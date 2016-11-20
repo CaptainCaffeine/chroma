@@ -1,0 +1,5 @@
+# Build directory
+[Bb]uild/
+
+# Vim swap files
+*.swp
