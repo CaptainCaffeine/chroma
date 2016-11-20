@@ -8,6 +8,9 @@ Chroma is licensed under the GPLv3.
 A reasonably recent compiler is required to build Chroma (at least GCC 5.x or Clang 3.4).
 
 `mkdir build`
+
 `cd build`
+
 `cmake ..`
+
 `make`
