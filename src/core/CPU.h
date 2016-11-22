@@ -51,10 +51,6 @@ private:
     void HardwareTick(unsigned int cycles);
     unsigned int ExecuteNext(const u8 opcode);
 
-    // Debug Functions
-    void PrintSerialOutput();
-    void PrintRegisterState();
-
     // Register interaction
     u8 Read8(Reg8 R) const; // Only used twice in ResetBit and SetBit
     u16 Read16(Reg16 R) const;
@@ -68,6 +64,12 @@ private:
     u8 GetImmediateByte();
     s8 GetImmediateSignedByte();
     u16 GetImmediateWord();
+
+    // Debug
+    void PrintRegisterState();
+
+    // Serial Stub
+    void DisconnectedSerial();
 
     // Ops
     // 8-bit loads

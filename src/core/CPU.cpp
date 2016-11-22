@@ -181,7 +181,6 @@ u16 CPU::GetImmediateWord() {
 // Execute instructions until the specified number of cycles has passed.
 void CPU::RunFor(unsigned int cycles) {
     while (cycles > 0) {
-        PrintSerialOutput();
         //PrintRegisterState();
 
         cycles -= HandleInterrupts();
@@ -269,6 +268,7 @@ void CPU::HardwareTick(unsigned int cycles) {
         enable_interrupts_delayed = false;
 
         timer.UpdateTimer();
+        DisconnectedSerial();
 
         mem.IF_written_this_cycle = false;
     }

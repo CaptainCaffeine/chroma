@@ -23,13 +23,6 @@
 
 namespace Core {
 
-void CPU::PrintSerialOutput() {
-    if ((mem.ReadMem8(0xFF02) & 0x80) == 0x80) {
-        std::cout << mem.ReadMem8(0xFF01);
-        mem.WriteMem8(0xFF02, 0x00);
-    }
-}
-
 void CPU::PrintRegisterState() {
     std::cout << std::hex << std::uppercase;
     std::cout << "\n";
