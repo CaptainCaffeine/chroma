@@ -6,3 +6,5 @@ set(CORE_SOURCES core/CPU.h core/CPU.cpp core/Ops.cpp core/Logging.cpp core/Seri
 set(EMU_SOURCES emu/chroma.cpp emu/ParseOptions.h emu/ParseOptions.cpp)
 
 add_executable(chroma ${EMU_SOURCES} ${CORE_SOURCES} ${COMMON_SOURCES})
+
+target_link_libraries(chroma ${SDL2_LIBRARY})
