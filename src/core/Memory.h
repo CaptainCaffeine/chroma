@@ -26,10 +26,11 @@ namespace Core {
 
 class Memory {
 public:
+    Memory(const Console game_boy, const CartridgeHeader header, std::vector<u8> rom_contents);
+
     const Console console;
     const GameMode game_mode;
-
-    Memory(const Console game_boy, const CartridgeHeader header, std::vector<u8> rom_contents);
+    bool cgb_double_speed = false;
 
     u8 ReadMem8(const u16 addr) const;
     u16 ReadMem16(const u16 addr) const;
@@ -61,6 +62,12 @@ private:
 
     // ******** I/O registers ******** 
     // P1 register: 0xFF00
+    //     bit 0: P10 Input Right or A (0=Pressed)
+    //     bit 1: P11 Input Left or B (0=Pressed)
+    //     bit 2: P12 Input Up or Select (0=Pressed)
+    //     bit 3: P13 Input Down or Start (0=Pressed)
+    //     bit 4: P14 Select Direction Keys (0=Select)
+    //     bit 5: P15 Select Button Keys (0=Select)
     u8 joypad; // Not implemented.
 
     // SB register: 0xFF01

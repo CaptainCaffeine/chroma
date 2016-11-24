@@ -45,7 +45,8 @@ Memory::Memory(const Console game_boy, const CartridgeHeader cart_header, std::v
 
     // 160 bytes object attribute memory.
     oam = std::vector<u8>(0xA0);
-    // 127 bytes high RAM (fast-access internal ram) + interrupt enable register.
+    // 127 bytes high RAM + interrupt enable register.
+    // (this is advertised as "fast-access" ram, but a few people deny that HRAM is actually faster than WRAM at all)
     hram = std::vector<u8>(0x80);
 
     IORegisterInit();
@@ -54,10 +55,10 @@ Memory::Memory(const Console game_boy, const CartridgeHeader cart_header, std::v
 void Memory::IORegisterInit() {
     if (game_mode == GameMode::DMG) {
         if (console == Console::DMG) {
-            joypad = 0xCF;
+            joypad = 0xCF; // DMG starts with joypad inputs enabled.
             divider = 0xABCC;
         } else {
-            joypad = 0xFF;
+            joypad = 0xFF; // CGB starts with joypad inputs disabled, even in DMG mode.
             divider = 0x267C;
         }
     } else {

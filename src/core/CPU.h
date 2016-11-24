@@ -32,7 +32,7 @@ public:
 private:
     enum class Reg8 {A, B, C, D, E, H, L};
     enum class Reg16 {AF, BC, DE, HL, SP};
-    enum class CPUMode {Running, Halted, HaltBug, Stopped};
+    enum class CPUMode {Running, Halted, HaltBug};
 
     Memory& mem;
     Timer& timer;
@@ -42,6 +42,7 @@ private:
     u16 sp = 0xFFFE, pc = 0x0100;
     Flags f;
 
+    // Internal CPU status
     bool interrupt_master_enable = true;
     bool enable_interrupts_delayed = false;
     CPUMode cpu_mode = CPUMode::Running;
@@ -67,6 +68,8 @@ private:
 
     // Debug
     void PrintRegisterState();
+    void BlarggRamDebug();
+    bool stop_printing = false;
 
     // Serial Stub
     void DisconnectedSerial();
@@ -162,6 +165,7 @@ private:
 
     // System control
     void Halt();
+    void Stop();
 };
 
 } // End namespace Core

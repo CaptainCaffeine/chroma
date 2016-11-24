@@ -1203,4 +1203,38 @@ void CPU::Halt() {
     }
 }
 
+void CPU::Stop() {
+    // If the opcode following STOP is not 0x00, the LCD supposedly turns on.
+    if (mem.ReadMem8(pc++) != 0x00) {
+        mem.WriteMem8(0xFF40, mem.ReadMem8(0xFF40) | 0x80);
+    }
+
+    // Check if we should begin a speed switch.
+    if (mem.game_mode == GameMode::CGB && mem.ReadMem8(0xFF4D) & 0x01) {
+        // The clock increases during this time, but normal interrupts are not serviced or checked. Regardless if
+        // the joypad interrupt is enabled in the IE register, a stopped Game Boy will intercept any joypad presses
+        // if the corresponding input lines in the P1 register are enabled.
+        // If the Game Boy receives an enabled joypad input during a speed switch, it will hang. Otherwise, it
+        // returns to normal operation once the speed switch is complete.
+
+        // A speed switch takes 128*1024-80=130992 cycles to complete, plus 4 cycles to decode the STOP instruction.
+        // I don't call HardwareTick here because currently its other functions are irrelevant during STOP.
+        for (unsigned int speed_switch_cycles = 130992; speed_switch_cycles != 0; speed_switch_cycles -= 4) {
+            timer.UpdateTimer();
+            // Should also check joypad inputs here.
+        }
+
+        // Toggle the CPU speed and set the prepare bit in KEY1 to zero.
+        mem.WriteMem8(0xFF4D, ~mem.ReadMem8(0xFF4D));
+        mem.cgb_double_speed = !mem.cgb_double_speed;
+    } else {
+        // I won't actually emulate STOP mode until I've implemented the joypad. So instead we'll immediately
+        // resume operations.
+
+        //while (no_joypad_inputs) {
+        //    timer.UpdateTimer();
+        //}
+    }
+}
+
 } // End namespace Core

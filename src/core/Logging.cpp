@@ -48,4 +48,23 @@ void Timer::PrintRegisterState() {
     std::cout << ", t_overflow = " << std::setw(1) << tima_overflow << "\n";
 }
 
+void CPU::BlarggRamDebug() {
+    if (!stop_printing &&
+            mem.ReadMem8(0xA001) == 0xDE &&
+            mem.ReadMem8(0xA002) == 0xB0 &&
+            mem.ReadMem8(0xA003) == 0x61 &&
+            mem.ReadMem8(0xA004) != 0x00 &&
+            mem.ReadMem8(0xA000) != 0x80) {
+        std::cout << "Test result: ";
+        std::cout << std::hex << std::setfill('0') << static_cast<unsigned int>(mem.ReadMem8(0xA000)) << "\n";
+
+        u16 text_addr = 0xA004;
+        while (mem.ReadMem8(text_addr) != 0x00) {
+            std::cout << mem.ReadMem8(text_addr++);
+        }
+
+        stop_printing = true;
+    }
+}
+
 } // End namespace Core

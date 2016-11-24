@@ -181,8 +181,6 @@ u16 CPU::GetImmediateWord() {
 // Execute instructions until the specified number of cycles has passed.
 void CPU::RunFor(unsigned int cycles) {
     while (cycles > 0) {
-        //PrintRegisterState();
-
         cycles -= HandleInterrupts();
 
         if (cpu_mode == CPUMode::Running) {
@@ -261,8 +259,6 @@ void CPU::ServiceInterrupt(const u16 addr) {
 
 void CPU::HardwareTick(unsigned int cycles) {
     for (; cycles != 0; cycles -= 4) {
-        //timer.PrintRegisterState();
-
         // Enable interrupts if EI was previously called. 
         interrupt_master_enable = interrupt_master_enable || enable_interrupts_delayed;
         enable_interrupts_delayed = false;
@@ -1328,10 +1324,9 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     case 0x76:
         Halt();
         return 4;
-    // STOP -- Halt both the CPU and LCD until a button is pressed.
+    // STOP -- Halt both the CPU and LCD until a button is pressed. Can also be used to switch to double-speed mode.
     case 0x10:
-        // TODO: implement. LCD turns on if second byte is not 0x00.
-        ++pc;
+        Stop();
         return 4;
     // DI -- Disable interrupts.
     case 0xF3:
