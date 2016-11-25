@@ -196,33 +196,26 @@ void CPU::RunFor(unsigned int cycles) {
 
 int CPU::HandleInterrupts() {
     if (interrupt_master_enable) {
-        const u8 pending_interrupts = mem.RequestedEnabledInterrupts();
-        if (pending_interrupts) {
-            const u8 interrupt_flags = mem.ReadMem8(0xFF0F);
-
+        if (mem.RequestedEnabledInterrupts()) {
             HardwareTick(12);
 
             // Disable interrupts, clear the corresponding bit in IF, and jump to the interrupt routine.
             interrupt_master_enable = false;
-            if (pending_interrupts & 0x01) {
-                // VBLANK
-                mem.WriteMem8(0xFF0F, interrupt_flags & ~0x01);
+
+            if (mem.IsPending(Interrupt::VBLANK)) {
+                mem.ClearInterrupt(Interrupt::VBLANK);
                 ServiceInterrupt(0x40);
-            } else if (pending_interrupts & 0x02) {
-                // LCDC
-                mem.WriteMem8(0xFF0F, interrupt_flags & ~0x02);
+            } else if (mem.IsPending(Interrupt::STAT)) {
+                mem.ClearInterrupt(Interrupt::STAT);
                 ServiceInterrupt(0x48);
-            } else if (pending_interrupts & 0x04) {
-                // Timer overflow
-                mem.WriteMem8(0xFF0F, interrupt_flags & ~0x04);
+            } else if (mem.IsPending(Interrupt::Timer)) {
+                mem.ClearInterrupt(Interrupt::Timer);
                 ServiceInterrupt(0x50);
-            } else if (pending_interrupts & 0x08) {
-                // Serial Transfer
-                mem.WriteMem8(0xFF0F, interrupt_flags & ~0x08);
+            } else if (mem.IsPending(Interrupt::Serial)) {
+                mem.ClearInterrupt(Interrupt::Serial);
                 ServiceInterrupt(0x58);
-            } else if (pending_interrupts & 0x10) {
-                // Joypad
-                mem.WriteMem8(0xFF0F, interrupt_flags & ~0x10);
+            } else if (mem.IsPending(Interrupt::Joypad)) {
+                mem.ClearInterrupt(Interrupt::Joypad);
                 ServiceInterrupt(0x60);
             }
 

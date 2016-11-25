@@ -24,7 +24,7 @@ void CPU::DisconnectedSerial() {
 //        std::cout << mem.ReadMem8(0xFF01);
         mem.WriteMem8(0xFF01, 0xFF);
         mem.WriteMem8(0xFF02, 0x00);
-        mem.WriteMem8(0xFF0F, mem.ReadMem8(0xFF0F) | 0x08);
+        mem.RequestInterrupt(Interrupt::Serial);
     }
 }
 

@@ -37,7 +37,11 @@ public:
     void WriteMem8(const u16 addr, const u8 data);
     void WriteMem16(const u16 addr, const u16 data);
 
-    u8 RequestedEnabledInterrupts() const { return interrupt_flags & (hram.back() & 0x1F); }
+    // Interrupt functions
+    void RequestInterrupt(Interrupt intr) { interrupt_flags |= static_cast<unsigned int>(intr); }
+    void ClearInterrupt(Interrupt intr) { interrupt_flags &= ~static_cast<unsigned int>(intr); }
+    bool IsPending(Interrupt intr) const { return interrupt_flags & hram.back() & static_cast<unsigned int>(intr); }
+    bool RequestedEnabledInterrupts() const { return interrupt_flags & hram.back(); }
     bool IF_written_this_cycle = false;
 
     // Timer functions
@@ -139,7 +143,7 @@ private:
     u8 window_x_pos = 0x00; // Not implemented. What is the initial value of this register?
 
     // KEY1 register: 0xFF4D
-    u8 speed_switch = 0x00; // Not implemented.
+    u8 speed_switch = 0x00;
 
     // HDMA1 register: 0xFF51
     u8 hdma_source_hi = 0x00; // Not implemented. What is the initial value of this register, if it has one?

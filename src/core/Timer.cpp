@@ -30,7 +30,7 @@ void Timer::UpdateTimer() {
     // If TIMA was written during this machine cycle, the value is overwritten with TMA.
     if (tima_overflow) {
         LoadTMAIntoTIMA();
-        mem.WriteMem8(0xFF0F, mem.ReadMem8(0xFF0F) | 0x04);
+        mem.RequestInterrupt(Interrupt::Timer);
 
         tima_overflow = false;
     }
