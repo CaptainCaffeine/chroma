@@ -23,8 +23,10 @@
 #include "core/CartridgeHeader.h"
 #include "core/Memory.h"
 #include "core/Timer.h"
+#include "core/LCD.h"
 #include "core/CPU.h"
 #include "emu/ParseOptions.h"
+#include "emu/SDL_Utils.h"
 
 int main(int argc, char** argv) {
     std::vector<std::string> tokens = Emu::GetTokens(argv, argv+argc);
@@ -59,16 +61,37 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // Init
+    Emu::SDLContext sdl_context;
+    if (Emu::InitSDL(sdl_context)) {
+        // SDL failed to create a renderer.
+        return 1;
+    }
+
+    // Initialize core.
     Core::CartridgeHeader cart_header = Core::GetCartridgeHeaderInfo(game_boy, rom);
     Core::Memory memory(game_boy, cart_header, std::move(rom));
     Core::Timer timer(memory);
-    Core::CPU cpu(memory, timer);
+    Core::LCD lcd(memory);
+    Core::CPU cpu(memory, timer, lcd);
 
-    while (true) {
-        // Eventually the cycle number will be synced with lcd or sound timings.
-        cpu.RunFor(0x80000);
+    SDL_Event e;
+    bool keep_going = true;
+    while (keep_going) {
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT) {
+                keep_going = false;
+            } else if (e.type == SDL_KEYDOWN) {
+                keep_going = false;
+            }
+        }
+
+        // This is the number of cycles needed for VBLANK... Temporary just to see if this works, I want VBLANK to
+        // exit the RunFor function.
+        cpu.RunFor(0x11250);
+        Emu::RenderFrame(lcd.GetRawPointerToFramebuffer(), sdl_context);
     }
+
+    Emu::CleanupSDL(sdl_context);
 
     std::cout << "End emulation." << std::endl;
     return 0;

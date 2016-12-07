@@ -18,7 +18,7 @@
 
 namespace Core {
 
-CPU::CPU(Memory& memory, Timer& tima) : mem(memory), timer(tima) {
+CPU::CPU(Memory& memory, Timer& tima, LCD& display) : mem(memory), timer(tima), lcd(display) {
     // Initial register values
     if (mem.game_mode == GameMode::DMG) {
         if (mem.console == Console::DMG) {
@@ -179,8 +179,9 @@ u16 CPU::GetImmediateWord() {
 }
 
 // Execute instructions until the specified number of cycles has passed.
-void CPU::RunFor(unsigned int cycles) {
+void CPU::RunFor(int cycles) {
     while (cycles > 0) {
+        //BlarggRamDebug();
         cycles -= HandleInterrupts();
 
         if (cpu_mode == CPUMode::Running) {
@@ -256,7 +257,9 @@ void CPU::HardwareTick(unsigned int cycles) {
         interrupt_master_enable = interrupt_master_enable || enable_interrupts_delayed;
         enable_interrupts_delayed = false;
 
+        // Update the rest of the system hardware.
         timer.UpdateTimer();
+        lcd.UpdateLCD();
         DisconnectedSerial();
 
         mem.IF_written_this_cycle = false;

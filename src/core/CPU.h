@@ -20,15 +20,16 @@
 #include "common/CommonEnums.h"
 #include "core/Memory.h"
 #include "core/Timer.h"
+#include "core/LCD.h"
 #include "core/Flags.h"
 
 namespace Core {
 
 class CPU {
 public:
-    CPU(Memory& memory, Timer& tima);
+    CPU(Memory& memory, Timer& tima, LCD& display);
 
-    void RunFor(unsigned int cycles);
+    void RunFor(int cycles);
 private:
     enum class Reg8 {A, B, C, D, E, H, L};
     enum class Reg16 {AF, BC, DE, HL, SP};
@@ -36,6 +37,7 @@ private:
 
     Memory& mem;
     Timer& timer;
+    LCD& lcd;
 
     // Registers
     u8 a, b, c, d, e, h, l;

@@ -17,6 +17,7 @@
 #pragma once
 
 #include <vector>
+#include <algorithm>
 
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
@@ -38,8 +39,12 @@ public:
     void WriteMem16(const u16 addr, const u16 data);
 
     // Interrupt functions
-    void RequestInterrupt(Interrupt intr) { interrupt_flags |= static_cast<unsigned int>(intr); }
-    void ClearInterrupt(Interrupt intr) { interrupt_flags &= ~static_cast<unsigned int>(intr); }
+    void RequestInterrupt(Interrupt intr) {
+        if (!IF_written_this_cycle) { interrupt_flags |= static_cast<unsigned int>(intr); }
+    }
+    void ClearInterrupt(Interrupt intr) {
+        if (!IF_written_this_cycle) { interrupt_flags &= ~static_cast<unsigned int>(intr); }
+    }
     bool IsPending(Interrupt intr) const { return interrupt_flags & hram.back() & static_cast<unsigned int>(intr); }
     bool RequestedEnabledInterrupts() const { return interrupt_flags & hram.back(); }
     bool IF_written_this_cycle = false;
@@ -47,6 +52,62 @@ public:
     // Timer functions
     u16 ReadDIV() const { return divider; }
     void IncrementDIV(unsigned int cycles) { divider += cycles; }
+
+    // LCD functions
+    template<typename DestIter>
+    void CopyFromVRAM(const u16 start_addr, const std::size_t num_bytes, DestIter dest) const {
+        std::copy_n(vram.cbegin() + (start_addr - 0x8000), num_bytes, dest);
+    }
+
+    // ******** Temporarily public for LCD access.
+
+    // LCDC register: 0xFF40
+    //     bit 7: LCD On
+    //     bit 6: Window Tilemap Region (0=0x9800-0x9BFF, 1=0x9C00-0x9FFF)
+    //     bit 5: Window Enable
+    //     bit 4: BG and Window Tile Data Region (0=0x8800-0x97FF, 1=0x8000-0x8FFF)
+    //     bit 3: BG Tilemap Region (0=0x9800-0x9BFF, 1=0x9C00-0x9FFF)
+    //     bit 2: Sprite Size (0=8x8, 1=8x16)
+    //     bit 1: Sprites Enabled
+    //     bit 0: BG Enabled (0=On DMG, this sets the background to white.
+    //                          On CGB in DMG mode, this disables both the window and background. 
+    //                          In CGB mode, this gives all sprites priority over the background and window.)
+    u8 lcdc = 0x91; // TODO: Verify that 0x91 is the correct initial value for this register.
+    // STAT register: 0xFF41
+    //     bit 6: LY=LYC Check Enable
+    //     bit 5: Mode 2 OAM Check Enable
+    //     bit 4: Mode 1 VBLANK Check Enable
+    //     bit 3: Mode 0 HBLANK Check Enable
+    //     bit 2: LY=LYC Compare Signal (1 implies LY=LYC)
+    //     bits 1&0: Screen Mode (0=HBLANK, 1=VBLANK, 2=Searching OAM, 3=Transferring Data to LCD driver)
+    u8 stat = 0x01; // What is the initial value of this register?
+    // SCY register: 0xFF42
+    u8 scroll_y = 0x00; // What is the initial value of this register?
+    // SCX register: 0xFF43
+    u8 scroll_x = 0x00; // What is the initial value of this register?
+    // LY register: 0xFF44
+    u8 ly = 0x00;
+    // LYC register: 0xFF45
+    u8 ly_compare = 0x00; // What is the initial value of this register?
+
+    // DMA register: 0xFF46
+    u8 oam_dma = 0x00; // Not implemented. What is the initial value of this register, if it has one?
+
+    // BGP register: 0xFF47
+    //     bits 7-6: background colour 3
+    //     bits 5-4: background colour 2
+    //     bits 3-2: background colour 1
+    //     bits 1-0: background colour 0
+    u8 bg_palette = 0x00; // What is the initial value of this register?
+    // OBP0 register: 0xFF48
+    u8 obj_palette0 = 0x00; // Not implemented. What is the initial value of this register?
+    // OBP1 register: 0xFF49
+    u8 obj_palette1 = 0x00; // Not implemented. What is the initial value of this register?
+    // WY register: 0xFF4A
+    u8 window_y = 0x00; // Not implemented. What is the initial value of this register?
+    // WX register: 0xFF4B
+    u8 window_x = 0x00; // Not implemented. What is the initial value of this register?
+
 private:
     const MBC mbc_mode;
     const bool ext_ram_present;
@@ -100,47 +161,6 @@ private:
     //     bit 3: Serial Transfer Complete
     //     bit 4: Joypad (high-to-low of I/O regs P10-P13)
     u8 interrupt_flags = 0x00;
-
-    // LCDC register: 0xFF40
-    //     bit 7: LCD On
-    //     bit 6: Window Tile Map Region (0=0x9800-0x9BFF, 1=0x9C00-0x9FFF)
-    //     bit 5: Window Enable
-    //     bit 4: BG and Window Tileset Region (0=0x8800-0x97FF, 1=0x8000-0x8FFF)
-    //     bit 3: BG Tilemap Region (0=0x9800-0x9BFF, 1=0x9C00-0x9FFF)
-    //     bit 2: Sprite Size (0=8x8, 1=8x16)
-    //     bit 1: Sprites Enabled
-    //     bit 0: BG Enabled (Behaviour differs on CGB)
-    u8 lcd_control = 0x91; // Not implemented. TODO: Verify that 0x91 is the correct initial value for this register.
-    // STAT register: 0xFF41
-    //     bit 6: LY=LYC Check Enable
-    //     bit 5: Mode 2 OAM Check Enable
-    //     bit 4: Mode 1 VBLANK Check Enable
-    //     bit 3: Mode 0 HBLANK Check Enable
-    //     bit 2: LY=LYC Compare Signal (1 implies LY=LYC)
-    //     bits 1&0: Screen Mode (0=HBLANK, 1=VBLANK, 2=Searching OAM, 3=Transferring Data to LCD driver)
-    u8 lcd_status = 0xFF; // Not implemented. What is the initial value of this register?
-    // SCY register: 0xFF42
-    u8 scroll_y = 0x00; // Not implemented. What is the initial value of this register?
-    // SCX register: 0xFF43
-    u8 scroll_x = 0x00; // Not implemented. What is the initial value of this register?
-    // LY register: 0xFF44
-    u8 lcd_current_scanline = 0x00; // Not implemented. What is the initial value of this register?
-    // LYC register: 0xFF45
-    u8 ly_compare = 0x00; // Not implemented. What is the initial value of this register?
-
-    // DMA register: 0xFF46
-    u8 oam_dma = 0x00; // Not implemented. What is the initial value of this register, if it has one?
-
-    // BGP register: 0xFF47
-    u8 bg_palette_data = 0x00; // Not implemented. What is the initial value of this register?
-    // OBP0 register: 0xFF48
-    u8 obj_palette0_data = 0x00; // Not implemented. What is the initial value of this register?
-    // OBP1 register: 0xFF49
-    u8 obj_palette1_data = 0x00; // Not implemented. What is the initial value of this register?
-    // WY register: 0xFF4A
-    u8 window_y_pos = 0x00; // Not implemented. What is the initial value of this register?
-    // WX register: 0xFF4B
-    u8 window_x_pos = 0x00; // Not implemented. What is the initial value of this register?
 
     // KEY1 register: 0xFF4D
     u8 speed_switch = 0x00;

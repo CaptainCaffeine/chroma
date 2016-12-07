@@ -605,7 +605,7 @@ void CPU::RotateLeftMemAtHL() {
 }
 
 void CPU::RotateLeftThroughCarry(Reg8 R) {
-    u8 carry_val;
+    u8 carry_val = 0x00;
     switch (R) {
     case (Reg8::A):
         carry_val = a & 0x80;
@@ -752,7 +752,7 @@ void CPU::RotateRightMemAtHL() {
 }
 
 void CPU::RotateRightThroughCarry(Reg8 R) {
-    u8 carry_val;
+    u8 carry_val = 0x00;
     switch (R) {
     case (Reg8::A):
         carry_val = a & 0x01;

@@ -76,7 +76,12 @@ u8 Memory::ReadMem8(const u16 addr) const {
         return rom[addr + 0x4000*((rom_bank_num % num_rom_banks) - 1)];
     } else if (addr < 0xA000) {
         // VRAM -- switchable in CGB mode
-        return vram[addr - 0x8000 + 0x2000*vram_bank_num];
+        // Not accessible during screen mode 3.
+        if ((stat & 0x03) != 3) {
+            return vram[addr - 0x8000 + 0x2000*vram_bank_num];
+        } else {
+            return 0xFF;
+        }
     } else if (addr < 0xC000) {
         // External RAM bank.
         if (ext_ram_enabled) {
@@ -117,7 +122,12 @@ u8 Memory::ReadMem8(const u16 addr) const {
         // exernal RAM, and bitwise AND the two values together (source: AntonioND timing docs).
     } else if (addr < 0xFEA0) {
         // OAM (Sprite Attribute Table)
-        return oam[addr - 0xFE00];
+        // Not accessible during screen modes 2 or 3.
+        if ((stat & 0x02) == 0) {
+            return oam[addr - 0xFE00];
+        } else {
+            return 0xFF;
+        }
     } else if (addr < 0xFF00) {
         // Unusable region
         // Pre-CGB devices: reads return 0x00
@@ -146,10 +156,10 @@ void Memory::WriteMem8(const u16 addr, const u8 data) {
         WriteMBCControlRegisters(addr, data);
     } else if (addr < 0xA000) {
         // VRAM -- switchable in CGB mode
-        if (game_mode == GameMode::CGB) {
+        // Not accessible during screen mode 3.
+        if ((stat & 0x03) != 3) {
             vram[addr - 0x8000 + 0x2000*vram_bank_num] = data;
         }
-        vram[addr - 0x8000] = data;
     } else if (addr < 0xC000) {
         // External RAM bank, switchable.
         if (ext_ram_enabled) {
@@ -182,7 +192,10 @@ void Memory::WriteMem8(const u16 addr, const u8 data) {
         // external RAM (source: AntonioND timing docs).
     } else if (addr < 0xFEA0) {
         // OAM (Sprite Attribute Table)
-        oam[addr - 0xFE00] = data;
+        // Not accessible during screen modes 2 or 3.
+        if ((stat & 0x02) == 0) {
+            oam[addr - 0xFE00] = data;
+        }
     } else if (addr < 0xFF00) {
         // Unusable region
         // Pre-CGB devices: writes are ignored
@@ -230,10 +243,10 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         return interrupt_flags | 0xE0;
     // LCDC -- LCD control
     case 0xFF40:
-        return lcd_control;
+        return lcdc;
     // STAT -- LCD status
     case 0xFF41:
-        return lcd_status | 0x80;
+        return stat | 0x80;
     // SCY -- BG Scroll Y
     case 0xFF42:
         return scroll_y;
@@ -242,7 +255,7 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         return scroll_x;
     // LY -- LCD Current Scanline
     case 0xFF44:
-        return lcd_current_scanline;
+        return ly;
     // LYC -- LY Compare
     case 0xFF45:
         return ly_compare;
@@ -251,19 +264,19 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         return oam_dma; // Is this register write only?
     // BGP -- BG Palette Data
     case 0xFF47:
-        return bg_palette_data;
+        return bg_palette;
     // OBP0 -- Sprite Palette 0 Data
     case 0xFF48:
-        return obj_palette0_data;
+        return obj_palette0;
     // OBP1 -- Sprite Palette 1 Data
     case 0xFF49:
-        return obj_palette1_data;
+        return obj_palette1;
     // WY -- Window Y Position
     case 0xFF4A:
-        return window_y_pos;
+        return window_y;
     // WX -- Window X Position
     case 0xFF4B:
-        return window_x_pos;
+        return window_x;
     // KEY1 -- Speed Switch
     case 0xFF4D:
         return speed_switch | ((game_mode == GameMode::CGB) ? 0x7E : 0xFF);
@@ -338,11 +351,11 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // LCDC -- LCD control
     case 0xFF40:
-        lcd_control = data;
+        lcdc = data;
         break;
     // STAT -- LCD status
     case 0xFF41:
-        lcd_status = data & 0x78;
+        stat = data & 0x78;
         break;
     // SCY -- BG Scroll Y
     case 0xFF42:
@@ -367,23 +380,23 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // BGP -- BG Palette Data
     case 0xFF47:
-        bg_palette_data = data;
+        bg_palette = data;
         break;
     // OBP0 -- Sprite Palette 0 Data
     case 0xFF48:
-        obj_palette0_data = data;
+        obj_palette0 = data;
         break;
     // OBP1 -- Sprite Palette 1 Data
     case 0xFF49:
-        obj_palette1_data = data;
+        obj_palette1 = data;
         break;
     // WY -- Window Y Position
     case 0xFF4A:
-        window_y_pos = data;
+        window_y = data;
         break;
     // WX -- Window X Position
     case 0xFF4B:
-        window_x_pos = data;
+        window_x = data;
         break;
     // KEY1 -- Speed Switch
     case 0xFF4D:
