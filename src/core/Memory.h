@@ -17,6 +17,7 @@
 #pragma once
 
 #include <vector>
+#include <array>
 #include <algorithm>
 
 #include "common/CommonTypes.h"
@@ -80,33 +81,33 @@ public:
     //     bit 3: Mode 0 HBLANK Check Enable
     //     bit 2: LY=LYC Compare Signal (1 implies LY=LYC)
     //     bits 1&0: Screen Mode (0=HBLANK, 1=VBLANK, 2=Searching OAM, 3=Transferring Data to LCD driver)
-    u8 stat = 0x01; // What is the initial value of this register?
+    u8 stat = 0x01;
     // SCY register: 0xFF42
-    u8 scroll_y = 0x00; // What is the initial value of this register?
+    u8 scroll_y = 0x00;
     // SCX register: 0xFF43
-    u8 scroll_x = 0x00; // What is the initial value of this register?
+    u8 scroll_x = 0x00;
     // LY register: 0xFF44
     u8 ly = 0x00;
     // LYC register: 0xFF45
-    u8 ly_compare = 0x00; // What is the initial value of this register?
+    u8 ly_compare = 0x00;
 
     // DMA register: 0xFF46
-    u8 oam_dma = 0x00; // Not implemented. What is the initial value of this register, if it has one?
+    u8 oam_dma = 0xFF; // Not implemented.
 
     // BGP register: 0xFF47
     //     bits 7-6: background colour 3
     //     bits 5-4: background colour 2
     //     bits 3-2: background colour 1
     //     bits 1-0: background colour 0
-    u8 bg_palette = 0x00; // What is the initial value of this register?
+    u8 bg_palette = 0xFC;
     // OBP0 register: 0xFF48
-    u8 obj_palette0 = 0x00; // Not implemented. What is the initial value of this register?
+    u8 obj_palette0 = 0xFF;
     // OBP1 register: 0xFF49
-    u8 obj_palette1 = 0x00; // Not implemented. What is the initial value of this register?
+    u8 obj_palette1 = 0xFF;
     // WY register: 0xFF4A
-    u8 window_y = 0x00; // Not implemented. What is the initial value of this register?
+    u8 window_y = 0x00; // Not implemented.
     // WX register: 0xFF4B
-    u8 window_x = 0x00; // Not implemented. What is the initial value of this register?
+    u8 window_x = 0x00; // Not implemented.
 
 private:
     const MBC mbc_mode;
@@ -136,12 +137,12 @@ private:
     u8 joypad; // Not implemented.
 
     // SB register: 0xFF01
-    u8 serial_data = 0x00; // Not implemented. What is the initial value of this register?
+    u8 serial_data = 0x00; // Not implemented.
     // SC register: 0xFF02
     //     bit 7: Transfer Start Flag
     //     bit 1: Speed? CGB only?
     //     bit 0: Shift Clock (0=External Clock, 1=Internal Clock 8192Hz)
-    u8 serial_control = 0x00; // Not implemented. What is the initial value of this register?
+    u8 serial_control = 0x00; // Not implemented.
 
     // DIV register: 0xFF04
     u16 divider;
@@ -160,7 +161,52 @@ private:
     //     bit 2: Timer Overflow
     //     bit 3: Serial Transfer Complete
     //     bit 4: Joypad (high-to-low of I/O regs P10-P13)
-    u8 interrupt_flags = 0x00;
+    u8 interrupt_flags = 0x01;
+
+    // NR10 register: 0xFF10
+    u8 sweep_mode1 = 0x00;
+    // NR11 register: 0xFF11
+    u8 pattern_duty_mode1 = 0x80;
+    // NR12 register: 0xFF12
+    u8 envelope_mode1 = 0xF3;
+    // NR13 register: 0xFF13
+    u8 frequency_lo_mode1 = 0xFF;
+    // NR14 register: 0xFF14
+    u8 frequency_hi_mode1 = 0x00;
+    // NR21 register: 0xFF16
+    u8 pattern_duty_mode2 = 0x00;
+    // NR22 register: 0xFF17
+    u8 envelope_mode2 = 0x00;
+    // NR23 register: 0xFF18
+    u8 frequency_lo_mode2 = 0xFF;
+    // NR24 register: 0xFF19
+    u8 frequency_hi_mode2 = 0x00;
+    // NR30 register: 0xFF1A
+    u8 sound_on_mode3 = 0x00;
+    // NR31 register: 0xFF1B
+    u8 sound_length_mode3 = 0xFF;
+    // NR32 register: 0xFF1C
+    u8 output_mode3 = 0x00;
+    // NR33 register: 0xFF1D
+    u8 frequency_lo_mode3 = 0xFF;
+    // NR34 register: 0xFF1E
+    u8 frequency_hi_mode3 = 0x00;
+    // NR41 register: 0xFF20
+    u8 sound_length_mode4 = 0x1F;
+    // NR42 register: 0xFF21
+    u8 envelope_mode4 = 0x00;
+    // NR43 register: 0xFF22
+    u8 poly_counter_mode4 = 0x00;
+    // NR44 register: 0xFF23
+    u8 counter_mode4 = 0x00;
+    // NR50 register: 0xFF24
+    u8 volume = 0x77;
+    // NR51 register: 0xFF25
+    u8 sound_select = 0xF3;
+    // NR52 register: 0xFF26
+    u8 sound_on = 0x81;
+    // Wave Pattern RAM: 0xFF30-0xFF3F
+    std::array<u8, 0x10> wave_ram{};
 
     // KEY1 register: 0xFF4D
     u8 speed_switch = 0x00;
