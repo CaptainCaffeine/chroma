@@ -70,6 +70,7 @@ private:
 
     // Debug
     void PrintRegisterState();
+    void PrintInterrupt();
     void BlarggRamDebug();
     bool stop_printing = false;
 

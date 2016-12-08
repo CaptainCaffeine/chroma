@@ -18,6 +18,7 @@
 #include <iomanip>
 
 #include "core/Timer.h"
+#include "core/LCD.h"
 #include "core/CPU.h"
 #include "core/Disassembler.h"
 
@@ -36,6 +37,22 @@ void CPU::PrintRegisterState() {
     std::cout << "\n";
 }
 
+void CPU::PrintInterrupt() {
+    std::cout << "\n";
+    if (mem.IsPending(Interrupt::VBLANK)) {
+        std::cout << "VBLANK";
+    } else if (mem.IsPending(Interrupt::STAT)) {
+        std::cout << "STAT";
+    } else if (mem.IsPending(Interrupt::Timer)) {
+        std::cout << "Timer";
+    } else if (mem.IsPending(Interrupt::Serial)) {
+        std::cout << "Serial";
+    } else if (mem.IsPending(Interrupt::Joypad)) {
+        std::cout << "Joypad";
+    }
+    std::cout << " Interrupt\n";
+}
+
 void Timer::PrintRegisterState() {
     std::cout << std::hex << std::uppercase;
     std::cout << "DIV = 0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(mem.ReadDIV());
@@ -45,7 +62,19 @@ void Timer::PrintRegisterState() {
     std::cout << ", IF = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF0F));
     std::cout << ", pt_inc = " << std::setw(1) << prev_tima_inc;
     std::cout << ", pt_val = " << std::setw(2) << static_cast<unsigned int>(prev_tima_val);
-    std::cout << ", t_overflow = " << std::setw(1) << tima_overflow << "\n";
+    std::cout << ", t_of = " << std::setw(1) << tima_overflow;
+    std::cout << ", t_of_ni = " << std::setw(1) << tima_overflow_not_interrupted << "\n";
+}
+
+void LCD::PrintRegisterState() {
+    std::cout << std::hex << std::uppercase;
+    std::cout << "LCDC = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF40));
+    std::cout << ", STAT = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF41));
+    std::cout << ", LY = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF44));
+    std::cout << ", LYC = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF45));
+    std::cout << ", LCD On = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(lcd_on);
+    std::cout << ", cycles = " << std::dec << std::setw(3) << scanline_cycles;
+    std::cout << ", stat_sig = " << std::setw(1) << stat_interrupt_signal << "\n";
 }
 
 void CPU::BlarggRamDebug() {

@@ -31,6 +31,8 @@ public:
     void UpdateLCD();
 
     const u32* GetRawPointerToFramebuffer() const { return framebuffer.data(); };
+
+    void PrintRegisterState();
 private:
     Memory& mem;
 

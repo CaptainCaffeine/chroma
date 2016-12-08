@@ -181,8 +181,9 @@ u16 CPU::GetImmediateWord() {
 // Execute instructions until the specified number of cycles has passed.
 void CPU::RunFor(int cycles) {
     while (cycles > 0) {
-        //BlarggRamDebug();
         cycles -= HandleInterrupts();
+
+//        PrintRegisterState();
 
         if (cpu_mode == CPUMode::Running) {
             cycles -= ExecuteNext(mem.ReadMem8(pc++));
@@ -198,6 +199,7 @@ void CPU::RunFor(int cycles) {
 int CPU::HandleInterrupts() {
     if (interrupt_master_enable) {
         if (mem.RequestedEnabledInterrupts()) {
+//            PrintInterrupt();
             HardwareTick(12);
 
             // Disable interrupts, clear the corresponding bit in IF, and jump to the interrupt routine.
@@ -253,6 +255,7 @@ void CPU::ServiceInterrupt(const u16 addr) {
 
 void CPU::HardwareTick(unsigned int cycles) {
     for (; cycles != 0; cycles -= 4) {
+
         // Enable interrupts if EI was previously called. 
         interrupt_master_enable = interrupt_master_enable || enable_interrupts_delayed;
         enable_interrupts_delayed = false;
@@ -263,6 +266,9 @@ void CPU::HardwareTick(unsigned int cycles) {
         DisconnectedSerial();
 
         mem.IF_written_this_cycle = false;
+
+//        timer.PrintRegisterState();
+//        lcd.PrintRegisterState();
     }
 }
 
