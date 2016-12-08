@@ -36,7 +36,7 @@ public:
 private:
     Memory& mem;
 
-    u8 lcd_on = 0x10;
+    u8 lcd_on = 0x80;
     void UpdatePowerOnState();
 
     int scanline_cycles = 452; // This should be set in constructor to adapt for CGB double speed.

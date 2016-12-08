@@ -539,7 +539,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // STAT -- LCD status
     case 0xFF41:
-        stat = data & 0x78;
+        stat = (data & 0x78) | (stat & 0x07);
         break;
     // SCY -- BG Scroll Y
     case 0xFF42:
