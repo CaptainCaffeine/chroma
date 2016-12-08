@@ -224,7 +224,6 @@ int CPU::HandleInterrupts() {
 
             if (cpu_mode == CPUMode::Halted) {
                 // Exit halt mode.
-                HardwareTick(4);
                 cpu_mode = CPUMode::Running;
                 return 24;
             }
@@ -234,7 +233,6 @@ int CPU::HandleInterrupts() {
         if (mem.RequestedEnabledInterrupts()) {
             // If halt mode is entered when IME is zero, then the next time an interrupt is triggered the CPU does 
             // not jump to the interrupt routine or clear the IF flag. It just exits halt mode and continues execution.
-            HardwareTick(4);
             cpu_mode = CPUMode::Running;
             return 4;
         }
