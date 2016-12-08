@@ -26,12 +26,25 @@ void Timer::UpdateTimer() {
     // DIV increments by 1 each clock cycle.
     mem.IncrementDIV(4);
 
-    // If TIMA overflowed during the previous machine cycle, load TMA into it and set the timer interrupt.
-    // If TIMA was written during this machine cycle, the value is overwritten with TMA.
-    if (tima_overflow) {
+    // If the TIMA overflow was not interrupted last cycle, write TMA into TIMA again. Any writes to TIMA during
+    // the past cycle are ignored, and writing to TMA will cause that written value to appear in TIMA.
+    if (tima_overflow_not_interrupted) {
         LoadTMAIntoTIMA();
-        mem.RequestInterrupt(Interrupt::Timer);
 
+        tima_overflow_not_interrupted = false;
+    }
+
+    // If TIMA overflowed last cycle, and is written to on the one cycle where it is 0x00, the overflow procedure is
+    // aborted. If it isn't written, them TMA is loaded into TIMA for the next cycle and the IF timer flag is set.
+    if (tima_overflow) {
+        if (TIMAWasNotWritten(mem.ReadMem8(0xFF05))) {
+            tima_overflow_not_interrupted = true;
+            LoadTMAIntoTIMA();
+            // If the IF register was written this cycle, the written value will remain.
+            mem.RequestInterrupt(Interrupt::Timer);
+        } else {
+            tima_overflow_not_interrupted = false;
+        }
         tima_overflow = false;
     }
 
@@ -51,8 +64,7 @@ void Timer::UpdateTimer() {
     if (TIMAIncWentLow(tima_inc)) {
         // When TIMA overflows, there is a delay of one machine cycle before it is loaded with TMA and the timer 
         // interrupt is triggered.
-        // If TIMA is written to on a machine cycle where it would have overflowed, the overflow procedure is aborted.
-        tima_overflow = (tima_val == 0xFF && TIMAWasNotWritten(tima_val));
+        tima_overflow = (tima_val == 0xFF);
 
         mem.WriteMem8(0xFF05, ++tima_val);
     }

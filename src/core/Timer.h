@@ -38,6 +38,7 @@ private:
 
     bool prev_tima_inc = false;
     bool tima_overflow = false;
+    bool tima_overflow_not_interrupted = false;
     u8 prev_tima_val = 0x00;
 
     unsigned int TACFrequency() const;
