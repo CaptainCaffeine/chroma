@@ -40,39 +40,33 @@ void LCD::UpdateLCD() {
     UpdateLYCompareSignal();
 
     if (mem.ly == 0) {
-        // We stay in mode 1 for all of scanline 153, even though LY reads 0. Maybe I should keep a separate scanline
-        // variable? Depends if it would be useful for CGB modes.
         if (STATMode() != 1) {
             if (scanline_cycles == 4) {
                 SetSTATMode(2);
-                stat_interrupt_signal |= Mode2CheckEnabled();
-            } else if (scanline_cycles == 84) {
+            } else if (scanline_cycles == 80) {
                 SetSTATMode(3);
                 RenderScanline();
-            } else if (scanline_cycles == 256) {
+            } else if (scanline_cycles == 252) {
                 // Inaccurate. The duration of Mode 3 varies depending on the number of sprites drawn
-                // for the scanline, but I don't know by how much. I also don't know the exact timings of the Mode 0
-                // interrupt, so I'm assuming it's triggered as soon as Mode 0 is entered.
+                // for the scanline, but I don't know by how much.
                 SetSTATMode(0);
-                stat_interrupt_signal |= Mode0CheckEnabled();
             }
         }
     } else if (mem.ly <= 143) {
         if (scanline_cycles == 0) {
-            // AntonioND claims the Mode 2 STAT interrupt happens the cycle before Mode 2 is entered?
-            // Except for scanline 0.
+            // AntonioND claims the Mode 2 STAT interrupt happens the cycle before Mode 2 is entered, except for
+            // scanline 0? Does this actually happen?
             stat_interrupt_signal |= Mode2CheckEnabled();
         } else if (scanline_cycles == 4) {
             SetSTATMode(2);
-        } else if (scanline_cycles == 84) {
+        } else if (scanline_cycles == 80) {
             SetSTATMode(3);
             RenderScanline();
-        } else if (scanline_cycles == 256) {
+        } else if (scanline_cycles == 252) {
             // Inaccurate. The duration of Mode 3 varies depending on the number of sprites drawn
             // for the scanline, but I don't know by how much. I also don't know the exact timings of the Mode 0
             // interrupt, so I'm assuming it's triggered as soon as Mode 0 is entered.
             SetSTATMode(0);
-            stat_interrupt_signal |= Mode0CheckEnabled();
         }
     } else if (mem.ly == 144) {
         if (scanline_cycles == 4) {
@@ -83,16 +77,7 @@ void LCD::UpdateLCD() {
         }
     }
 
-    // Disabling and reenabling the Mode 1 check during VBLANK will cause the STAT interrupt to trigger again.
-    stat_interrupt_signal |= (Mode1CheckEnabled() && STATMode() == 1);
-
-    // The STAT interrupt is triggered on a rising edge of the STAT interrupt signal, which is a 4 way logical OR
-    // between each STAT check. As a result, if two events which would have triggered a STAT interrupt happen on 
-    // consecutive machine cycles, the second one will not cause an interrupt to be requested.
-    if (stat_interrupt_signal && !prev_interrupt_signal) {
-        mem.RequestInterrupt(Interrupt::STAT);
-    }
-    prev_interrupt_signal = stat_interrupt_signal;
+    CheckSTATInterruptSignal();
 
 //    // Mode timings debug
 //    if (scanline_cycles == 0) {
@@ -109,12 +94,12 @@ void LCD::UpdatePowerOnState() {
         if (lcd_on) {
             // Initialize scanline cycle count (to 452 instead of 0, so it ticks over to 0 in UpdateLY()).
             scanline_cycles = 452;
-        } else {
-            // LY register is fixed to 0x00 when the LCD is off.
-            mem.ly = 0;
-            // LCD behaves as if it's in Mode 1 when it is off. I don't know if this is what the STAT register 
-            // actually reads though...
             SetSTATMode(1);
+        } else {
+            mem.ly = 0;
+            SetSTATMode(0);
+            stat_interrupt_signal = 0;
+            prev_interrupt_signal = 0;
         }
     }
 }
@@ -130,8 +115,7 @@ void LCD::UpdateLY() {
         // LY does not increase at the end of scanline 153, it stays 0 until the end of scanline 0.
         // Otherwise, increment LY.
         if (mem.ly == 0 && STATMode() == 1) {
-            SetSTATMode(0);
-            stat_interrupt_signal |= Mode0CheckEnabled();
+            SetSTATMode(0); // Does this actually happen? Or do we spend the first cycle in mode 1?
         } else {
             ++mem.ly;
         }
@@ -146,8 +130,6 @@ void LCD::UpdateLYCompareSignal() {
     if (LY_compare_equal_forced_zero) {
         SetLYCompare(mem.ly_compare == LY_last_cycle);
 
-        stat_interrupt_signal |= (LYCompareCheckEnabled() && LYCompareEqual());
-
         // Don't update LY_last_cycle.
         LY_compare_equal_forced_zero = false;
     } else if (mem.ly != LY_last_cycle) {
@@ -158,6 +140,21 @@ void LCD::UpdateLYCompareSignal() {
         SetLYCompare(mem.ly_compare == mem.ly);
         LY_last_cycle = mem.ly;
     }
+}
+
+void LCD::CheckSTATInterruptSignal() {
+    stat_interrupt_signal |= (Mode0CheckEnabled() && STATMode() == 0);
+    stat_interrupt_signal |= (Mode1CheckEnabled() && STATMode() == 1);
+    stat_interrupt_signal |= (Mode2CheckEnabled() && STATMode() == 2);
+    stat_interrupt_signal |= (LYCompareCheckEnabled() && LYCompareEqual());
+
+    // The STAT interrupt is triggered on a rising edge of the STAT interrupt signal, which is a 4 way logical OR
+    // between each STAT check. As a result, if two events which would have triggered a STAT interrupt happen on
+    // consecutive machine cycles, the second one will not cause an interrupt to be requested.
+    if (stat_interrupt_signal && !prev_interrupt_signal) {
+        mem.RequestInterrupt(Interrupt::STAT);
+    }
+    prev_interrupt_signal = stat_interrupt_signal;
 }
 
 void LCD::RenderScanline() {

@@ -34,6 +34,8 @@ void CPU::PrintRegisterState() {
     std::cout << ", BC = 0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(Read16(Reg16::BC));
     std::cout << ", DE = 0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(Read16(Reg16::DE));
     std::cout << ", HL = 0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(Read16(Reg16::HL));
+    std::cout << ", IF = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF0F));
+    std::cout << ", IE = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFFFF));
     std::cout << "\n";
 }
 
@@ -59,7 +61,6 @@ void Timer::PrintRegisterState() {
     std::cout << ", TIMA = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF05));
     std::cout << ", TMA = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF06));
     std::cout << ", TAC = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF07));
-    std::cout << ", IF = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF0F));
     std::cout << ", pt_inc = " << std::setw(1) << prev_tima_inc;
     std::cout << ", pt_val = " << std::setw(2) << static_cast<unsigned int>(prev_tima_val);
     std::cout << ", t_of = " << std::setw(1) << tima_overflow;
@@ -74,6 +75,8 @@ void LCD::PrintRegisterState() {
     std::cout << ", LYC = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF45));
     std::cout << ", LCD On = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(lcd_on);
     std::cout << ", cycles = " << std::dec << std::setw(3) << scanline_cycles;
+    std::cout << ", bg_en = " << std::setw(1) << BGEnabled();
+    std::cout << ", win_en = " << std::setw(1) << WindowEnabled();
     std::cout << ", stat_sig = " << std::setw(1) << stat_interrupt_signal << "\n";
 }
 

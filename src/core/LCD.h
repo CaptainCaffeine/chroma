@@ -43,6 +43,7 @@ private:
     void UpdateLY();
 
     bool stat_interrupt_signal = false, prev_interrupt_signal = false;
+    void CheckSTATInterruptSignal();
 
     // LY=LYC interrupt
     u8 LY_last_cycle = 0xFF;
@@ -53,6 +54,7 @@ private:
     static constexpr std::size_t num_tiles = 32;
     static constexpr std::size_t tile_bytes = 16;
     const std::array<unsigned int, 4> shades{0xFFFFFF00, 0xAAAAAA00, 0x55555500, 0x00000000};
+
     std::array<u8, num_tiles> row_tile_map;
     std::array<s8, num_tiles> signed_row_tile_map;
     std::array<u8, num_tiles*tile_bytes> tile_data;
@@ -61,7 +63,6 @@ private:
     std::array<u32, 160*144> framebuffer{};
 
     void RenderScanline();
-
     template<typename T, std::size_t N>
     void FetchTiles(const std::array<T, N>& tile_indicies) {
         u16 region_start_addr = TileDataStartAddr();
@@ -85,9 +86,6 @@ private:
     bool Mode0CheckEnabled() const { return mem.stat & 0x08; }
 
     // LCDC functions
-    // Separate BG and window functions? Or have a BG and Window enum passed as parameter? Perhaps
-    // enum class Drawing{BG, Window};
-    // GetTileMapStartAddr(Drawing drawing) {u8 mask = (drawing == Drawing::BG) ? 0x08 : 0x40; ... test & return addr}
     u16 TileDataStartAddr() const { return (mem.lcdc & 0x10) ? 0x8000 : 0x9000; }
     bool BGEnabled() const { return mem.lcdc & 0x01; }
     u16 BGTileMapStartAddr() const { return (mem.lcdc & 0x08) ? 0x9C00 : 0x9800; }
