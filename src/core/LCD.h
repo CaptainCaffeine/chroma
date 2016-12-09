@@ -52,6 +52,7 @@ private:
 
     // Drawing
     static constexpr std::size_t num_tiles = 32;
+    static constexpr std::size_t tile_map_row_bytes = 32;
     static constexpr std::size_t tile_bytes = 16;
     const std::array<unsigned int, 4> shades{0xFFFFFF00, 0xAAAAAA00, 0x55555500, 0x00000000};
 
@@ -59,17 +60,23 @@ private:
     std::array<s8, num_tiles> signed_row_tile_map;
     std::array<u8, num_tiles*tile_bytes> tile_data;
 
-    std::array<u32, 176> row_pixels;
+    std::array<u32, 176> bg_row_pixels;
+    std::array<u32, 168> win_row_pixels;
     std::array<u32, 160*144> framebuffer{};
 
+    u8 window_y_frame_val = 0x00;
+
     void RenderScanline();
+    void RenderBackground();
+    void RenderWindow();
+
     template<typename T, std::size_t N>
     void FetchTiles(const std::array<T, N>& tile_indicies) {
         u16 region_start_addr = TileDataStartAddr();
         auto tile_data_iter = tile_data.begin();
         // T is either u8 or s8, depending on the current tile data region.
         for (T index : tile_indicies) {
-            u16 tile_addr = region_start_addr + index * tile_bytes;
+            u16 tile_addr = region_start_addr + index * static_cast<T>(tile_bytes);
             mem.CopyFromVRAM(tile_addr, tile_bytes, tile_data_iter);
             tile_data_iter += tile_bytes;
         }
@@ -89,7 +96,8 @@ private:
     u16 TileDataStartAddr() const { return (mem.lcdc & 0x10) ? 0x8000 : 0x9000; }
     bool BGEnabled() const { return mem.lcdc & 0x01; }
     u16 BGTileMapStartAddr() const { return (mem.lcdc & 0x08) ? 0x9C00 : 0x9800; }
-    bool WindowEnabled() const { return mem.lcdc & 0x20; }
+    // The window can be disabled by either disabling it in LCDC or by pushing it off the screen.
+    bool WindowEnabled() const { return (mem.lcdc & 0x20) && (mem.window_x < 167) && (window_y_frame_val < 144); }
     u16 WindowTileMapStartAddr() const { return (mem.lcdc & 0x40) ? 0x9C00 : 0x9800; }
     bool SpritesEnabled() const { return mem.lcdc & 0x02; }
 };

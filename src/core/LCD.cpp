@@ -116,6 +116,9 @@ void LCD::UpdateLY() {
         // Otherwise, increment LY.
         if (mem.ly == 0 && STATMode() == 1) {
             SetSTATMode(0); // Does this actually happen? Or do we spend the first cycle in mode 1?
+
+            // Changes to the window Y position register are ignored until next VBLANK.
+            window_y_frame_val = mem.window_y;
         } else {
             ++mem.ly;
         }
@@ -158,74 +161,168 @@ void LCD::CheckSTATInterruptSignal() {
 }
 
 void LCD::RenderScanline() {
-    if (BGEnabled()) {
-        // The background is composed of 32x32 tiles of 8x8 pixels. The scroll registers (SCY and SCX) allow the
-        // top-left corner of the screen to be positioned anywhere on the background, and the background wraps around
-        // when it hits the edge.
-        // The background tile map is located at either 0x9800-0x9BFF or 0x9C00-0x9FFF, and consists of 32 rows
-        // of 32 bytes each to index the background tiles. We first determine which row we need to fetch from the
-        // current values of SCY and LY.
-        unsigned int row_num = ((mem.scroll_y + mem.ly) / 8) % num_tiles;
-        u16 tile_map_addr = BGTileMapStartAddr() + row_num * num_tiles;
+    unsigned int num_bg_pixels = 160;
 
-        // Get the row of tile indicies from VRAM.
-        mem.CopyFromVRAM(tile_map_addr, num_tiles, row_tile_map.begin());
+    if (WindowEnabled()) {
+        RenderWindow();
 
-        // The background tiles are located at either 0x8000-0x8FFF or 0x8800-0x97FF. For the first region, the
-        // tile map indicies are unsigned offsets from 0x8000; for the second region, the indicies are signed
-        // offsets from 0x9000.
-        // Fetch the tile bitmaps pointed to by the indicies in the tile map row. Each tile is 16 bytes.
-        if (TileDataStartAddr() == 0x9000) {
-            // Tile map indexes are signed, with 0 at 0x9000.
-            std::copy(row_tile_map.cbegin(), row_tile_map.cend(), signed_row_tile_map.begin());
-            FetchTiles(signed_row_tile_map);
-        } else {
-            // Tile map indexes are unsigned, with 0 at 0x8000.
-            FetchTiles(row_tile_map);
+        num_bg_pixels = (mem.window_x < 7) ? 0 : mem.window_x - 7;
+
+        // The `win_row_pixels` buffer is 21 full tiles wide and contains 168 pixels.
+        // If WX is less than 7, some of the first tile is cut off.
+        auto win_start_iter = win_row_pixels.begin();
+        if (mem.window_x < 7) {
+            win_start_iter += 7 - mem.window_x;
         }
 
-        // Determine which row of pixels we're on.
-        unsigned int tile_row = (mem.scroll_y + mem.ly) % 8;
-        // Determine in which tile we start reading data.
-        unsigned int start_tile = mem.scroll_x / 8;
-
-        // Each row of 8 pixels in a tile is 2 bytes. The first byte contains the low bit of the palette index for
-        // each pixel, and the second byte contains the high bit of the palette index. The background palette in
-        // DMG mode is in the BGP register at 0xFF47.
-
-        // Decode the tile data and determine the pixel colors.
-        std::size_t tile_data_index = tile_row * 2 + start_tile * 16;
-
-        auto row_pixel = row_pixels.begin();
-        while (row_pixel != row_pixels.end()) {
-            // Get the two bytes describing the row of the current tile.
-            u8 lsb = tile_data[tile_data_index];
-            u8 msb = tile_data[tile_data_index + 1];
-
-            // Combine the bytes together to get the palette indicies.
-            std::array<unsigned int, 8> pixel_indicies;
-            for (std::size_t j = 0; j < 7; ++j) {
-                pixel_indicies[j] = ((lsb >> (7-j)) & 0x01) | ((msb >> (6-j)) & 0x02);
-            }
-            pixel_indicies[7] = (lsb & 0x01) | ((msb << 1) & 0x02); // Can't shift right by -1...
-
-            // Get the colours corresponding to the palette indicies.
-            for (auto plt_index : pixel_indicies) {
-                *row_pixel++ = shades[(mem.bg_palette >> (plt_index * 2)) & 0x03];
-            }
-
-            // Increment the tile index to the next tile, and wrap around if we hit the end.
-            tile_data_index = (tile_data_index + 16) % tile_data.size();
-        }
-
-        // The `row_pixels` buffer is 22 full tiles wide and contains 176 pixels.
-        // We determine which 160 pixels get transferred to the framebuffer from the SCX register.
-        auto row_start_iter = row_pixels.begin() + (mem.scroll_x % 8);
-        std::copy(row_start_iter, row_start_iter + 160, framebuffer.begin() + mem.ly * 160);
-    } else if (WindowEnabled()) {
-        // The Window tile map is located at either 0x9800-0x9BFF or 0x9C00-0x9FFF.
-    } else if (SpritesEnabled()) {
+        // The number of window pixels to copy depends on the number of background pixels copied.
+        std::copy_n(win_row_pixels.begin(), 160 - num_bg_pixels, framebuffer.begin() + mem.ly * 160 + num_bg_pixels);
     }
+
+    if (BGEnabled()) {
+        RenderBackground();
+
+        // The `bg_row_pixels` buffer is 22 full tiles wide and contains 176 pixels.
+        // We determine which 160 pixels get transferred to the framebuffer from the SCX register.
+        auto bg_start_iter = bg_row_pixels.begin() + (mem.scroll_x % 8);
+        std::copy_n(bg_start_iter, num_bg_pixels, framebuffer.begin() + mem.ly * 160);
+    } else {
+        // If disabled, we need to blank what isn't covered by the window.
+        std::fill_n(framebuffer.begin() + mem.ly * 160, num_bg_pixels, 0xFFFFFF00);
+    }
+}
+
+void LCD::RenderBackground() {
+    // The background is composed of 32x32 tiles of 8x8 pixels. The scroll registers (SCY and SCX) allow the
+    // top-left corner of the screen to be positioned anywhere on the background, and the background wraps around
+    // when it hits the edge.
+
+    // The background tile map is located at either 0x9800-0x9BFF or 0x9C00-0x9FFF, and consists of 32 rows
+    // of 32 bytes each to index the background tiles. We first determine which row we need to fetch from the
+    // current values of SCY and LY.
+    unsigned int row_num = ((mem.scroll_y + mem.ly) / 8) % num_tiles;
+    u16 tile_map_addr = BGTileMapStartAddr() + row_num * tile_map_row_bytes;
+
+    // Get the row of tile indicies from VRAM.
+    mem.CopyFromVRAM(tile_map_addr, tile_map_row_bytes, row_tile_map.begin());
+
+    // The background tiles are located at either 0x8000-0x8FFF or 0x8800-0x97FF. For the first region, the
+    // tile map indicies are unsigned offsets from 0x8000; for the second region, the indicies are signed
+    // offsets from 0x9000.
+    // Fetch the tile bitmaps pointed to by the indicies in the tile map row. Each tile is 16 bytes.
+    if (TileDataStartAddr() == 0x9000) {
+        // Tile map indexes are signed, with 0 at 0x9000.
+        std::copy(row_tile_map.cbegin(), row_tile_map.cend(), signed_row_tile_map.begin());
+        FetchTiles(signed_row_tile_map);
+    } else {
+        // Tile map indexes are unsigned, with 0 at 0x8000.
+        FetchTiles(row_tile_map);
+    }
+
+    // Determine which row of pixels we're on.
+    unsigned int tile_row = (mem.scroll_y + mem.ly) % 8;
+    // Determine in which tile we start reading data.
+    unsigned int start_tile = mem.scroll_x / 8;
+
+    // Each row of 8 pixels in a tile is 2 bytes. The first byte contains the low bit of the palette index for
+    // each pixel, and the second byte contains the high bit of the palette index. The background palette in
+    // DMG mode is in the BGP register at 0xFF47.
+
+    // Decode the tile data and determine the pixel colors.
+    std::size_t tile_data_index = tile_row * 2 + start_tile * 16;
+
+    auto row_pixel = bg_row_pixels.begin();
+    while (row_pixel != bg_row_pixels.end()) {
+        // Get the two bytes describing the row of the current tile.
+        u8 lsb = tile_data[tile_data_index];
+        u8 msb = tile_data[tile_data_index + 1];
+
+        // Combine the bytes together to get the palette indicies.
+        std::array<unsigned int, 8> pixel_indicies;
+        for (std::size_t j = 0; j < 7; ++j) {
+            pixel_indicies[j] = ((lsb >> (7-j)) & 0x01) | ((msb >> (6-j)) & 0x02);
+        }
+        pixel_indicies[7] = (lsb & 0x01) | ((msb << 1) & 0x02); // Can't shift right by -1...
+
+        // Get the colours corresponding to the palette indicies.
+        for (auto plt_index : pixel_indicies) {
+            *row_pixel++ = shades[(mem.bg_palette >> (plt_index * 2)) & 0x03];
+        }
+
+        // Increment the tile index to the next tile, and wrap around if we hit the end.
+        tile_data_index = (tile_data_index + 16) % tile_data.size();
+    }
+}
+
+void LCD::RenderWindow() {
+    // The window is composed of 32x32 tiles of 8x8 pixels (of which only 21x18 tiles can be seen). Unlike the
+    // background, the window cannot be scrolled; it is always displayed from its top-left corner and does not
+    // wrap around. Instead, the position of its top-left corner can be set with the WY and WX registers.
+
+    // The behaviour of WY differs from SCY. At the beginning of a frame, the LCD hardware stores the current value
+    // of WY and ignores all writes to that register until the next VBLANK. In addition, the row of window pixels
+    // rendered to a scanline is not directly dependent on LY. While the window is enabled, the rows of the window
+    // are rendered one after another like the background, but if it is disabled during HBLANK and later re-enabled
+    // before the frame has ended, the window will resume drawing from the exact scanline at which it left off;
+    // ignoring the LY increments that happened while it was disabled.
+
+    // The window tile map is located at either 0x9800-0x9BFF or 0x9C00-0x9FFF, and consists of 32 rows
+    // of 32 bytes each to index the window tiles. We first determine which row we need to fetch from the
+    // current internal value of the window Y position.
+    u16 tile_map_addr = WindowTileMapStartAddr() + (window_y_frame_val / 8) * tile_map_row_bytes;
+
+    // Get the row of tile indicies from VRAM.
+    mem.CopyFromVRAM(tile_map_addr, tile_map_row_bytes, row_tile_map.begin());
+
+    // The window tiles are located at either 0x8000-0x8FFF or 0x8800-0x97FF. For the first region, the
+    // tile map indicies are unsigned offsets from 0x8000; for the second region, the indicies are signed
+    // offsets from 0x9000.
+    // Fetch the tile bitmaps pointed to by the indicies in the tile map row. Each tile is 16 bytes.
+    if (TileDataStartAddr() == 0x9000) {
+        // Tile map indexes are signed, with 0 at 0x9000.
+        std::copy(row_tile_map.cbegin(), row_tile_map.cend(), signed_row_tile_map.begin());
+        FetchTiles(signed_row_tile_map);
+    } else {
+        // Tile map indexes are unsigned, with 0 at 0x8000.
+        FetchTiles(row_tile_map);
+    }
+
+    // Each row of 8 pixels in a tile is 2 bytes. The first byte contains the low bit of the palette index for
+    // each pixel, and the second byte contains the high bit of the palette index. The window palette in
+    // DMG mode is in the BGP register at 0xFF47.
+
+    // Determine which row of pixels we're on.
+    unsigned int tile_row = (window_y_frame_val) % 8;
+    // The window always starts rendering at the leftmost/first tile.
+    std::size_t tile_data_index = tile_row * 2;
+    // Stop rendering when we hit the edge of the screen.
+    auto row_end_tile = win_row_pixels.begin() + ((166 - mem.window_x) / 8 + 1) * 16;
+
+    // Decode the tile data and determine the pixel colors.
+    auto row_pixel = win_row_pixels.begin();
+    while (row_pixel != row_end_tile) {
+        // Get the two bytes describing the row of the current tile.
+        u8 lsb = tile_data[tile_data_index];
+        u8 msb = tile_data[tile_data_index + 1];
+
+        // Combine the bytes together to get the palette indicies.
+        std::array<unsigned int, 8> pixel_indicies;
+        for (std::size_t j = 0; j < 7; ++j) {
+            pixel_indicies[j] = ((lsb >> (7-j)) & 0x01) | ((msb >> (6-j)) & 0x02);
+        }
+        pixel_indicies[7] = (lsb & 0x01) | ((msb << 1) & 0x02); // Can't shift right by -1...
+
+        // Get the colours corresponding to the palette indicies.
+        for (auto plt_index : pixel_indicies) {
+            *row_pixel++ = shades[(mem.bg_palette >> (plt_index * 2)) & 0x03];
+        }
+
+        // Increment the tile index to the next tile.
+        tile_data_index += 16;
+    }
+
+    // Increment internal window Y position.
+    ++window_y_frame_val;
 }
 
 } // End namespace Core
