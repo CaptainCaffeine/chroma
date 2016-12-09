@@ -425,10 +425,8 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     case 0xFF0F:
         // If an instruction writes to IF on the same machine cycle an interrupt would have been triggered, the
         // written value remains in IF.
-        if (!IF_written_this_cycle) {
-            interrupt_flags = data & 0x1F;
-            IF_written_this_cycle = true;
-        }
+        interrupt_flags = data & 0x1F;
+        IF_written_this_cycle = true;
         break;
     // NR10 -- Sound Mode 1 Sweep Register
     case 0xFF10:
