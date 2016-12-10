@@ -28,16 +28,14 @@ namespace Core {
 
 class Memory {
 public:
-    Memory(const Console game_boy, const CartridgeHeader header, std::vector<u8> rom_contents);
+    Memory(const Console game_boy, const CartridgeHeader& header, std::vector<u8> rom_contents);
 
     const Console console;
     const GameMode game_mode;
     bool cgb_double_speed = false;
 
     u8 ReadMem8(const u16 addr) const;
-    u16 ReadMem16(const u16 addr) const;
     void WriteMem8(const u16 addr, const u8 data);
-    void WriteMem16(const u16 addr, const u16 data);
 
     // Interrupt functions
     void RequestInterrupt(Interrupt intr) {
@@ -55,16 +53,7 @@ public:
     void IncrementDIV(unsigned int cycles) { divider += cycles; }
 
     // DMA functions
-    enum class DMAState {Inactive, RegWritten, Starting, Active};
-    DMAState state_oam_dma = DMAState::Inactive;
-    bool dma_blocking_memory = false;
-
-    u16 oam_transfer_addr;
-    u8 oam_transfer_byte;
-    unsigned int bytes_read = 0;
-
     void UpdateOAM_DMA();
-    u8 DMACopy(const u16 addr) const;
 
     // LCD functions
     template<typename DestIter>
@@ -131,10 +120,23 @@ private:
     std::vector<u8> hram;
     std::vector<u8> ext_ram;
 
+    // I/O register functions
     void IORegisterInit();
     u8 ReadIORegisters(const u16 addr) const;
     void WriteIORegisters(const u16 addr, const u8 data);
 
+    // DMA utilities
+    enum class DMAState {Inactive, RegWritten, Starting, Active};
+    DMAState state_oam_dma = DMAState::Inactive;
+    bool dma_blocking_memory = false;
+
+    u16 oam_transfer_addr;
+    u8 oam_transfer_byte;
+    unsigned int bytes_read = 0;
+
+    u8 DMACopy(const u16 addr) const;
+
+    // MBC functions
     u8 ReadExternalRAM(const u16 addr) const;
     void WriteExternalRAM(const u16 addr, const u8 data);
     void WriteMBCControlRegisters(const u16 addr, const u8 data);

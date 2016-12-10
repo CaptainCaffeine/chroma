@@ -18,7 +18,7 @@
 
 namespace Core {
 
-Memory::Memory(const Console game_boy, const CartridgeHeader cart_header, std::vector<u8> rom_contents)
+Memory::Memory(const Console game_boy, const CartridgeHeader& cart_header, std::vector<u8> rom_contents)
         : console(game_boy)
         , game_mode(cart_header.game_mode)
         , mbc_mode(cart_header.mbc_mode)
@@ -124,13 +124,6 @@ u8 Memory::ReadMem8(const u16 addr) const {
     }
 }
 
-u16 Memory::ReadMem16(const u16 addr) const {
-    u8 byte_lo = ReadMem8(addr);
-    u8 byte_hi = ReadMem8(addr+1);
-
-    return (static_cast<u16>(byte_hi) << 8) | static_cast<u16>(byte_lo);
-}
-
 void Memory::WriteMem8(const u16 addr, const u8 data) {
     if (addr >= 0xFF00) {
         // 0xFF00-0xFFFF are still accessible during OAM DMA.
@@ -178,11 +171,6 @@ void Memory::WriteMem8(const u16 addr, const u8 data) {
             // AGB: writes are ignored
         }
     }
-}
-
-void Memory::WriteMem16(const u16 addr, const u16 data) {
-    WriteMem8(addr, static_cast<u8>(data));
-    WriteMem8(addr+1, static_cast<u8>(data >> 8));
 }
 
 u8 Memory::ReadIORegisters(const u16 addr) const {
@@ -275,22 +263,8 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
     case 0xFF26:
         return sound_on | 0x70;
     // Wave Pattern RAM
-    case 0xFF30:
-    case 0xFF31:
-    case 0xFF32:
-    case 0xFF33:
-    case 0xFF34:
-    case 0xFF35:
-    case 0xFF36:
-    case 0xFF37:
-    case 0xFF38:
-    case 0xFF39:
-    case 0xFF3A:
-    case 0xFF3B:
-    case 0xFF3C:
-    case 0xFF3D:
-    case 0xFF3E:
-    case 0xFF3F:
+    case 0xFF30: case 0xFF31: case 0xFF32: case 0xFF33: case 0xFF34: case 0xFF35: case 0xFF36: case 0xFF37:
+    case 0xFF38: case 0xFF39: case 0xFF3A: case 0xFF3B: case 0xFF3C: case 0xFF3D: case 0xFF3E: case 0xFF3F:
         return wave_ram[addr - 0xFF30];
     // LCDC -- LCD control
     case 0xFF40:
@@ -337,22 +311,14 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
     // VBK -- VRAM bank number
     case 0xFF4F:
         if (console == Console::CGB) {
-            if (game_mode == GameMode::DMG) {
-                // GBC in DMG mode always has bank 0 selected.
-                return 0xFE;
-            } else {
-                return static_cast<u8>(vram_bank_num) | 0xFE;
-            }
+            // CGB in DMG mode always has bank 0 selected.
+            return ((game_mode == GameMode::CGB) ? (static_cast<u8>(vram_bank_num) | 0xFE) : 0xFE);
         } else {
             return 0xFF;
         }
     // SVBK -- WRAM bank number
     case 0xFF70:
-        if (game_mode == GameMode::DMG) {
-            return 0xFF;
-        } else {
-            return static_cast<u8>(wram_bank_num) | 0xF8;
-        }
+        return ((game_mode == GameMode::CGB) ? (static_cast<u8>(wram_bank_num) | 0xF8) : 0xFF);
 
     // Unused/unusable I/O registers all return 0xFF when read.
     default:
@@ -483,22 +449,8 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         sound_on = data & 0x8F;
         break;
     // Wave Pattern RAM
-    case 0xFF30:
-    case 0xFF31:
-    case 0xFF32:
-    case 0xFF33:
-    case 0xFF34:
-    case 0xFF35:
-    case 0xFF36:
-    case 0xFF37:
-    case 0xFF38:
-    case 0xFF39:
-    case 0xFF3A:
-    case 0xFF3B:
-    case 0xFF3C:
-    case 0xFF3D:
-    case 0xFF3E:
-    case 0xFF3F:
+    case 0xFF30: case 0xFF31: case 0xFF32: case 0xFF33: case 0xFF34: case 0xFF35: case 0xFF36: case 0xFF37:
+    case 0xFF38: case 0xFF39: case 0xFF3A: case 0xFF3B: case 0xFF3C: case 0xFF3D: case 0xFF3E: case 0xFF3F:
         wave_ram[addr - 0xFF30] = data;
         break;
     // LCDC -- LCD control
@@ -588,352 +540,6 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
 
     default:
-        break;
-    }
-}
-
-void Memory::UpdateOAM_DMA() {
-    if (state_oam_dma == DMAState::RegWritten) {
-        oam_transfer_addr = static_cast<u16>(oam_dma_start) << 8;
-        bytes_read = 0;
-
-        state_oam_dma = DMAState::Starting;
-    } else if (state_oam_dma == DMAState::Starting) {
-        // No write on the startup cycle.
-        oam_transfer_byte = DMACopy(oam_transfer_addr);
-        ++bytes_read;
-
-        state_oam_dma = DMAState::Active;
-
-        // The current OAM DMA state is not enough to determine if the external bus is currently being blocked.
-        // The bus only becomes unblocked when the DMA state transitions from active to inactive. When starting 
-        // a DMA while none are currently active, memory remains accessible for the two cycles when the DMA state is
-        // RegWritten and Starting. But, if a DMA is started while one is already active, the state goes from
-        // Active to RegWritten, without becoming Inactive, so memory remains inaccessible for those two cycles.
-        dma_blocking_memory = true;
-    } else if (state_oam_dma == DMAState::Active) {
-        // Write the byte which was read last cycle to OAM.
-        if ((stat & 0x02) != 1) {
-            oam[bytes_read - 1] = oam_transfer_byte;
-        } else {
-            oam[bytes_read - 1] = 0xFF;
-        }
-
-        if (bytes_read == 160) {
-            // Don't read on the last cycle.
-            state_oam_dma = DMAState::Inactive;
-            dma_blocking_memory = false;
-            return;
-        }
-
-        // Read the next byte.
-        oam_transfer_byte = DMACopy(oam_transfer_addr + bytes_read);
-        ++bytes_read;
-    }
-}
-
-u8 Memory::DMACopy(const u16 addr) const {
-    if (addr < 0x4000) {
-        // Fixed ROM bank
-        return rom[addr];
-    } else if (addr < 0x8000) {
-        // Switchable ROM bank.
-        return rom[addr + 0x4000*((rom_bank_num % num_rom_banks) - 1)];
-    } else if (addr < 0xA000) {
-        // VRAM -- switchable in CGB mode
-        // Not accessible during screen mode 3.
-        if ((stat & 0x03) != 3) {
-            return vram[addr - 0x8000 + 0x2000*vram_bank_num];
-        } else {
-            return 0xFF;
-        }
-    } else if (addr < 0xC000) {
-        // External RAM bank.
-        return ReadExternalRAM(addr);
-    } else if (addr < 0xD000) {
-        // WRAM bank 0
-        return wram[addr - 0xC000];
-    } else if (addr < 0xE000) {
-        // WRAM bank 1 (switchable from 1-7 in CGB mode)
-        return wram[addr - 0xC000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
-    } else if (addr < 0xF200) {
-        // Echo of C000-DDFF
-        return wram[addr - 0xE000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
-        // For some unlicensed games and flashcarts on pre-CGB devices, reads from this region read both WRAM and
-        // exernal RAM, and bitwise AND the two values together (source: AntonioND timing docs).
-    } else {
-        // Only 0x00-0xF1 are valid OAM DMA start addresses (several sources make that claim, at least. I've seen
-        // differing ranges mentioned but this seems to work for now).
-        return 0xFF;
-    }
-}
-
-u8 Memory::ReadExternalRAM(const u16 addr) const {
-    if (ext_ram_enabled) {
-        u16 adjusted_addr = addr - 0xA000 + 0x2000*ram_bank_num;
-        switch (mbc_mode) {
-        case MBC::MBC1:
-            // Out of bounds reads return 0xFF.
-            if (adjusted_addr < ext_ram.size()) {
-                return ext_ram[adjusted_addr];
-            } else {
-                return 0xFF;
-            }
-            break;
-        case MBC::MBC2:
-            // MBC2 RAM range is only A000-A1FF.
-            if (adjusted_addr < ext_ram.size()) {
-                return ext_ram[adjusted_addr] & 0xF0;
-            } else {
-                return 0xFF;
-            }
-            break;
-        case MBC::MBC3:
-            // RAM bank or RTC register?
-            if (ram_bank_num & 0x08) {
-                // Any address in the range will work to write the RTC registers.
-                switch (ram_bank_num) {
-                case 0x08:
-                    return rtc_seconds;
-                    break;
-                case 0x09:
-                    return rtc_minutes;
-                    break;
-                case 0x0A:
-                    return rtc_hours;
-                    break;
-                case 0x0B:
-                    return rtc_day;
-                    break;
-                case 0x0C:
-                    return rtc_flags | 0x3E;
-                    break;
-                default:
-                    // I'm assuming an invalid register value (0x0D-0x0F) returns 0xFF, needs confirmation though.
-                    return 0xFF;
-                    break;
-                }
-            } else {
-                // Out of bounds reads return 0xFF.
-                if (adjusted_addr < ext_ram.size()) {
-                    return ext_ram[adjusted_addr];
-                } else {
-                    return 0xFF;
-                }
-            }
-            break;
-        case MBC::MBC5:
-            if (rumble_present) {
-                // Carts with rumble cannot use bit 4 of the RAM bank register for bank selection.
-                adjusted_addr = addr - 0xA000 + 0x2000 * (ram_bank_num & 0x07);
-            }
-
-            // Out of bounds reads return 0xFF.
-            if (adjusted_addr < ext_ram.size()) {
-                return ext_ram[adjusted_addr];
-            } else {
-                return 0xFF;
-            }
-            break;
-
-        default:
-            return 0xFF;
-            break;
-        }
-    } else {
-        // Reads from this region when the RAM banks are disabled or not present return 0xFF.
-        return 0xFF;
-    }
-}
-
-void Memory::WriteExternalRAM(const u16 addr, const u8 data) {
-    // Writes are ignored if external RAM is disabled or not present.
-    if (ext_ram_enabled) {
-        u16 adjusted_addr = addr - 0xA000 + 0x2000*ram_bank_num;
-        switch (mbc_mode) {
-        case MBC::MBC1:
-            // Ignore out-of-bounds writes.
-            if (adjusted_addr < ext_ram.size()) {
-                ext_ram[adjusted_addr] = data;
-            }
-            break;
-        case MBC::MBC2:
-            // MBC2 RAM range is only A000-A1FF. Only the lower nibble of the bytes in this region are used.
-            if (adjusted_addr < ext_ram.size()) {
-                ext_ram[adjusted_addr] = data & 0x0F;
-            }
-            break;
-        case MBC::MBC3:
-            // RAM bank or RTC register?
-            if (ram_bank_num & 0x08) {
-                // Any address in the range will work to write the RTC registers.
-                switch (ram_bank_num) {
-                case 0x08:
-                    rtc_seconds = data % 60;
-                    break;
-                case 0x09:
-                    rtc_minutes = data % 60;
-                    break;
-                case 0x0A:
-                    rtc_hours = data % 24;
-                    break;
-                case 0x0B:
-                    rtc_day = data;
-                    break;
-                case 0x0C:
-                    rtc_flags = data & 0xC1;
-                    break;
-                default:
-                    // I'm assuming an invalid register value (0x0D-0x0F) is just ignored.
-                    break;
-                }
-            } else {
-                // Ignore out-of-bounds writes.
-                if (adjusted_addr < ext_ram.size()) {
-                    ext_ram[adjusted_addr] = data;
-                }
-            }
-            break;
-        case MBC::MBC5:
-            if (rumble_present) {
-                // Carts with rumble cannot use bit 4 of the RAM bank register for bank selection.
-                adjusted_addr = addr - 0xA000 + 0x2000 * (ram_bank_num & 0x07);
-            }
-
-            // Ignore out-of-bounds writes.
-            if (adjusted_addr < ext_ram.size()) {
-                ext_ram[adjusted_addr] = data;
-            }
-            break;
-
-        default:
-            break;
-        }
-    }
-}
-
-void Memory::WriteMBCControlRegisters(const u16 addr, const u8 data) {
-    switch (mbc_mode) {
-    case MBC::MBC1:
-        if (addr < 0x2000) {
-            // RAM enable register -- RAM banking is enabled if a byte with lower nibble 0xA is written
-            if (ext_ram_present && (data & 0x0F) == 0x0A) {
-                ext_ram_enabled = true;
-            } else {
-                ext_ram_enabled = false;
-            }
-        } else if (addr < 0x4000) {
-            // ROM bank register
-            // Only the lower 5 bits of the written value are considered -- preserve the upper bits.
-            rom_bank_num = (rom_bank_num & 0x60) | (data & 0x1F);
-
-            // 0x00, 0x20, 0x40, 0x60 all map to 0x01, 0x21, 0x41, 0x61 respectively.
-            if (rom_bank_num == 0x00 || rom_bank_num == 0x20 || rom_bank_num == 0x40 || rom_bank_num == 0x60) {
-                ++rom_bank_num;
-            }
-        } else if (addr < 0x6000) {
-            // RAM bank register (or upper bits ROM bank)
-            // Only the lower 2 bits of the written value are considered.
-            if (ram_bank_mode) {
-                ram_bank_num = data & 0x03;
-            } else {
-                rom_bank_num = (rom_bank_num & 0x1F) | (data & 0x03) << 5;
-            }
-        } else if (addr < 0x8000) {
-            // Memory mode -- selects whether the two bits in the above register act as the RAM bank number or 
-            // the upper bits of the ROM bank number.
-            ram_bank_mode = data & 0x01;
-            if (ram_bank_mode) {
-                // The 5th and 6th bits of the ROM bank number become the RAM bank number.
-                ram_bank_num = (rom_bank_num & 0x60) >> 5;
-                rom_bank_num &= 0x1F;
-            } else {
-                // The RAM bank number becomes the 5th and 6th bits of the ROM bank number.
-                rom_bank_num |= ram_bank_num << 5;
-                ram_bank_num = 0x00;
-            }
-        }
-        break;
-    case MBC::MBC2:
-        if (addr < 0x2000) {
-            // RAM enable register -- RAM banking is enabled if a byte with lower nibble 0xA is written
-            // The least significant bit of the upper address byte must be zero to enable or disable external ram.
-            if (!(addr & 0x0100)) {
-                if (ext_ram_present && (data & 0x0F) == 0x0A) {
-                    ext_ram_enabled = true;
-                } else {
-                    ext_ram_enabled = false;
-                }
-            }
-        } else if (addr < 0x4000) {
-            // ROM bank register -- The least significant bit of the upper address byte must be 1 to switch ROM banks.
-            if (addr & 0x0100) {
-                // Only the lower 4 bits of the written value are considered.
-                rom_bank_num = data & 0x0F;
-                if (rom_bank_num == 0) {
-                    ++rom_bank_num;
-                }
-            }
-        }
-        // MBC2 does not have RAM banking.
-        break;
-    case MBC::MBC3:
-        if (addr < 0x2000) {
-            // RAM banking and RTC registers enable register -- enabled if a byte with lower nibble 0xA is written.
-            if (ext_ram_present && (data & 0x0F) == 0x0A) {
-                ext_ram_enabled = true;
-            } else {
-                ext_ram_enabled = false;
-            }
-        } else if (addr < 0x4000) {
-            // ROM bank register
-            // The 7 lower bits of the written value select the ROM bank to be used at 0x4000-0x7FFF.
-            rom_bank_num = data & 0x7F;
-
-            // Selecting 0x00 will select bank 0x01. Unlike MBC1, the banks 0x20, 0x40, and 0x60 can all be selected.
-            if (rom_bank_num == 0x00) {
-                ++rom_bank_num;
-            }
-        } else if (addr < 0x6000) {
-            // RAM bank selection or RTC register selection register
-            // Values 0x00-0x07 select one of the RAM banks, and values 0x08-0x0C select one of the RTC registers.
-            ram_bank_num = data & 0x0F;
-        } else if (addr < 0x8000) {
-            // Latch RTC data.
-            // Writing a 0x00 then a 0x01 latches the current time into the RTC registers. Some games don't always
-            // write 0x00 before writing 0x01, and other games write 0x00 before and after writing a 0x01.
-            // TODO: RTC unimplemented.
-        }
-        break;
-    case MBC::MBC5:
-        if (addr < 0x2000) {
-            // RAM banking enable register -- enabled if a byte with lower nibble 0xA is written.
-            if (ext_ram_present && (data & 0x0F) == 0x0A) {
-                ext_ram_enabled = true;
-            } else {
-                ext_ram_enabled = false;
-            }
-        } else if (addr < 0x3000) {
-            // Low byte ROM bank register
-            // This register selects the low 8 bits of the ROM bank to be used at 0x4000-0x7FFF.
-            // Unlike both MBC1 and MBC3, ROM bank 0 can be mapped here.
-            rom_bank_num = (rom_bank_num & 0xFF00) | data;
-        } else if (addr < 0x4000) {
-            // High byte ROM bank register
-            // This register selects the high 8 bits of the ROM bank to be used at 0x4000-0x7FFF.
-            // There is only one official game known to use more than 256 ROM banks (Densha de Go! 2), and it only 
-            // uses bit 0 of this register.
-            rom_bank_num = (rom_bank_num & 0x00FF) | (static_cast<unsigned int>(data) << 8);
-        } else if (addr < 0x6000) {
-            // RAM bank selection.
-            // Can have as many as 16 RAM banks. Carts with rumble activate it by writing 0x08 to this register, so
-            // they cannot have more than 8 RAM banks.
-            ram_bank_num = data & 0x0F;
-        }
-        break;
-
-    default:
-        // Carts with no MBC ignore writes here.
         break;
     }
 }
