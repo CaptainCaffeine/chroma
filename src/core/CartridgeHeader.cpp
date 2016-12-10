@@ -121,25 +121,39 @@ CartridgeHeader GetCartridgeHeaderInfo(const Console console, const std::vector<
     case 0x0F:
     case 0x11:
         // MBC3, no RAM. 0x0F implies timer and battery.
-        assert(false && "MBC3 unimplemented");
+        cart_header.mbc_mode = MBC::MBC3;
+        cart_header.ext_ram_present = false;
         break;
     case 0x10:
     case 0x12:
     case 0x13:
         // MBC3 with external RAM. 0x10 implies timer and battery, 0x13 implies battery.
-        assert(false && "MBC3 unimplemented");
+        cart_header.mbc_mode = MBC::MBC3;
+        cart_header.ext_ram_present = true;
         break;
     case 0x19:
+        // MBC5, no RAM.
+        cart_header.mbc_mode = MBC::MBC5;
+        cart_header.ext_ram_present = false;
+        break;
     case 0x1C:
-        // MBC5, no RAM. 0x1C implies rumble.
-        assert(false && "MBC5 unimplemented");
+        // MBC5 with rumble, no RAM.
+        cart_header.mbc_mode = MBC::MBC5;
+        cart_header.ext_ram_present = false;
+        cart_header.rumble_present = true;
         break;
     case 0x1A:
     case 0x1B:
+        // MBC5 with external RAM. 0x1B implies battery.
+        cart_header.mbc_mode = MBC::MBC5;
+        cart_header.ext_ram_present = true;
+        break;
     case 0x1D:
     case 0x1E:
-        // MBC5 with external RAM. 0x1B implies battery, 0x1D implies rumble, and 0x1E implies battery and rumble.
-        assert(false && "MBC5 unimplemented");
+        // MBC5 with external RAM and rumble. 0x1E implies battery.
+        cart_header.mbc_mode = MBC::MBC5;
+        cart_header.ext_ram_present = true;
+        cart_header.rumble_present = true;
         break;
     case 0x20:
         // MBC6 with external RAM and battery.

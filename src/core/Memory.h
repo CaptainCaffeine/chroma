@@ -121,7 +121,8 @@ public:
 private:
     const MBC mbc_mode;
     const bool ext_ram_present;
-    const unsigned int num_rom_banks;
+    const bool rumble_present;
+    const int num_rom_banks;
 
     const std::vector<u8> rom;
     std::vector<u8> vram;
@@ -133,6 +134,9 @@ private:
     void IORegisterInit();
     u8 ReadIORegisters(const u16 addr) const;
     void WriteIORegisters(const u16 addr, const u8 data);
+
+    u8 ReadExternalRAM(const u16 addr) const;
+    void WriteExternalRAM(const u16 addr, const u8 data);
     void WriteMBCControlRegisters(const u16 addr, const u8 data);
 
     // ******** I/O registers ******** 
@@ -240,10 +244,23 @@ private:
     unsigned int wram_bank_num = 0x00;
 
     // ******** MBC control registers ******** 
-    unsigned int rom_bank_num = 0x01;
-    unsigned int ram_bank_num = 0x00;
+    int rom_bank_num = 0x01;
+    int ram_bank_num = 0x00;
     bool ext_ram_enabled = false;
+
+    // MBC1
     bool ram_bank_mode = false;
+
+    // MBC3
+    unsigned int rtc_seconds = 0x00;
+    unsigned int rtc_minutes = 0x00;
+    unsigned int rtc_hours = 0x00;
+    u8 rtc_day = 0x00;
+
+    // bit 0: MSB(it) of Day Counter
+    // bit 6: Halt (0=Active, 1=Stop Timer)
+    // bit 7: Day Counter Carry Bit
+    u8 rtc_flags = 0x00;
 };
 
 } // End namespace Core

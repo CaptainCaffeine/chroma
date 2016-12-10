@@ -29,6 +29,7 @@ struct CartridgeHeader {
     bool ext_ram_present;
     unsigned int ram_size;
     unsigned int num_rom_banks;
+    bool rumble_present = false;
 };
 
 CartridgeHeader GetCartridgeHeaderInfo(const Console console, const std::vector<u8>& rom);
