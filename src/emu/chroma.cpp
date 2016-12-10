@@ -21,10 +21,10 @@
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
 #include "core/CartridgeHeader.h"
-#include "core/Memory.h"
+#include "core/memory/Memory.h"
 #include "core/Timer.h"
 #include "core/LCD.h"
-#include "core/CPU.h"
+#include "core/cpu/CPU.h"
 #include "emu/ParseOptions.h"
 #include "emu/SDL_Utils.h"
 

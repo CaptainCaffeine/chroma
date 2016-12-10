@@ -16,7 +16,7 @@
 
 #include <cassert>
 
-#include "core/CPU.h"
+#include "core/cpu/CPU.h"
 
 namespace Core {
 

@@ -20,7 +20,7 @@
 
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
-#include "core/Memory.h"
+#include "core/memory/Memory.h"
 
 namespace Core {
 

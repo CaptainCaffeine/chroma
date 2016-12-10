@@ -18,10 +18,10 @@
 
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
-#include "core/Memory.h"
+#include "core/memory/Memory.h"
 #include "core/Timer.h"
 #include "core/LCD.h"
-#include "core/Flags.h"
+#include "core/cpu/Flags.h"
 
 namespace Core {
 

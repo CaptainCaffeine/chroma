@@ -1,10 +1,41 @@
 # Specify includes relative to the src directory
 include_directories(.)
 
-set(COMMON_SOURCES common/CommonTypes.h common/CommonEnums.h)
-set(CORE_SOURCES core/CPU.h core/CPU.cpp core/Ops.cpp core/Logging.cpp core/Serial.cpp core/Disassembler.h core/Disassembler.cpp core/Flags.h core/Timer.h core/Timer.cpp core/LCD.h core/LCD.cpp core/Memory.h core/Memory.cpp core/DMA.cpp core/MBC.cpp core/CartridgeHeader.h core/CartridgeHeader.cpp)
-set(EMU_SOURCES emu/chroma.cpp emu/SDL_Utils.h emu/SDL_Utils.cpp emu/ParseOptions.h emu/ParseOptions.cpp)
+set(COMMON_HEADERS
+    common/CommonTypes.h
+    common/CommonEnums.h)
 
-add_executable(chroma ${EMU_SOURCES} ${CORE_SOURCES} ${COMMON_SOURCES})
+set(CORE_SOURCES
+    core/cpu/CPU.cpp
+    core/cpu/Ops.cpp
+    core/Disassembler.cpp
+    core/Logging.cpp
+    core/Serial.cpp
+    core/Timer.cpp
+    core/LCD.cpp
+    core/memory/Memory.cpp
+    core/memory/DMA.cpp
+    core/memory/MBC.cpp
+    core/CartridgeHeader.cpp)
+
+set(CORE_HEADERS
+    core/cpu/CPU.h
+    core/cpu/Flags.h
+    core/Disassembler.h
+    core/Timer.h
+    core/LCD.h
+    core/memory/Memory.h
+    core/CartridgeHeader.h)
+
+set(EMU_SOURCES
+    emu/chroma.cpp
+    emu/SDL_Utils.cpp
+    emu/ParseOptions.cpp)
+
+set(EMU_HEADERS
+    emu/SDL_Utils.h
+    emu/ParseOptions.h)
+
+add_executable(chroma ${EMU_SOURCES} ${EMU_HEADERS} ${CORE_SOURCES} ${CORE_HEADERS} ${COMMON_HEADERS})
 
 target_link_libraries(chroma ${SDL2_LIBRARY})

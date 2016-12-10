@@ -19,7 +19,7 @@
 #include <string>
 
 #include "common/CommonTypes.h"
-#include "core/Memory.h"
+#include "core/memory/Memory.h"
 
 namespace Core {
 

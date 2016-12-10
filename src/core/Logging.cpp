@@ -19,7 +19,7 @@
 
 #include "core/Timer.h"
 #include "core/LCD.h"
-#include "core/CPU.h"
+#include "core/cpu/CPU.h"
 #include "core/Disassembler.h"
 
 namespace Core {
