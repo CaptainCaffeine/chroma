@@ -192,6 +192,7 @@ void CPU::RunFor(int cycles) {
             cpu_mode = CPUMode::Running;
         } else if (cpu_mode == CPUMode::Halted) {
             HardwareTick(4);
+            cycles -= 4;
         }
     }
 }
