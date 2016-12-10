@@ -259,6 +259,7 @@ void CPU::HardwareTick(unsigned int cycles) {
         enable_interrupts_delayed = false;
 
         // Update the rest of the system hardware.
+        mem.UpdateOAM_DMA();
         timer.UpdateTimer();
         lcd.UpdateLCD();
         DisconnectedSerial();

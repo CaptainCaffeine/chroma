@@ -54,6 +54,18 @@ public:
     u16 ReadDIV() const { return divider; }
     void IncrementDIV(unsigned int cycles) { divider += cycles; }
 
+    // DMA functions
+    enum class DMAState {Inactive, RegWritten, Starting, Active};
+    DMAState state_oam_dma = DMAState::Inactive;
+    bool dma_blocking_memory = false;
+
+    u16 oam_transfer_addr;
+    u8 oam_transfer_byte;
+    unsigned int bytes_read = 0;
+
+    void UpdateOAM_DMA();
+    u8 DMACopy(const u16 addr) const;
+
     // LCD functions
     template<typename DestIter>
     void CopyFromVRAM(const u16 start_addr, const std::size_t num_bytes, DestIter dest) const {
@@ -91,9 +103,6 @@ public:
     // LYC register: 0xFF45
     u8 ly_compare = 0x00;
 
-    // DMA register: 0xFF46
-    u8 oam_dma = 0xFF; // Not implemented.
-
     // BGP register: 0xFF47
     //     bits 7-6: background colour 3
     //     bits 5-4: background colour 2
@@ -105,9 +114,9 @@ public:
     // OBP1 register: 0xFF49
     u8 obj_palette1 = 0xFF;
     // WY register: 0xFF4A
-    u8 window_y = 0x00; // Not implemented.
+    u8 window_y = 0x00;
     // WX register: 0xFF4B
-    u8 window_x = 0x00; // Not implemented.
+    u8 window_x = 0x00;
 
 private:
     const MBC mbc_mode;
@@ -207,6 +216,9 @@ private:
     u8 sound_on = 0x81;
     // Wave Pattern RAM: 0xFF30-0xFF3F
     std::array<u8, 0x10> wave_ram{};
+
+    // DMA register: 0xFF46
+    u8 oam_dma_start = 0xFF;
 
     // KEY1 register: 0xFF4D
     u8 speed_switch = 0x00;

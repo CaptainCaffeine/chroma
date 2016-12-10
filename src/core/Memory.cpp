@@ -14,9 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <cassert>
-#include <vector>
-
 #include "core/Memory.h"
 
 namespace Core {
@@ -68,78 +65,85 @@ void Memory::IORegisterInit() {
 }
 
 u8 Memory::ReadMem8(const u16 addr) const {
-    if (addr < 0x4000) {
-        // Fixed ROM bank
-        return rom[addr];
-    } else if (addr < 0x8000) {
-        // Switchable ROM bank.
-        return rom[addr + 0x4000*((rom_bank_num % num_rom_banks) - 1)];
-    } else if (addr < 0xA000) {
-        // VRAM -- switchable in CGB mode
-        // Not accessible during screen mode 3.
-        if ((stat & 0x03) != 3) {
-            return vram[addr - 0x8000 + 0x2000*vram_bank_num];
+    if (addr >= 0xFF00) {
+        // 0xFF00-0xFFFF are still accessible during OAM DMA.
+        if (addr < 0xFF80) {
+            // I/O registers
+            return ReadIORegisters(addr);
         } else {
-            return 0xFF;
+            // High RAM + interrupt enable (IE) register at 0xFFFF
+            return hram[addr - 0xFF80];
         }
-    } else if (addr < 0xC000) {
-        // External RAM bank.
-        if (ext_ram_enabled) {
-            if (mbc_mode == MBC::MBC1) {
-                // Out of bounds reads return 0xFF.
-                u16 adjusted_addr = addr - 0xA000 + 0x2000*ram_bank_num;
-                if (adjusted_addr < ext_ram.size()) {
-                    return ext_ram[adjusted_addr];
+    } else if (!dma_blocking_memory) {
+        if (addr < 0x4000) {
+            // Fixed ROM bank
+            return rom[addr];
+        } else if (addr < 0x8000) {
+            // Switchable ROM bank.
+            return rom[addr + 0x4000*((rom_bank_num % num_rom_banks) - 1)];
+        } else if (addr < 0xA000) {
+            // VRAM -- switchable in CGB mode
+            // Not accessible during screen mode 3.
+            if ((stat & 0x03) != 3) {
+                return vram[addr - 0x8000 + 0x2000*vram_bank_num];
+            } else {
+                return 0xFF;
+            }
+        } else if (addr < 0xC000) {
+            // External RAM bank.
+            if (ext_ram_enabled) {
+                if (mbc_mode == MBC::MBC1) {
+                    // Out of bounds reads return 0xFF.
+                    u16 adjusted_addr = addr - 0xA000 + 0x2000*ram_bank_num;
+                    if (adjusted_addr < ext_ram.size()) {
+                        return ext_ram[adjusted_addr];
+                    } else {
+                        return 0xFF;
+                    }
+                } else if (mbc_mode == MBC::MBC2) {
+                    // MBC2 RAM range is only A000-A1FF.
+                    u16 adjusted_addr = addr - 0xA000;
+                    if (adjusted_addr < ext_ram.size()) {
+                        return ext_ram[adjusted_addr] & 0xF0;
+                    } else {
+                        return 0xFF;
+                    }
                 } else {
-                    return 0xFF;
-                }
-            } else if (mbc_mode == MBC::MBC2) {
-                // MBC2 RAM range is only A000-A1FF.
-                u16 adjusted_addr = addr - 0xA000;
-                if (adjusted_addr < ext_ram.size()) {
-                    return ext_ram[adjusted_addr] & 0xF0;
-                } else {
+                    // Currently only MBC1 and MBC2 supported. Default value returned here to silence a warning.
                     return 0xFF;
                 }
             } else {
-                // Currently only MBC1 and MBC2 supported. Default value returned here to silence a warning.
+                // Reads from this region when the RAM banks are disabled or not present return 0xFF.
+                return 0xFF;
+            }
+        } else if (addr < 0xD000) {
+            // WRAM bank 0
+            return wram[addr - 0xC000];
+        } else if (addr < 0xE000) {
+            // WRAM bank 1 (switchable from 1-7 in CGB mode)
+            return wram[addr - 0xC000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
+        } else if (addr < 0xFE00) {
+            // Echo of C000-DDFF
+            return wram[addr - 0xE000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
+            // For some unlicensed games and flashcarts on pre-CGB devices, reads from this region read both WRAM and
+            // exernal RAM, and bitwise AND the two values together (source: AntonioND timing docs).
+        } else if (addr < 0xFEA0) {
+            // OAM (Sprite Attribute Table)
+            // Not accessible during screen modes 2 or 3.
+            if ((stat & 0x02) == 0) {
+                return oam[addr - 0xFE00];
+            } else {
                 return 0xFF;
             }
         } else {
-            // Reads from this region when the RAM banks are disabled or not present return 0xFF.
-            return 0xFF;
+            // Unusable region
+            // Pre-CGB devices: reads return 0x00
+            // CGB: reads vary, refer to TCAGBD
+            // AGB: reads return 0xNN where N is the high nybble of the lower byte of addr.
+            return 0x00;
         }
-    } else if (addr < 0xD000) {
-        // WRAM bank 0
-        return wram[addr - 0xC000];
-    } else if (addr < 0xE000) {
-        // WRAM bank 1 (switchable from 1-7 in CGB mode)
-        return wram[addr - 0xC000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
-    } else if (addr < 0xFE00) {
-        // Echo of C000-DDFF
-        return wram[addr - 0xE000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
-        // For some unlicensed games and flashcarts on pre-CGB devices, reads from this region read both WRAM and 
-        // exernal RAM, and bitwise AND the two values together (source: AntonioND timing docs).
-    } else if (addr < 0xFEA0) {
-        // OAM (Sprite Attribute Table)
-        // Not accessible during screen modes 2 or 3.
-        if ((stat & 0x02) == 0) {
-            return oam[addr - 0xFE00];
-        } else {
-            return 0xFF;
-        }
-    } else if (addr < 0xFF00) {
-        // Unusable region
-        // Pre-CGB devices: reads return 0x00
-        // CGB: reads vary, refer to TCAGBD
-        // AGB: reads return 0xNN where N is the high nybble of the lower byte of addr.
-        return 0x00;
-    } else if (addr < 0xFF80) {
-        // I/O registers
-        return ReadIORegisters(addr);
     } else {
-        // High RAM + interrupt enable (IE) register at 0xFFFF
-        return hram[addr - 0xFF80];
+        return 0xFF;
     }
 }
 
@@ -151,62 +155,66 @@ u16 Memory::ReadMem16(const u16 addr) const {
 }
 
 void Memory::WriteMem8(const u16 addr, const u8 data) {
-    if (addr < 0x8000) {
-        // MBC control registers -- writes to this region do not write the ROM.
-        WriteMBCControlRegisters(addr, data);
-    } else if (addr < 0xA000) {
-        // VRAM -- switchable in CGB mode
-        // Not accessible during screen mode 3.
-        if ((stat & 0x03) != 3) {
-            vram[addr - 0x8000 + 0x2000*vram_bank_num] = data;
+    if (addr >= 0xFF00) {
+        // 0xFF00-0xFFFF are still accessible during OAM DMA.
+        if (addr < 0xFF80) {
+            // I/O registers
+            WriteIORegisters(addr, data);
+        } else {
+            // High RAM + interrupt enable (IE) register.
+            hram[addr - 0xFF80] = data;
         }
-    } else if (addr < 0xC000) {
-        // External RAM bank, switchable.
-        if (ext_ram_enabled) {
-            if (mbc_mode == MBC::MBC1) {
-                // There can apparently be varying ram sizes here for MBC1, may need to make this more fine-grained.
-                // Ignore out-of-bounds writes.
-                u16 adjusted_addr = addr - 0xA000 + 0x2000*ram_bank_num;
-                if (adjusted_addr < ext_ram.size()) {
-                    ext_ram[adjusted_addr] = data;
-                }
-            } else if (mbc_mode == MBC::MBC2) {
-                // MBC2 RAM range is only A000-A1FF. Only the lower nibble of the bytes in this region are used.
-                u16 adjusted_addr = addr - 0xA000;
-                if (adjusted_addr < ext_ram.size()) {
-                    ext_ram[adjusted_addr] = data & 0x0F;
+    } else if (!dma_blocking_memory) {
+        if (addr < 0x8000) {
+            // MBC control registers -- writes to this region do not write the ROM.
+            WriteMBCControlRegisters(addr, data);
+        } else if (addr < 0xA000) {
+            // VRAM -- switchable in CGB mode
+            // Not accessible during screen mode 3.
+            if ((stat & 0x03) != 3) {
+                vram[addr - 0x8000 + 0x2000*vram_bank_num] = data;
+            }
+        } else if (addr < 0xC000) {
+            // External RAM bank, switchable.
+            if (ext_ram_enabled) {
+                if (mbc_mode == MBC::MBC1) {
+                    // Ignore out-of-bounds writes.
+                    u16 adjusted_addr = addr - 0xA000 + 0x2000*ram_bank_num;
+                    if (adjusted_addr < ext_ram.size()) {
+                        ext_ram[adjusted_addr] = data;
+                    }
+                } else if (mbc_mode == MBC::MBC2) {
+                    // MBC2 RAM range is only A000-A1FF. Only the lower nibble of the bytes in this region are used.
+                    u16 adjusted_addr = addr - 0xA000;
+                    if (adjusted_addr < ext_ram.size()) {
+                        ext_ram[adjusted_addr] = data & 0x0F;
+                    }
                 }
             }
+            // Writes are ignored if the RAM banks are not enabled.
+        } else if (addr < 0xD000) {
+            // WRAM bank 0
+            wram[addr - 0xC000] = data;
+        } else if (addr < 0xE000) {
+            // WRAM bank 1 (switchable from 1-7 in CGB mode)
+            wram[addr - 0xC000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)] = data;
+        } else if (addr < 0xFE00) {
+            // Echo of C000-DDFF
+            wram[addr - 0xE000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)] = data;
+            // For some unlicensed games and flashcarts on pre-CGB devices, writes to this region write to both WRAM 
+            // and external RAM (source: AntonioND timing docs).
+        } else if (addr < 0xFEA0) {
+            // OAM (Sprite Attribute Table)
+            // Not accessible during screen modes 2 or 3.
+            if ((stat & 0x02) == 0) {
+                oam[addr - 0xFE00] = data;
+            }
+        } else {
+            // Unusable region
+            // Pre-CGB devices: writes are ignored
+            // CGB: writes are *not* ignored, refer to TCAGBD
+            // AGB: writes are ignored
         }
-        // Writes are ignored if the RAM banks are not enabled.
-    } else if (addr < 0xD000) {
-        // WRAM bank 0
-        wram[addr - 0xC000] = data;
-    } else if (addr < 0xE000) {
-        // WRAM bank 1 (switchable from 1-7 in CGB mode)
-        wram[addr - 0xC000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)] = data;
-    } else if (addr < 0xFE00) {
-        // Echo of C000-DDFF
-        wram[addr - 0xE000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)] = data;
-        // For some unlicensed games and flashcarts on pre-CGB devices, writes to this region write to both WRAM and 
-        // external RAM (source: AntonioND timing docs).
-    } else if (addr < 0xFEA0) {
-        // OAM (Sprite Attribute Table)
-        // Not accessible during screen modes 2 or 3.
-        if ((stat & 0x02) == 0) {
-            oam[addr - 0xFE00] = data;
-        }
-    } else if (addr < 0xFF00) {
-        // Unusable region
-        // Pre-CGB devices: writes are ignored
-        // CGB: writes are *not* ignored, refer to TCAGBD
-        // AGB: writes are ignored
-    } else if (addr < 0xFF80) {
-        // I/O registers
-        WriteIORegisters(addr, data);
-    } else {
-        // High RAM + interrupt enable (IE) register.
-        hram[addr - 0xFF80] = data;
     }
 }
 
@@ -342,7 +350,7 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         return ly_compare;
     // DMA -- OAM DMA Transfer
     case 0xFF46:
-        return oam_dma;
+        return oam_dma_start;
     // BGP -- BG Palette Data
     case 0xFF47:
         return bg_palette;
@@ -557,8 +565,8 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // DMA -- OAM DMA Transfer
     case 0xFF46:
-        oam_dma = data;
-        // TODO: Trigger the actual DMA copy
+        oam_dma_start = data;
+        state_oam_dma = DMAState::RegWritten;
         break;
     // BGP -- BG Palette Data
     case 0xFF47:
@@ -619,6 +627,106 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
 
     default:
         break;
+    }
+}
+
+void Memory::UpdateOAM_DMA() {
+    if (state_oam_dma == DMAState::RegWritten) {
+        oam_transfer_addr = static_cast<u16>(oam_dma_start) << 8;
+        bytes_read = 0;
+
+        state_oam_dma = DMAState::Starting;
+    } else if (state_oam_dma == DMAState::Starting) {
+        // No write on the startup cycle.
+        oam_transfer_byte = DMACopy(oam_transfer_addr);
+        ++bytes_read;
+
+        state_oam_dma = DMAState::Active;
+
+        // The current OAM DMA state is not enough to determine if the external bus is currently being blocked.
+        // The bus only becomes unblocked when the DMA state transitions from active to inactive. When starting 
+        // a DMA while none are currently active, memory remains accessible for the two cycles when the DMA state is
+        // RegWritten and Starting. But, if a DMA is started while one is already active, the state goes from
+        // Active to RegWritten, without becoming Inactive, so memory remains inaccessible for those two cycles.
+        dma_blocking_memory = true;
+    } else if (state_oam_dma == DMAState::Active) {
+        // Write the byte which was read last cycle to OAM.
+        if ((stat & 0x02) != 1) {
+            oam[bytes_read - 1] = oam_transfer_byte;
+        } else {
+            oam[bytes_read - 1] = 0xFF;
+        }
+
+        if (bytes_read == 160) {
+            // Don't read on the last cycle.
+            state_oam_dma = DMAState::Inactive;
+            dma_blocking_memory = false;
+            return;
+        }
+
+        // Read the next byte.
+        oam_transfer_byte = DMACopy(oam_transfer_addr + bytes_read);
+        ++bytes_read;
+    }
+}
+
+u8 Memory::DMACopy(const u16 addr) const {
+    if (addr < 0x4000) {
+        // Fixed ROM bank
+        return rom[addr];
+    } else if (addr < 0x8000) {
+        // Switchable ROM bank.
+        return rom[addr + 0x4000*((rom_bank_num % num_rom_banks) - 1)];
+    } else if (addr < 0xA000) {
+        // VRAM -- switchable in CGB mode
+        // Not accessible during screen mode 3.
+        if ((stat & 0x03) != 3) {
+            return vram[addr - 0x8000 + 0x2000*vram_bank_num];
+        } else {
+            return 0xFF;
+        }
+    } else if (addr < 0xC000) {
+        // External RAM bank.
+        if (ext_ram_enabled) {
+            if (mbc_mode == MBC::MBC1) {
+                // Out of bounds reads return 0xFF.
+                u16 adjusted_addr = addr - 0xA000 + 0x2000*ram_bank_num;
+                if (adjusted_addr < ext_ram.size()) {
+                    return ext_ram[adjusted_addr];
+                } else {
+                    return 0xFF;
+                }
+            } else if (mbc_mode == MBC::MBC2) {
+                // MBC2 RAM range is only A000-A1FF.
+                u16 adjusted_addr = addr - 0xA000;
+                if (adjusted_addr < ext_ram.size()) {
+                    return ext_ram[adjusted_addr] & 0xF0;
+                } else {
+                    return 0xFF;
+                }
+            } else {
+                // Currently only MBC1 and MBC2 supported. Default value returned here to silence a warning.
+                return 0xFF;
+            }
+        } else {
+            // Reads from this region when the RAM banks are disabled or not present return 0xFF.
+            return 0xFF;
+        }
+    } else if (addr < 0xD000) {
+        // WRAM bank 0
+        return wram[addr - 0xC000];
+    } else if (addr < 0xE000) {
+        // WRAM bank 1 (switchable from 1-7 in CGB mode)
+        return wram[addr - 0xC000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
+    } else if (addr < 0xF200) {
+        // Echo of C000-DDFF
+        return wram[addr - 0xE000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
+        // For some unlicensed games and flashcarts on pre-CGB devices, reads from this region read both WRAM and
+        // exernal RAM, and bitwise AND the two values together (source: AntonioND timing docs).
+    } else {
+        // Only 0x00-0xF1 are valid OAM DMA start addresses (several sources make that claim, at least. I've seen
+        // differing ranges mentioned but this seems to work for now).
+        return 0xFF;
     }
 }
 
