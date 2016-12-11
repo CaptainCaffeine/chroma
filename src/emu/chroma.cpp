@@ -24,6 +24,7 @@
 #include "core/memory/Memory.h"
 #include "core/Timer.h"
 #include "core/LCD.h"
+#include "core/Serial.h"
 #include "core/cpu/CPU.h"
 #include "emu/ParseOptions.h"
 #include "emu/SDL_Utils.h"
@@ -72,7 +73,8 @@ int main(int argc, char** argv) {
     Core::Memory memory(game_boy, cart_header, std::move(rom));
     Core::Timer timer(memory);
     Core::LCD lcd(memory);
-    Core::CPU cpu(memory, timer, lcd);
+    Core::Serial serial(memory);
+    Core::CPU cpu(memory, timer, lcd, serial);
 
     SDL_Event e;
     bool keep_going = true;

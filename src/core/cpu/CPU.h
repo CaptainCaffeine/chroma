@@ -21,13 +21,14 @@
 #include "core/memory/Memory.h"
 #include "core/Timer.h"
 #include "core/LCD.h"
+#include "core/Serial.h"
 #include "core/cpu/Flags.h"
 
 namespace Core {
 
 class CPU {
 public:
-    CPU(Memory& memory, Timer& tima, LCD& display);
+    CPU(Memory& memory, Timer& tima, LCD& display, Serial& serial_io);
 
     void RunFor(int cycles);
 private:
@@ -38,6 +39,7 @@ private:
     Memory& mem;
     Timer& timer;
     LCD& lcd;
+    Serial& serial;
 
     // Registers
     u8 a, b, c, d, e, h, l;

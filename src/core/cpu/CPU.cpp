@@ -18,7 +18,12 @@
 
 namespace Core {
 
-CPU::CPU(Memory& memory, Timer& tima, LCD& display) : mem(memory), timer(tima), lcd(display) {
+CPU::CPU(Memory& memory, Timer& tima, LCD& display, Serial& serial_io)
+        : mem(memory)
+        , timer(tima)
+        , lcd(display)
+        , serial(serial_io) {
+
     // Initial register values
     if (mem.game_mode == GameMode::DMG) {
         if (mem.console == Console::DMG) {
@@ -263,7 +268,7 @@ void CPU::HardwareTick(unsigned int cycles) {
         mem.UpdateOAM_DMA();
         timer.UpdateTimer();
         lcd.UpdateLCD();
-        DisconnectedSerial();
+        serial.UpdateSerial();
 
         mem.IF_written_this_cycle = false;
 

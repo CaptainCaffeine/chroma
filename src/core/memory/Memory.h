@@ -152,12 +152,12 @@ private:
     u8 joypad; // Not implemented.
 
     // SB register: 0xFF01
-    u8 serial_data = 0x00; // Not implemented.
+    u8 serial_data = 0x00;
     // SC register: 0xFF02
     //     bit 7: Transfer Start Flag
-    //     bit 1: Speed? CGB only?
+    //     bit 1: Transfer Speed (0=Normal, 1=Fast) (CGB Only)
     //     bit 0: Shift Clock (0=External Clock, 1=Internal Clock 8192Hz)
-    u8 serial_control = 0x00; // Not implemented.
+    u8 serial_control = 0x00;
 
     // DIV register: 0xFF04
     u16 divider;

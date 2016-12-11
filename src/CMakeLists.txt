@@ -22,6 +22,7 @@ set(CORE_HEADERS
     core/cpu/CPU.h
     core/cpu/Flags.h
     core/Disassembler.h
+    core/Serial.h
     core/Timer.h
     core/LCD.h
     core/memory/Memory.h

@@ -14,17 +14,76 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-//#include <iostream>
-#include "core/cpu/CPU.h"
+#include "core/Serial.h"
 
 namespace Core {
 
-void CPU::DisconnectedSerial() {
-    if ((mem.ReadMem8(0xFF02) & 0x80) == 0x80) {
-//        std::cout << mem.ReadMem8(0xFF01);
-        mem.WriteMem8(0xFF01, 0xFF);
-        mem.WriteMem8(0xFF02, 0x00);
+Serial::Serial(Memory& memory) : mem(memory) {
+    // I'm assuming the initial value of the internal serial clock is equal to that of the lower byte of DIV.
+    if (mem.game_mode == GameMode::DMG) {
+        if (mem.console == Console::DMG) {
+            serial_clock = 0xCC;
+        } else {
+            serial_clock = 0x7C;
+        }
+    } else {
+        serial_clock = 0xA0;
+    }
+}
+
+void Serial::UpdateSerial() {
+    // Serial clock advances with the system clock.
+    serial_clock += 4;
+
+    // Check if a transfer has been initiated.
+    if (bits_to_shift == 0 && (mem.ReadMem8(0xFF02) & 0x80)) {
+        bits_to_shift = 8;
+    }
+
+    // A falling edge on the internal transfer signal causes a bit to be shifted out/in.
+    if (bits_to_shift > 0 && !transfer_signal && prev_transfer_signal) {
+        ShiftSerialBit();
+    }
+
+    prev_transfer_signal = transfer_signal;
+
+    bool serial_inc = (serial_clock & SelectClockBit()) && UsingInternalClock();
+
+    // When using the internal clock, a falling edge on bit 7 of the serial clock causes the internal transfer
+    // signal to be toggled.
+    if (!serial_inc && prev_inc) {
+        transfer_signal = !transfer_signal;
+    }
+
+    prev_inc = serial_inc;
+}
+
+void Serial::ShiftSerialBit() {
+    // Shift the most significant bit out of SB.
+    u8 serial_data = mem.ReadMem8(0xFF01);
+    serial_data <<= 1;
+
+    // Since we are always emulating a disconnected serial port at the moment, place a 1 in the least significant
+    // bit of SB.
+    serial_data |= 0x01;
+
+    mem.WriteMem8(0xFF01, serial_data);
+
+    if (--bits_to_shift == 0) {
+        // The transfer has completed.
+        mem.WriteMem8(0xFF02, mem.ReadMem8(0xFF02) & 0x7F);
         mem.RequestInterrupt(Interrupt::Serial);
+    }
+}
+
+u8 Serial::SelectClockBit() const {
+    // In CBG mode, bit 1 of SC can be used to set the speed of the serial transfer. The transfer runs at the usual 
+    // speed (using bit 7 of the serial clock) if it's 0, and runs fast (using bit 2 of the serial clock) if it's 1.
+    // In DMG mode, bit 1 of SC returns 1 even though the transfer runs at the usual speed.
+    if (mem.game_mode == GameMode::CGB) {
+        return (mem.ReadMem8(0xFF02) & 0x02) ? 0x04 : 0x80;
+    } else {
+        return 0x80;
     }
 }
 
