@@ -330,7 +330,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     switch (addr) {
     // P1 -- Joypad
     case 0xFF00:
-        joypad = data & 0x30;
+        joypad = (joypad & 0x0F) | (data & 0x30);
         break;
     // SB -- Serial Data Transfer
     case 0xFF01:
