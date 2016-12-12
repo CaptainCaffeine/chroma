@@ -19,33 +19,43 @@
 #include <array>
 
 #include "common/CommonTypes.h"
-#include "core/memory/Memory.h"
 
 namespace Core {
 
+class Memory;
+
 class Timer {
 public:
-    Timer(Memory& memory);
-
     void UpdateTimer();
 
-    // Debug Function
-    void PrintRegisterState();
-private:
-    Memory& mem;
+    void LinkToMemory(Memory* memory) { mem = memory; }
 
-    const std::array<unsigned int, 4> select_div_bit {0x0200, 0x0008, 0x0020, 0x0080};
+    // Debug Functions
+    void PrintRegisterState();
+
+    // ******** Timer I/O registers ********
+    // DIV register: 0xFF04
+    u16 divider;
+    // TIMA register: 0xFF05
+    u8 tima = 0x00;
+    // TMA register: 0xFF06
+    u8 tma = 0x00;
+    // TAC register: 0xFF07
+    //     bit 2: Timer Enable
+    //     bits 1&0: Main Frequency Divider (0=every 1024 cycles, 1=16 cycles, 2=64 cycles, 3=256 cycles)
+    u8 tac = 0x00;
+private:
+    Memory* mem;
 
     bool prev_tima_inc = false;
     bool tima_overflow = false;
     bool tima_overflow_not_interrupted = false;
     u8 prev_tima_val = 0x00;
 
-    unsigned int TACFrequency() const;
-    bool TACEnable() const;
-    bool TIMAIncWentLow(bool tima_inc) const;
-    bool TIMAWasNotWritten(u8 current_tima_val) const;
-    void LoadTMAIntoTIMA();
+    const std::array<unsigned int, 4> select_div_bit {0x0200, 0x0008, 0x0020, 0x0080};
+
+    bool DivFrequencyBitSet() const { return select_div_bit[tac & 0x03] & divider; }
+    bool TimerEnabled() const { return tac & 0x04; }
 };
 
 } // End namespace Core

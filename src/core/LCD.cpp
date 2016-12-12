@@ -17,10 +17,9 @@
 #include <algorithm>
 
 #include "core/LCD.h"
+#include "core/memory/Memory.h"
 
 namespace Core {
-
-LCD::LCD(Memory& memory) : mem(memory) { }
 
 void LCD::UpdateLCD() {
     // Check if the LCD has been set on or off.
@@ -39,7 +38,7 @@ void LCD::UpdateLCD() {
 
     UpdateLYCompareSignal();
 
-    if (mem.ly == 0) {
+    if (ly == 0) {
         if (STATMode() != 1) {
             if (scanline_cycles == 4) {
                 SetSTATMode(2);
@@ -52,7 +51,7 @@ void LCD::UpdateLCD() {
                 SetSTATMode(0);
             }
         }
-    } else if (mem.ly <= 143) {
+    } else if (ly <= 143) {
         if (scanline_cycles == 0) {
             // AntonioND claims the Mode 2 STAT interrupt happens the cycle before Mode 2 is entered, except for
             // scanline 0? Does this actually happen?
@@ -68,9 +67,9 @@ void LCD::UpdateLCD() {
             // interrupt, so I'm assuming it's triggered as soon as Mode 0 is entered.
             SetSTATMode(0);
         }
-    } else if (mem.ly == 144) {
+    } else if (ly == 144) {
         if (scanline_cycles == 4) {
-            mem.RequestInterrupt(Interrupt::VBLANK);
+            mem->RequestInterrupt(Interrupt::VBLANK);
             SetSTATMode(1);
             // The OAM STAT interrupt is also triggered on entering Mode 1.
             stat_interrupt_signal |= Mode2CheckEnabled();
@@ -81,13 +80,13 @@ void LCD::UpdateLCD() {
 
 //    // Mode timings debug
 //    if (scanline_cycles == 0) {
-//        std::cout << "\n LY=" << std::setw(3) << std::setfill(' ') << static_cast<unsigned int>(mem.ly) << " ";
+//        std::cout << "\n LY=" << std::setw(3) << std::setfill(' ') << static_cast<unsigned int>(ly) << " ";
 //    }
 //    std::cout << STATMode() << " ";
 }
 
 void LCD::UpdatePowerOnState() {
-    u8 lcdc_power_on = mem.lcdc & 0x80;
+    u8 lcdc_power_on = lcdc & 0x80;
     if (lcdc_power_on ^ lcd_on) {
         lcd_on = lcdc_power_on;
 
@@ -96,7 +95,7 @@ void LCD::UpdatePowerOnState() {
             scanline_cycles = 452;
             SetSTATMode(1);
         } else {
-            mem.ly = 0;
+            ly = 0;
             SetSTATMode(0);
             stat_interrupt_signal = 0;
             prev_interrupt_signal = 0;
@@ -105,22 +104,22 @@ void LCD::UpdatePowerOnState() {
 }
 
 void LCD::UpdateLY() {
-    if (mem.ly == 153) {
+    if (ly == 153) {
         // LY is 153 only for one machine cycle at the beginning of scanline 153, then wraps back to 0.
-        mem.ly = 0;
+        ly = 0;
     } else if (scanline_cycles == 456) {
         // Reset scanline cycle counter.
         scanline_cycles = 0;
 
         // LY does not increase at the end of scanline 153, it stays 0 until the end of scanline 0.
         // Otherwise, increment LY.
-        if (mem.ly == 0 && STATMode() == 1) {
+        if (ly == 0 && STATMode() == 1) {
             SetSTATMode(0); // Does this actually happen? Or do we spend the first cycle in mode 1?
 
             // Changes to the window Y position register are ignored until next VBLANK.
-            window_y_frame_val = mem.window_y;
+            window_y_frame_val = window_y;
         } else {
-            ++mem.ly;
+            ++ly;
         }
     }
 }
@@ -131,17 +130,17 @@ void LCD::UpdateLY() {
 // on scanline 153). In that case, the two events caused by an LY change begin on the following cycle.
 void LCD::UpdateLYCompareSignal() {
     if (LY_compare_equal_forced_zero) {
-        SetLYCompare(mem.ly_compare == LY_last_cycle);
+        SetLYCompare(ly_compare == LY_last_cycle);
 
         // Don't update LY_last_cycle.
         LY_compare_equal_forced_zero = false;
-    } else if (mem.ly != LY_last_cycle) {
+    } else if (ly != LY_last_cycle) {
         SetLYCompare(false);
         LY_compare_equal_forced_zero = true;
-        LY_last_cycle = mem.ly;
+        LY_last_cycle = ly;
     } else {
-        SetLYCompare(mem.ly_compare == mem.ly);
-        LY_last_cycle = mem.ly;
+        SetLYCompare(ly_compare == ly);
+        LY_last_cycle = ly;
     }
 }
 
@@ -155,7 +154,7 @@ void LCD::CheckSTATInterruptSignal() {
     // between each STAT check. As a result, if two events which would have triggered a STAT interrupt happen on
     // consecutive machine cycles, the second one will not cause an interrupt to be requested.
     if (stat_interrupt_signal && !prev_interrupt_signal) {
-        mem.RequestInterrupt(Interrupt::STAT);
+        mem->RequestInterrupt(Interrupt::STAT);
     }
     prev_interrupt_signal = stat_interrupt_signal;
 }
@@ -166,17 +165,17 @@ void LCD::RenderScanline() {
     if (WindowEnabled()) {
         RenderWindow();
 
-        num_bg_pixels = (mem.window_x < 7) ? 0 : mem.window_x - 7;
+        num_bg_pixels = (window_x < 7) ? 0 : window_x - 7;
 
         // The `win_row_pixels` buffer is 21 full tiles wide and contains 168 pixels.
         // If WX is less than 7, some of the first tile is cut off.
         auto win_start_iter = win_row_pixels.begin();
-        if (mem.window_x < 7) {
-            win_start_iter += 7 - mem.window_x;
+        if (window_x < 7) {
+            win_start_iter += 7 - window_x;
         }
 
         // The number of window pixels to copy depends on the number of background pixels copied.
-        std::copy_n(win_row_pixels.begin(), 160 - num_bg_pixels, framebuffer.begin() + mem.ly * 160 + num_bg_pixels);
+        std::copy_n(win_row_pixels.begin(), 160 - num_bg_pixels, framebuffer.begin() + ly * 160 + num_bg_pixels);
     }
 
     if (BGEnabled()) {
@@ -184,11 +183,11 @@ void LCD::RenderScanline() {
 
         // The `bg_row_pixels` buffer is 22 full tiles wide and contains 176 pixels.
         // We determine which 160 pixels get transferred to the framebuffer from the SCX register.
-        auto bg_start_iter = bg_row_pixels.begin() + (mem.scroll_x % 8);
-        std::copy_n(bg_start_iter, num_bg_pixels, framebuffer.begin() + mem.ly * 160);
+        auto bg_start_iter = bg_row_pixels.begin() + (scroll_x % 8);
+        std::copy_n(bg_start_iter, num_bg_pixels, framebuffer.begin() + ly * 160);
     } else {
         // If disabled, we need to blank what isn't covered by the window.
-        std::fill_n(framebuffer.begin() + mem.ly * 160, num_bg_pixels, 0xFFFFFF00);
+        std::fill_n(framebuffer.begin() + ly * 160, num_bg_pixels, 0xFFFFFF00);
     }
 }
 
@@ -200,11 +199,11 @@ void LCD::RenderBackground() {
     // The background tile map is located at either 0x9800-0x9BFF or 0x9C00-0x9FFF, and consists of 32 rows
     // of 32 bytes each to index the background tiles. We first determine which row we need to fetch from the
     // current values of SCY and LY.
-    unsigned int row_num = ((mem.scroll_y + mem.ly) / 8) % num_tiles;
+    unsigned int row_num = ((scroll_y + ly) / 8) % num_tiles;
     u16 tile_map_addr = BGTileMapStartAddr() + row_num * tile_map_row_bytes;
 
     // Get the row of tile indicies from VRAM.
-    mem.CopyFromVRAM(tile_map_addr, tile_map_row_bytes, row_tile_map.begin());
+    mem->CopyFromVRAM(tile_map_addr, tile_map_row_bytes, row_tile_map.begin());
 
     // The background tiles are located at either 0x8000-0x8FFF or 0x8800-0x97FF. For the first region, the
     // tile map indicies are unsigned offsets from 0x8000; for the second region, the indicies are signed
@@ -220,9 +219,9 @@ void LCD::RenderBackground() {
     }
 
     // Determine which row of pixels we're on.
-    unsigned int tile_row = (mem.scroll_y + mem.ly) % 8;
+    unsigned int tile_row = (scroll_y + ly) % 8;
     // Determine in which tile we start reading data.
-    unsigned int start_tile = mem.scroll_x / 8;
+    unsigned int start_tile = scroll_x / 8;
 
     // Each row of 8 pixels in a tile is 2 bytes. The first byte contains the low bit of the palette index for
     // each pixel, and the second byte contains the high bit of the palette index. The background palette in
@@ -246,7 +245,7 @@ void LCD::RenderBackground() {
 
         // Get the colours corresponding to the palette indicies.
         for (auto plt_index : pixel_indicies) {
-            *row_pixel++ = shades[(mem.bg_palette >> (plt_index * 2)) & 0x03];
+            *row_pixel++ = shades[(bg_palette >> (plt_index * 2)) & 0x03];
         }
 
         // Increment the tile index to the next tile, and wrap around if we hit the end.
@@ -272,7 +271,7 @@ void LCD::RenderWindow() {
     u16 tile_map_addr = WindowTileMapStartAddr() + (window_y_frame_val / 8) * tile_map_row_bytes;
 
     // Get the row of tile indicies from VRAM.
-    mem.CopyFromVRAM(tile_map_addr, tile_map_row_bytes, row_tile_map.begin());
+    mem->CopyFromVRAM(tile_map_addr, tile_map_row_bytes, row_tile_map.begin());
 
     // The window tiles are located at either 0x8000-0x8FFF or 0x8800-0x97FF. For the first region, the
     // tile map indicies are unsigned offsets from 0x8000; for the second region, the indicies are signed
@@ -296,7 +295,7 @@ void LCD::RenderWindow() {
     // The window always starts rendering at the leftmost/first tile.
     std::size_t tile_data_index = tile_row * 2;
     // Stop rendering when we hit the edge of the screen.
-    auto row_end_tile = win_row_pixels.begin() + ((166 - mem.window_x) / 8 + 1) * 16;
+    auto row_end_tile = win_row_pixels.begin() + ((166 - window_x) / 8 + 1) * 16;
 
     // Decode the tile data and determine the pixel colors.
     auto row_pixel = win_row_pixels.begin();
@@ -314,7 +313,7 @@ void LCD::RenderWindow() {
 
         // Get the colours corresponding to the palette indicies.
         for (auto plt_index : pixel_indicies) {
-            *row_pixel++ = shades[(mem.bg_palette >> (plt_index * 2)) & 0x03];
+            *row_pixel++ = shades[(bg_palette >> (plt_index * 2)) & 0x03];
         }
 
         // Increment the tile index to the next tile.
@@ -323,6 +322,18 @@ void LCD::RenderWindow() {
 
     // Increment internal window Y position.
     ++window_y_frame_val;
+}
+
+template<typename T, std::size_t N>
+void LCD::FetchTiles(const std::array<T, N>& tile_indicies) {
+    u16 region_start_addr = TileDataStartAddr();
+    auto tile_data_iter = tile_data.begin();
+    // T is either u8 or s8, depending on the current tile data region.
+    for (T index : tile_indicies) {
+        u16 tile_addr = region_start_addr + index * static_cast<T>(tile_bytes);
+        mem->CopyFromVRAM(tile_addr, tile_bytes, tile_data_iter);
+        tile_data_iter += tile_bytes;
+    }
 }
 
 } // End namespace Core

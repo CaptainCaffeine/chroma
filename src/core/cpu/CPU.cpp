@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "core/cpu/CPU.h"
+#include "core/memory/Memory.h"
 #include "core/GameBoy.h"
 
 namespace Core {
@@ -39,10 +40,6 @@ CPU::CPU(Memory& memory) : mem(memory) {
         d = 0xFF; e = 0x56;
         h = 0x00; l = 0x0D;
     }
-}
-
-void CPU::LinkToGameBoy(GameBoy* gb) {
-    gameboy = gb;
 }
 
 // Returns the value stored in an 8-bit register.
@@ -261,27 +258,6 @@ void CPU::EnableInterruptsDelayed() {
     interrupt_master_enable = interrupt_master_enable || enable_interrupts_delayed;
     enable_interrupts_delayed = false;
 }
-
-//void CPU::HardwareTick(unsigned int cycles) {
-//    gameboy->HardwareTick(cycles);
-////    for (; cycles != 0; cycles -= 4) {
-////
-////        // Enable interrupts if EI was previously called. 
-////        interrupt_master_enable = interrupt_master_enable || enable_interrupts_delayed;
-////        enable_interrupts_delayed = false;
-////
-////        // Update the rest of the system hardware.
-////        mem.UpdateOAM_DMA();
-////        timer.UpdateTimer();
-////        lcd.UpdateLCD();
-////        serial.UpdateSerial();
-////
-////        mem.IF_written_this_cycle = false;
-////
-//////        timer.PrintRegisterState();
-//////        lcd.PrintRegisterState();
-////    }
-//}
 
 unsigned int CPU::ExecuteNext(const u8 opcode) {
     gameboy->HardwareTick(4);

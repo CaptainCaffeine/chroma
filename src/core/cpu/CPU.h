@@ -18,14 +18,11 @@
 
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
-#include "core/memory/Memory.h"
 #include "core/cpu/Flags.h"
 
 namespace Core {
 
-class Timer;
-class LCD;
-class Serial;
+class Memory;
 class GameBoy;
 
 class CPU {
@@ -35,7 +32,7 @@ public:
     void RunFor(int cycles);
 
     // GameBoy core functions
-    void LinkToGameBoy(GameBoy* gb);
+    void LinkToGameBoy(GameBoy* gb) { gameboy = gb; }
     void EnableInterruptsDelayed();
 private:
     enum class Reg8 {A, B, C, D, E, H, L};
@@ -78,8 +75,6 @@ private:
     // Debug
     void PrintRegisterState();
     void PrintInterrupt();
-    void BlarggRamDebug();
-    bool stop_printing = false;
 
     // Ops
     // 8-bit loads

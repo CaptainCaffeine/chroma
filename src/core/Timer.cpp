@@ -15,33 +15,31 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "core/Timer.h"
+#include "core/memory/Memory.h"
 
 namespace Core {
-
-Timer::Timer(Memory& memory) : mem(memory) {}
 
 void Timer::UpdateTimer() {
     // Increment the timer subsystem by 4 cycles.
  
     // DIV increments by 1 each clock cycle.
-    mem.IncrementDIV(4);
+    divider += 4;
 
     // If the TIMA overflow was not interrupted last cycle, write TMA into TIMA again. Any writes to TIMA during
     // the past cycle are ignored, and writing to TMA will cause that written value to appear in TIMA.
     if (tima_overflow_not_interrupted) {
-        LoadTMAIntoTIMA();
-
+        tima = tma;
         tima_overflow_not_interrupted = false;
     }
 
     // If TIMA overflowed last cycle, and is written to on the one cycle where it is 0x00, the overflow procedure is
     // aborted. If it isn't written, them TMA is loaded into TIMA for the next cycle and the IF timer flag is set.
     if (tima_overflow) {
-        if (TIMAWasNotWritten(mem.ReadMem8(0xFF05))) {
+        if (prev_tima_val == tima) {
             tima_overflow_not_interrupted = true;
-            LoadTMAIntoTIMA();
+            tima = tma;
             // If the IF register was written this cycle, the written value will remain.
-            mem.RequestInterrupt(Interrupt::Timer);
+            mem->RequestInterrupt(Interrupt::Timer);
         } else {
             tima_overflow_not_interrupted = false;
         }
@@ -57,40 +55,16 @@ void Timer::UpdateTimer() {
     // of AntonioND's thorough timing documentation) instead of attempting to HLE each edge case. Unfortunately,
     // not enough is known about the rest of the timer circuitry (overflow, write priorities) to attempt LLE.
 
-    bool div_tick_bit = select_div_bit[TACFrequency()] & mem.ReadDIV();
-    bool tima_inc = div_tick_bit && TACEnable();
-    u8 tima_val = mem.ReadMem8(0xFF05);
+    bool tima_inc = DivFrequencyBitSet() && TimerEnabled();
 
-    if (TIMAIncWentLow(tima_inc)) {
+    if (!tima_inc && prev_tima_inc) {
         // When TIMA overflows, there is a delay of one machine cycle before it is loaded with TMA and the timer 
         // interrupt is triggered.
-        tima_overflow = (tima_val == 0xFF);
-
-        mem.WriteMem8(0xFF05, ++tima_val);
+        tima_overflow = (++tima == 0x00);
     }
 
-    prev_tima_val = tima_val;
+    prev_tima_val = tima;
     prev_tima_inc = tima_inc;
-}
-
-unsigned int Timer::TACFrequency() const {
-    return mem.ReadMem8(0xFF07) & 0x03;
-}
-
-bool Timer::TACEnable() const {
-    return mem.ReadMem8(0xFF07) & 0x04;
-}
-
-bool Timer::TIMAIncWentLow(bool tima_inc) const {
-    return !tima_inc && prev_tima_inc;
-}
-
-bool Timer::TIMAWasNotWritten(u8 current_tima_val) const {
-    return prev_tima_val == current_tima_val;
-}
-
-void Timer::LoadTMAIntoTIMA() {
-    mem.WriteMem8(0xFF05, mem.ReadMem8(0xFF06));
 }
 
 } // End namespace Core

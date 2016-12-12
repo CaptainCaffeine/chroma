@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "core/memory/Memory.h"
+#include "core/LCD.h"
 
 namespace Core {
 
@@ -39,7 +40,7 @@ void Memory::UpdateOAM_DMA() {
         dma_blocking_memory = true;
     } else if (state_oam_dma == DMAState::Active) {
         // Write the byte which was read last cycle to OAM.
-        if ((stat & 0x02) != 1) {
+        if ((lcd.stat & 0x02) != 1) {
             oam[bytes_read - 1] = oam_transfer_byte;
         } else {
             oam[bytes_read - 1] = 0xFF;
@@ -68,7 +69,7 @@ u8 Memory::DMACopy(const u16 addr) const {
     } else if (addr < 0xA000) {
         // VRAM -- switchable in CGB mode
         // Not accessible during screen mode 3.
-        if ((stat & 0x03) != 3) {
+        if ((lcd.stat & 0x03) != 3) {
             return vram[addr - 0x8000 + 0x2000*vram_bank_num];
         } else {
             return 0xFF;

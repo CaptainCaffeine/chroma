@@ -17,6 +17,7 @@
 #include <cassert>
 
 #include "core/cpu/CPU.h"
+#include "core/memory/Memory.h"
 #include "core/GameBoy.h"
 
 namespace Core {

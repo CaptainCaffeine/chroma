@@ -21,13 +21,18 @@ namespace Core {
 
 GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Emu::SDLContext& context, std::vector<u8> rom)
         : sdl_context(context)
-        , mem(Memory(gb_type, header, std::move(rom)))
-        , timer(Timer(mem))
-        , lcd(LCD(mem))
-        , serial(Serial(mem))
+        , timer(Timer())
+        , serial(Serial(gb_type, header.game_mode))
+        , lcd(LCD())
+        , mem(Memory(gb_type, header, timer, serial, lcd, std::move(rom)))
         , cpu(CPU(mem)) {
 
+    // Link together circular dependencies after all components are constructed. For the CPU and LCD, these are
+    // necessary. However, currently Timer and Serial only need a reference to Memory to request interrupts.
     cpu.LinkToGameBoy(this);
+    timer.LinkToMemory(&mem);
+    serial.LinkToMemory(&mem);
+    lcd.LinkToMemory(&mem);
 }
 
 void GameBoy::EmulatorLoop() {
@@ -52,7 +57,6 @@ void GameBoy::EmulatorLoop() {
 
 void GameBoy::HardwareTick(unsigned int cycles) {
     for (; cycles != 0; cycles -= 4) {
-
         // Enable interrupts if EI was previously called.
         cpu.EnableInterruptsDelayed();
 

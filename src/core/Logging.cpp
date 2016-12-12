@@ -57,10 +57,10 @@ void CPU::PrintInterrupt() {
 
 void Timer::PrintRegisterState() {
     std::cout << std::hex << std::uppercase;
-    std::cout << "DIV = 0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(mem.ReadDIV());
-    std::cout << ", TIMA = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF05));
-    std::cout << ", TMA = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF06));
-    std::cout << ", TAC = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF07));
+    std::cout << "DIV = 0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(divider);
+    std::cout << ", TIMA = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(tima);
+    std::cout << ", TMA = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(tma);
+    std::cout << ", TAC = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(tac);
     std::cout << ", pt_inc = " << std::setw(1) << prev_tima_inc;
     std::cout << ", pt_val = " << std::setw(2) << static_cast<unsigned int>(prev_tima_val);
     std::cout << ", t_of = " << std::setw(1) << tima_overflow;
@@ -69,34 +69,15 @@ void Timer::PrintRegisterState() {
 
 void LCD::PrintRegisterState() {
     std::cout << std::hex << std::uppercase;
-    std::cout << "LCDC = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF40));
-    std::cout << ", STAT = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF41));
-    std::cout << ", LY = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF44));
-    std::cout << ", LYC = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF45));
+    std::cout << "LCDC = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(lcdc);
+    std::cout << ", STAT = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(stat);
+    std::cout << ", LY = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(ly);
+    std::cout << ", LYC = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(ly_compare);
     std::cout << ", LCD On = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(lcd_on);
     std::cout << ", cycles = " << std::dec << std::setw(3) << scanline_cycles;
     std::cout << ", bg_en = " << std::setw(1) << BGEnabled();
     std::cout << ", win_en = " << std::setw(1) << WindowEnabled();
     std::cout << ", stat_sig = " << std::setw(1) << stat_interrupt_signal << "\n";
-}
-
-void CPU::BlarggRamDebug() {
-    if (!stop_printing &&
-            mem.ReadMem8(0xA001) == 0xDE &&
-            mem.ReadMem8(0xA002) == 0xB0 &&
-            mem.ReadMem8(0xA003) == 0x61 &&
-            mem.ReadMem8(0xA004) != 0x00 &&
-            mem.ReadMem8(0xA000) != 0x80) {
-        std::cout << "Test result: ";
-        std::cout << std::hex << std::setfill('0') << static_cast<unsigned int>(mem.ReadMem8(0xA000)) << "\n";
-
-        u16 text_addr = 0xA004;
-        while (mem.ReadMem8(text_addr) != 0x00) {
-            std::cout << mem.ReadMem8(text_addr++);
-        }
-
-        stop_printing = true;
-    }
 }
 
 } // End namespace Core

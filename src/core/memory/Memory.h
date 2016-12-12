@@ -26,10 +26,14 @@
 namespace Core {
 
 struct CartridgeHeader;
+class Timer;
+class Serial;
+class LCD;
 
 class Memory {
 public:
-    Memory(const Console gb_type, const CartridgeHeader& header, std::vector<u8> rom_contents);
+    Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima, Serial& sio, LCD& display,
+           std::vector<u8> rom_contents);
 
     const Console console;
     const GameMode game_mode;
@@ -49,10 +53,6 @@ public:
     bool RequestedEnabledInterrupts() const { return interrupt_flags & hram.back(); }
     bool IF_written_this_cycle = false;
 
-    // Timer functions
-    u16 ReadDIV() const { return divider; }
-    void IncrementDIV(unsigned int cycles) { divider += cycles; }
-
     // DMA functions
     void UpdateOAM_DMA();
 
@@ -61,54 +61,11 @@ public:
     void CopyFromVRAM(const u16 start_addr, const std::size_t num_bytes, DestIter dest) const {
         std::copy_n(vram.cbegin() + (start_addr - 0x8000), num_bytes, dest);
     }
-
-    // ******** Temporarily public for LCD access.
-
-    // LCDC register: 0xFF40
-    //     bit 7: LCD On
-    //     bit 6: Window Tilemap Region (0=0x9800-0x9BFF, 1=0x9C00-0x9FFF)
-    //     bit 5: Window Enable
-    //     bit 4: BG and Window Tile Data Region (0=0x8800-0x97FF, 1=0x8000-0x8FFF)
-    //     bit 3: BG Tilemap Region (0=0x9800-0x9BFF, 1=0x9C00-0x9FFF)
-    //     bit 2: Sprite Size (0=8x8, 1=8x16)
-    //     bit 1: Sprites Enabled
-    //     bit 0: BG Enabled (0=On DMG, this sets the background to white.
-    //                          On CGB in DMG mode, this disables both the window and background. 
-    //                          In CGB mode, this gives all sprites priority over the background and window.)
-    u8 lcdc = 0x91; // TODO: Verify that 0x91 is the correct initial value for this register.
-    // STAT register: 0xFF41
-    //     bit 6: LY=LYC Check Enable
-    //     bit 5: Mode 2 OAM Check Enable
-    //     bit 4: Mode 1 VBLANK Check Enable
-    //     bit 3: Mode 0 HBLANK Check Enable
-    //     bit 2: LY=LYC Compare Signal (1 implies LY=LYC)
-    //     bits 1&0: Screen Mode (0=HBLANK, 1=VBLANK, 2=Searching OAM, 3=Transferring Data to LCD driver)
-    u8 stat = 0x01;
-    // SCY register: 0xFF42
-    u8 scroll_y = 0x00;
-    // SCX register: 0xFF43
-    u8 scroll_x = 0x00;
-    // LY register: 0xFF44
-    u8 ly = 0x00;
-    // LYC register: 0xFF45
-    u8 ly_compare = 0x00;
-
-    // BGP register: 0xFF47
-    //     bits 7-6: background colour 3
-    //     bits 5-4: background colour 2
-    //     bits 3-2: background colour 1
-    //     bits 1-0: background colour 0
-    u8 bg_palette = 0xFC;
-    // OBP0 register: 0xFF48
-    u8 obj_palette0 = 0xFF;
-    // OBP1 register: 0xFF49
-    u8 obj_palette1 = 0xFF;
-    // WY register: 0xFF4A
-    u8 window_y = 0x00;
-    // WX register: 0xFF4B
-    u8 window_x = 0x00;
-
 private:
+    Timer& timer;
+    Serial& serial;
+    LCD& lcd;
+
     const MBC mbc_mode;
     const bool ext_ram_present;
     const bool rumble_present;
@@ -153,23 +110,19 @@ private:
     u8 joypad; // Not implemented.
 
     // SB register: 0xFF01
-    u8 serial_data = 0x00;
     // SC register: 0xFF02
     //     bit 7: Transfer Start Flag
     //     bit 1: Transfer Speed (0=Normal, 1=Fast) (CGB Only)
     //     bit 0: Shift Clock (0=External Clock, 1=Internal Clock 8192Hz)
-    u8 serial_control = 0x00;
+    // Implementations located in Serial class.
 
     // DIV register: 0xFF04
-    u16 divider;
     // TIMA register: 0xFF05
-    u8 timer_counter = 0x00;
     // TMA register: 0xFF06
-    u8 timer_modulo = 0x00;
     // TAC register: 0xFF07
     //     bit 2: Timer Enable
     //     bits 1&0: Main Frequency Divider (0=every 1024 cycles, 1=16 cycles, 2=64 cycles, 3=256 cycles)
-    u8 timer_control = 0x00;
+    // Implementations located in Timer class.
 
     // IF register: 0xFF0F
     //     bit 0: VBLANK
@@ -223,6 +176,39 @@ private:
     u8 sound_on = 0x81;
     // Wave Pattern RAM: 0xFF30-0xFF3F
     std::array<u8, 0x10> wave_ram{};
+
+    // LCDC register: 0xFF40
+    //     bit 7: LCD On
+    //     bit 6: Window Tilemap Region (0=0x9800-0x9BFF, 1=0x9C00-0x9FFF)
+    //     bit 5: Window Enable
+    //     bit 4: BG and Window Tile Data Region (0=0x8800-0x97FF, 1=0x8000-0x8FFF)
+    //     bit 3: BG Tilemap Region (0=0x9800-0x9BFF, 1=0x9C00-0x9FFF)
+    //     bit 2: Sprite Size (0=8x8, 1=8x16)
+    //     bit 1: Sprites Enabled
+    //     bit 0: BG Enabled (0=On DMG, this sets the background to white.
+    //                          On CGB in DMG mode, this disables both the window and background. 
+    //                          In CGB mode, this gives all sprites priority over the background and window.)
+    // STAT register: 0xFF41
+    //     bit 6: LY=LYC Check Enable
+    //     bit 5: Mode 2 OAM Check Enable
+    //     bit 4: Mode 1 VBLANK Check Enable
+    //     bit 3: Mode 0 HBLANK Check Enable
+    //     bit 2: LY=LYC Compare Signal (1 implies LY=LYC)
+    //     bits 1&0: Screen Mode (0=HBLANK, 1=VBLANK, 2=Searching OAM, 3=Transferring Data to LCD driver)
+    // SCY register: 0xFF42
+    // SCX register: 0xFF43
+    // LY register: 0xFF44
+    // LYC register: 0xFF45
+    // BGP register: 0xFF47
+    //     bits 7-6: background colour 3
+    //     bits 5-4: background colour 2
+    //     bits 3-2: background colour 1
+    //     bits 1-0: background colour 0
+    // OBP0 register: 0xFF48
+    // OBP1 register: 0xFF49
+    // WY register: 0xFF4A
+    // WX register: 0xFF4B
+    // Implementations located in LCD class.
 
     // DMA register: 0xFF46
     u8 oam_dma_start = 0xFF;

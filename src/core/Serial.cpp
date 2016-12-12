@@ -15,13 +15,14 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "core/Serial.h"
+#include "core/memory/Memory.h"
 
 namespace Core {
 
-Serial::Serial(Memory& memory) : mem(memory) {
+Serial::Serial(const Console console, const GameMode game_mode) {
     // I'm assuming the initial value of the internal serial clock is equal to that of the lower byte of DIV.
-    if (mem.game_mode == GameMode::DMG) {
-        if (mem.console == Console::DMG) {
+    if (game_mode == GameMode::DMG) {
+        if (console == Console::DMG) {
             serial_clock = 0xCC;
         } else {
             serial_clock = 0x7C;
@@ -36,7 +37,7 @@ void Serial::UpdateSerial() {
     serial_clock += 4;
 
     // Check if a transfer has been initiated.
-    if (bits_to_shift == 0 && (mem.ReadMem8(0xFF02) & 0x80)) {
+    if (bits_to_shift == 0 && (serial_control & 0x80)) {
         bits_to_shift = 8;
     }
 
@@ -60,19 +61,16 @@ void Serial::UpdateSerial() {
 
 void Serial::ShiftSerialBit() {
     // Shift the most significant bit out of SB.
-    u8 serial_data = mem.ReadMem8(0xFF01);
     serial_data <<= 1;
 
     // Since we are always emulating a disconnected serial port at the moment, place a 1 in the least significant
     // bit of SB.
     serial_data |= 0x01;
 
-    mem.WriteMem8(0xFF01, serial_data);
-
     if (--bits_to_shift == 0) {
         // The transfer has completed.
-        mem.WriteMem8(0xFF02, mem.ReadMem8(0xFF02) & 0x7F);
-        mem.RequestInterrupt(Interrupt::Serial);
+        serial_control &= 0x7F;
+        mem->RequestInterrupt(Interrupt::Serial);
     }
 }
 
@@ -80,8 +78,8 @@ u8 Serial::SelectClockBit() const {
     // In CBG mode, bit 1 of SC can be used to set the speed of the serial transfer. The transfer runs at the usual 
     // speed (using bit 7 of the serial clock) if it's 0, and runs fast (using bit 2 of the serial clock) if it's 1.
     // In DMG mode, bit 1 of SC returns 1 even though the transfer runs at the usual speed.
-    if (mem.game_mode == GameMode::CGB) {
-        return (mem.ReadMem8(0xFF02) & 0x02) ? 0x04 : 0x80;
+    if (mem->game_mode == GameMode::CGB) {
+        return (serial_control & 0x02) ? 0x04 : 0x80;
     } else {
         return 0x80;
     }

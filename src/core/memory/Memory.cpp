@@ -16,16 +16,23 @@
 
 #include "core/CartridgeHeader.h"
 #include "core/memory/Memory.h"
+#include "core/Timer.h"
+#include "core/Serial.h"
+#include "core/LCD.h"
 
 namespace Core {
 
-Memory::Memory(const Console gb_type, const CartridgeHeader& cart_header, std::vector<u8> rom_contents)
+Memory::Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima, Serial& sio, LCD& display,
+               std::vector<u8> rom_contents)
         : console(gb_type)
-        , game_mode(cart_header.game_mode)
-        , mbc_mode(cart_header.mbc_mode)
-        , ext_ram_present(cart_header.ext_ram_present)
-        , rumble_present(cart_header.rumble_present)
-        , num_rom_banks(cart_header.num_rom_banks)
+        , game_mode(header.game_mode)
+        , timer(tima)
+        , serial(sio)
+        , lcd(display)
+        , mbc_mode(header.mbc_mode)
+        , ext_ram_present(header.ext_ram_present)
+        , rumble_present(header.rumble_present)
+        , num_rom_banks(header.num_rom_banks)
         , rom(std::move(rom_contents)) {
 
     if (game_mode == GameMode::DMG) {
@@ -39,7 +46,7 @@ Memory::Memory(const Console gb_type, const CartridgeHeader& cart_header, std::v
     }
 
     if (ext_ram_present) {
-        ext_ram = std::vector<u8>(cart_header.ram_size);
+        ext_ram = std::vector<u8>(header.ram_size);
     }
 
     // 160 bytes object attribute memory.
@@ -55,14 +62,14 @@ void Memory::IORegisterInit() {
     if (game_mode == GameMode::DMG) {
         if (console == Console::DMG) {
             joypad = 0xCF; // DMG starts with joypad inputs enabled.
-            divider = 0xABCC;
+            timer.divider = 0xABCC;
         } else {
             joypad = 0xFF; // CGB starts with joypad inputs disabled, even in DMG mode.
-            divider = 0x267C;
+            timer.divider = 0x267C;
         }
     } else {
         joypad = 0xFF; // Probably?
-        divider = 0x1EA0;
+        timer.divider = 0x1EA0;
     }
 }
 
@@ -86,7 +93,7 @@ u8 Memory::ReadMem8(const u16 addr) const {
         } else if (addr < 0xA000) {
             // VRAM -- switchable in CGB mode
             // Not accessible during screen mode 3.
-            if ((stat & 0x03) != 3) {
+            if ((lcd.stat & 0x03) != 3) {
                 return vram[addr - 0x8000 + 0x2000*vram_bank_num];
             } else {
                 return 0xFF;
@@ -108,7 +115,7 @@ u8 Memory::ReadMem8(const u16 addr) const {
         } else if (addr < 0xFEA0) {
             // OAM (Sprite Attribute Table)
             // Not accessible during screen modes 2 or 3.
-            if ((stat & 0x02) == 0) {
+            if ((lcd.stat & 0x02) == 0) {
                 return oam[addr - 0xFE00];
             } else {
                 return 0xFF;
@@ -142,7 +149,7 @@ void Memory::WriteMem8(const u16 addr, const u8 data) {
         } else if (addr < 0xA000) {
             // VRAM -- switchable in CGB mode
             // Not accessible during screen mode 3.
-            if ((stat & 0x03) != 3) {
+            if ((lcd.stat & 0x03) != 3) {
                 vram[addr - 0x8000 + 0x2000*vram_bank_num] = data;
             }
         } else if (addr < 0xC000) {
@@ -162,7 +169,7 @@ void Memory::WriteMem8(const u16 addr, const u8 data) {
         } else if (addr < 0xFEA0) {
             // OAM (Sprite Attribute Table)
             // Not accessible during screen modes 2 or 3.
-            if ((stat & 0x02) == 0) {
+            if ((lcd.stat & 0x02) == 0) {
                 oam[addr - 0xFE00] = data;
             }
         } else {
@@ -181,22 +188,22 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         return joypad | 0xC0;
     // SB -- Serial Data Transfer
     case 0xFF01:
-        return serial_data;
+        return serial.serial_data;
     // SC -- Serial control
     case 0xFF02:
-        return serial_control | ((game_mode == GameMode::CGB) ? 0x7C : 0x7E);
+        return serial.serial_control | ((game_mode == GameMode::CGB) ? 0x7C : 0x7E);
     // DIV -- Divider Register
     case 0xFF04:
-        return static_cast<u8>(divider >> 8);
+        return static_cast<u8>(timer.divider >> 8);
     // TIMA -- Timer Counter
     case 0xFF05:
-        return timer_counter;
+        return timer.tima;
     // TMA -- Timer Modulo
     case 0xFF06:
-        return timer_modulo;
+        return timer.tma;
     // TAC -- Timer Control
     case 0xFF07:
-        return timer_control | 0xF8;
+        return timer.tac | 0xF8;
     // IF -- Interrupt Flags
     case 0xFF0F:
         return interrupt_flags | 0xE0;
@@ -269,40 +276,40 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         return wave_ram[addr - 0xFF30];
     // LCDC -- LCD control
     case 0xFF40:
-        return lcdc;
+        return lcd.lcdc;
     // STAT -- LCD status
     case 0xFF41:
-        return stat | 0x80;
+        return lcd.stat | 0x80;
     // SCY -- BG Scroll Y
     case 0xFF42:
-        return scroll_y;
+        return lcd.scroll_y;
     // SCX -- BG Scroll X
     case 0xFF43:
-        return scroll_x;
+        return lcd.scroll_x;
     // LY -- LCD Current Scanline
     case 0xFF44:
-        return ly;
+        return lcd.ly;
     // LYC -- LY Compare
     case 0xFF45:
-        return ly_compare;
+        return lcd.ly_compare;
     // DMA -- OAM DMA Transfer
     case 0xFF46:
         return oam_dma_start;
     // BGP -- BG Palette Data
     case 0xFF47:
-        return bg_palette;
+        return lcd.bg_palette;
     // OBP0 -- Sprite Palette 0 Data
     case 0xFF48:
-        return obj_palette0;
+        return lcd.obj_palette0;
     // OBP1 -- Sprite Palette 1 Data
     case 0xFF49:
-        return obj_palette1;
+        return lcd.obj_palette1;
     // WY -- Window Y Position
     case 0xFF4A:
-        return window_y;
+        return lcd.window_y;
     // WX -- Window X Position
     case 0xFF4B:
-        return window_x;
+        return lcd.window_x;
     // KEY1 -- Speed Switch
     case 0xFF4D:
         return speed_switch | ((game_mode == GameMode::CGB) ? 0x7E : 0xFF);
@@ -335,28 +342,28 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // SB -- Serial Data Transfer
     case 0xFF01:
-        serial_data = data;
+        serial.serial_data = data;
         break;
     // SC -- Serial control
     case 0xFF02:
-        serial_control = data & ((game_mode == GameMode::CGB) ? 0x83 : 0x81);
+        serial.serial_control = data & ((game_mode == GameMode::CGB) ? 0x83 : 0x81);
         break;
     // DIV -- Divider Register
     case 0xFF04:
         // DIV is set to zero on any write.
-        divider = 0x0000;
+        timer.divider = 0x0000;
         break;
     // TIMA -- Timer Counter
     case 0xFF05:
-        timer_counter = data;
+        timer.tima = data;
         break;
     // TMA -- Timer Modulo
     case 0xFF06:
-        timer_modulo = data;
+        timer.tma = data;
         break;
     // TAC -- Timer Control
     case 0xFF07:
-        timer_control = data & 0x07;
+        timer.tac = data & 0x07;
         break;
     // IF -- Interrupt Flags
     case 0xFF0F:
@@ -456,19 +463,19 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // LCDC -- LCD control
     case 0xFF40:
-        lcdc = data;
+        lcd.lcdc = data;
         break;
     // STAT -- LCD status
     case 0xFF41:
-        stat = (data & 0x78) | (stat & 0x07);
+        lcd.stat = (data & 0x78) | (lcd.stat & 0x07);
         break;
     // SCY -- BG Scroll Y
     case 0xFF42:
-        scroll_y = data;
+        lcd.scroll_y = data;
         break;
     // SCX -- BG Scroll X
     case 0xFF43:
-        scroll_x = data;
+        lcd.scroll_x = data;
         break;
     // LY -- LCD Current Scanline
     case 0xFF44:
@@ -476,7 +483,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // LYC -- LY Compare
     case 0xFF45:
-        ly_compare = data;
+        lcd.ly_compare = data;
         break;
     // DMA -- OAM DMA Transfer
     case 0xFF46:
@@ -485,23 +492,23 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // BGP -- BG Palette Data
     case 0xFF47:
-        bg_palette = data;
+        lcd.bg_palette = data;
         break;
     // OBP0 -- Sprite Palette 0 Data
     case 0xFF48:
-        obj_palette0 = data;
+        lcd.obj_palette0 = data;
         break;
     // OBP1 -- Sprite Palette 1 Data
     case 0xFF49:
-        obj_palette1 = data;
+        lcd.obj_palette1 = data;
         break;
     // WY -- Window Y Position
     case 0xFF4A:
-        window_y = data;
+        lcd.window_y = data;
         break;
     // WX -- Window X Position
     case 0xFF4B:
-        window_x = data;
+        lcd.window_x = data;
         break;
     // KEY1 -- Speed Switch
     case 0xFF4D:

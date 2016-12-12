@@ -38,10 +38,10 @@ public:
     Emu::SDLContext& sdl_context;
 
     // Game Boy hardware components.
-    Memory mem;
     Timer timer;
-    LCD lcd;
     Serial serial;
+    LCD lcd;
+    Memory mem;
     CPU cpu;
 
     void EmulatorLoop();

@@ -16,17 +16,31 @@
 
 #pragma once
 
-#include "core/memory/Memory.h"
+#include "common/CommonTypes.h"
+#include "common/CommonEnums.h"
 
 namespace Core {
 
+class Memory;
+
 class Serial {
 public:
-    Serial(Memory& memory);
+    Serial(const Console console, const GameMode game_mode);
 
     void UpdateSerial();
+
+    void LinkToMemory(Memory* memory) { mem = memory; }
+
+    // ******** Serial I/O registers ********
+    // SB register: 0xFF01
+    u8 serial_data = 0x00;
+    // SC register: 0xFF02
+    //     bit 7: Transfer Start Flag
+    //     bit 1: Transfer Speed (0=Normal, 1=Fast) (CGB Only)
+    //     bit 0: Shift Clock (0=External Clock, 1=Internal Clock 8192Hz)
+    u8 serial_control = 0x00;
 private:
-    Memory& mem;
+    Memory* mem;
 
     u8 serial_clock;
     int bits_to_shift = 0;
@@ -36,7 +50,7 @@ private:
     bool prev_transfer_signal = false;
 
     void ShiftSerialBit();
-    bool UsingInternalClock() const { return mem.ReadMem8(0xFF02) & 0x01; }
+    bool UsingInternalClock() const { return serial_control & 0x01; }
     u8 SelectClockBit() const;
 };
 
