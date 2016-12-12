@@ -14,12 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "core/CartridgeHeader.h"
 #include "core/memory/Memory.h"
 
 namespace Core {
 
-Memory::Memory(const Console game_boy, const CartridgeHeader& cart_header, std::vector<u8> rom_contents)
-        : console(game_boy)
+Memory::Memory(const Console gb_type, const CartridgeHeader& cart_header, std::vector<u8> rom_contents)
+        : console(gb_type)
         , game_mode(cart_header.game_mode)
         , mbc_mode(cart_header.mbc_mode)
         , ext_ram_present(cart_header.ext_ram_present)

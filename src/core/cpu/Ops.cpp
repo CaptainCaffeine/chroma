@@ -17,6 +17,7 @@
 #include <cassert>
 
 #include "core/cpu/CPU.h"
+#include "core/GameBoy.h"
 
 namespace Core {
 
@@ -27,7 +28,7 @@ void CPU::Load8(Reg8 R, u8 immediate) {
 
 void CPU::Load8FromMem(Reg8 R, u16 addr) {
     Write8(R, mem.ReadMem8(addr));
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 }
 
 void CPU::Load8FromMemAtHL(Reg8 R) {
@@ -36,12 +37,12 @@ void CPU::Load8FromMemAtHL(Reg8 R) {
 
 void CPU::Load8IntoMem(Reg16 R, u8 immediate) {
     mem.WriteMem8(Read16(R), immediate);
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 }
 
 void CPU::LoadAIntoMem(u16 addr) {
     mem.WriteMem8(addr, a);
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 }
 
 // 16-bit Load operations
@@ -51,7 +52,7 @@ void CPU::Load16(Reg16 R, u16 immediate) {
 
 void CPU::LoadHLIntoSP() {
     sp = (static_cast<u16>(h) << 8) | static_cast<u16>(l);
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 }
 
 void CPU::LoadSPnIntoHL(s8 immediate) {
@@ -68,35 +69,35 @@ void CPU::LoadSPnIntoHL(s8 immediate) {
     h = static_cast<u8>(tmp16 >> 8);
     
     // Internal delay
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 }
 
 void CPU::LoadSPIntoMem(u16 addr) {
     mem.WriteMem8(addr, static_cast<u8>(sp));
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 
     mem.WriteMem8(addr+1, static_cast<u8>(sp >> 8));
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 }
 
 void CPU::Push(Reg16 R) {
     // Internal delay
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 
     u16 reg_val = Read16(R); // TODO: clean up this register access mess
 
     mem.WriteMem8(--sp, static_cast<u8>(reg_val >> 8));
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 
     mem.WriteMem8(--sp, static_cast<u8>(reg_val));
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 }
 
 void CPU::Pop(Reg16 R) {
     u8 byte_lo = mem.ReadMem8(sp++);
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
     u8 byte_hi = mem.ReadMem8(sp++);
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 
     Write16(R, (static_cast<u16>(byte_hi) << 8) | static_cast<u16>(byte_lo)); // TODO: clean up
 }
@@ -330,7 +331,7 @@ void CPU::IncReg(Reg16 R) {
         break;
     }
 
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 }
 
 void CPU::IncMemAtHL() {
@@ -423,7 +424,7 @@ void CPU::DecReg(Reg16 R) {
         break;
     }
 
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 }
 
 void CPU::DecMemAtHL() {
@@ -473,7 +474,7 @@ void CPU::AddHL(Reg16 R) {
     f.SetCarry(tmp16 & 0x0100);
     h = static_cast<u8>(tmp16);
 
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 }
 
 void CPU::AddSP(s8 immediate) {
@@ -488,7 +489,7 @@ void CPU::AddSP(s8 immediate) {
     sp += immediate;
 
     // Two internal delays.
-    HardwareTick(8);
+    gameboy->HardwareTick(8);
 }
 
 // Miscellaneous arithmetic
@@ -1149,7 +1150,7 @@ void CPU::SetBitOfMemAtHL(unsigned int bit) {
 // Jumps
 void CPU::Jump(u16 addr) {
     // Internal delay
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 
     pc = addr;
 }
@@ -1160,7 +1161,7 @@ void CPU::JumpToHL() {
 
 void CPU::RelativeJump(s8 immediate) {
     // Internal delay
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 
     pc += immediate;
 }
@@ -1168,25 +1169,25 @@ void CPU::RelativeJump(s8 immediate) {
 // Calls and Returns
 void CPU::Call(u16 addr) {
     // Internal delay
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 
     mem.WriteMem8(--sp, static_cast<u8>(pc >> 8));
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 
     mem.WriteMem8(--sp, static_cast<u8>(pc));
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 
     pc = addr;
 }
 
 void CPU::Return() {
     // Internal delay
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 
     u8 byte_lo = mem.ReadMem8(sp++);
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
     u8 byte_hi = mem.ReadMem8(sp++);
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 
     pc = (static_cast<u16>(byte_hi) << 8) | static_cast<u16>(byte_lo);
 }
@@ -1218,9 +1219,8 @@ void CPU::Stop() {
         // returns to normal operation once the speed switch is complete.
 
         // A speed switch takes 128*1024-80=130992 cycles to complete, plus 4 cycles to decode the STOP instruction.
-        // I don't call HardwareTick here because currently its other functions are irrelevant during STOP.
         for (unsigned int speed_switch_cycles = 130992; speed_switch_cycles != 0; speed_switch_cycles -= 4) {
-            timer.UpdateTimer();
+            gameboy->HardwareTick(4);
             // Should also check joypad inputs here.
         }
 

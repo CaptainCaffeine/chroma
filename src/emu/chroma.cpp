@@ -21,11 +21,7 @@
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
 #include "core/CartridgeHeader.h"
-#include "core/memory/Memory.h"
-#include "core/Timer.h"
-#include "core/LCD.h"
-#include "core/Serial.h"
-#include "core/cpu/CPU.h"
+#include "core/GameBoy.h"
 #include "emu/ParseOptions.h"
 #include "emu/SDL_Utils.h"
 
@@ -37,20 +33,20 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    Console game_boy;
+    Console gameboy_type;
     std::string mode_string = Emu::GetOptionParam(tokens, "-m");
     if (!mode_string.empty()) {
         if (mode_string == "dmg") {
-            game_boy = Console::DMG;
+            gameboy_type = Console::DMG;
         } else if (mode_string == "cgb") {
-            game_boy = Console::CGB;
+            gameboy_type = Console::CGB;
         } else {
             std::cerr << "Invalid mode specified: " << mode_string << ". Valid modes are dmg and cgb." << std::endl;
             return 1;
         }
     } else {
         // If no console specified, default is DMG.
-        game_boy = Console::DMG;
+        gameboy_type = Console::DMG;
     }
 
     std::vector<u8> rom = Emu::LoadROM(tokens.back());
@@ -68,32 +64,10 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // Initialize core.
-    Core::CartridgeHeader cart_header = Core::GetCartridgeHeaderInfo(game_boy, rom);
-    Core::Memory memory(game_boy, cart_header, std::move(rom));
-    Core::Timer timer(memory);
-    Core::LCD lcd(memory);
-    Core::Serial serial(memory);
-    Core::CPU cpu(memory, timer, lcd, serial);
+    Core::CartridgeHeader cart_header = Core::GetCartridgeHeaderInfo(gameboy_type, rom);
+    Core::GameBoy gameboy_core(gameboy_type, cart_header, sdl_context, std::move(rom));
 
-    SDL_Event e;
-    bool keep_going = true;
-    while (keep_going) {
-        while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) {
-                keep_going = false;
-            } else if (e.type == SDL_KEYDOWN) {
-                keep_going = false;
-            }
-        }
-
-        // This is the number of cycles needed for VBLANK... Temporary just to see if this works, I want VBLANK to
-        // exit the RunFor function.
-        cpu.RunFor(0x11250);
-        Emu::RenderFrame(lcd.GetRawPointerToFramebuffer(), sdl_context);
-    }
-
-    Emu::CleanupSDL(sdl_context);
+    gameboy_core.EmulatorLoop();
 
     std::cout << "End emulation." << std::endl;
     return 0;

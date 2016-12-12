@@ -22,13 +22,14 @@
 
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
-#include "core/CartridgeHeader.h"
 
 namespace Core {
 
+struct CartridgeHeader;
+
 class Memory {
 public:
-    Memory(const Console game_boy, const CartridgeHeader& header, std::vector<u8> rom_contents);
+    Memory(const Console gb_type, const CartridgeHeader& header, std::vector<u8> rom_contents);
 
     const Console console;
     const GameMode game_mode;

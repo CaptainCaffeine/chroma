@@ -15,15 +15,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "core/cpu/CPU.h"
+#include "core/GameBoy.h"
 
 namespace Core {
 
-CPU::CPU(Memory& memory, Timer& tima, LCD& display, Serial& serial_io)
-        : mem(memory)
-        , timer(tima)
-        , lcd(display)
-        , serial(serial_io) {
-
+CPU::CPU(Memory& memory) : mem(memory) {
     // Initial register values
     if (mem.game_mode == GameMode::DMG) {
         if (mem.console == Console::DMG) {
@@ -43,6 +39,10 @@ CPU::CPU(Memory& memory, Timer& tima, LCD& display, Serial& serial_io)
         d = 0xFF; e = 0x56;
         h = 0x00; l = 0x0D;
     }
+}
+
+void CPU::LinkToGameBoy(GameBoy* gb) {
+    gameboy = gb;
 }
 
 // Returns the value stored in an 8-bit register.
@@ -149,36 +149,36 @@ void CPU::Write16(Reg16 R, u16 val) {
 // Returns the value from memory at the address stored in the 16-bit register pair HL.
 u8 CPU::ReadMemAtHL() {
     const u8 data = mem.ReadMem8((static_cast<u16>(h) << 8) | static_cast<u16>(l));
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
     return data;
 }
 
 // Writes a value to memory at the address stored in the 16-bit register pair HL.
 void CPU::WriteMemAtHL(const u8 val) {
     mem.WriteMem8((static_cast<u16>(h) << 8) | static_cast<u16>(l), val);
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 }
 
 // Return the byte from memory at the pc and increment the pc.
 u8 CPU::GetImmediateByte() {
     const u8 imm = mem.ReadMem8(pc++);
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
     return imm;
 }
 
 // Return the signed byte from memory at the pc and increment the pc.
 s8 CPU::GetImmediateSignedByte() {
     const s8 imm = static_cast<s8>(mem.ReadMem8(pc++));
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
     return imm;
 }
 
 // Return the 16-bit word from memory at the pc and increment the pc by 2.
 u16 CPU::GetImmediateWord() {
     const u8 byte_lo = mem.ReadMem8(pc++);
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
     const u8 byte_hi = mem.ReadMem8(pc++);
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 
     return (static_cast<u16>(byte_hi) << 8) | static_cast<u16>(byte_lo);
 }
@@ -196,7 +196,7 @@ void CPU::RunFor(int cycles) {
             cycles -= ExecuteNext(mem.ReadMem8(pc));
             cpu_mode = CPUMode::Running;
         } else if (cpu_mode == CPUMode::Halted) {
-            HardwareTick(4);
+            gameboy->HardwareTick(4);
             cycles -= 4;
         }
     }
@@ -206,7 +206,7 @@ int CPU::HandleInterrupts() {
     if (interrupt_master_enable) {
         if (mem.RequestedEnabledInterrupts()) {
 //            PrintInterrupt();
-            HardwareTick(12);
+            gameboy->HardwareTick(12);
 
             // Disable interrupts, clear the corresponding bit in IF, and jump to the interrupt routine.
             interrupt_master_enable = false;
@@ -249,36 +249,42 @@ int CPU::HandleInterrupts() {
 
 void CPU::ServiceInterrupt(const u16 addr) {
     mem.WriteMem8(--sp, static_cast<u8>(pc >> 8));
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 
     mem.WriteMem8(--sp, static_cast<u8>(pc));
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 
     pc = addr;
 }
 
-void CPU::HardwareTick(unsigned int cycles) {
-    for (; cycles != 0; cycles -= 4) {
-
-        // Enable interrupts if EI was previously called. 
-        interrupt_master_enable = interrupt_master_enable || enable_interrupts_delayed;
-        enable_interrupts_delayed = false;
-
-        // Update the rest of the system hardware.
-        mem.UpdateOAM_DMA();
-        timer.UpdateTimer();
-        lcd.UpdateLCD();
-        serial.UpdateSerial();
-
-        mem.IF_written_this_cycle = false;
-
-//        timer.PrintRegisterState();
-//        lcd.PrintRegisterState();
-    }
+void CPU::EnableInterruptsDelayed() {
+    interrupt_master_enable = interrupt_master_enable || enable_interrupts_delayed;
+    enable_interrupts_delayed = false;
 }
 
+//void CPU::HardwareTick(unsigned int cycles) {
+//    gameboy->HardwareTick(cycles);
+////    for (; cycles != 0; cycles -= 4) {
+////
+////        // Enable interrupts if EI was previously called. 
+////        interrupt_master_enable = interrupt_master_enable || enable_interrupts_delayed;
+////        enable_interrupts_delayed = false;
+////
+////        // Update the rest of the system hardware.
+////        mem.UpdateOAM_DMA();
+////        timer.UpdateTimer();
+////        lcd.UpdateLCD();
+////        serial.UpdateSerial();
+////
+////        mem.IF_written_this_cycle = false;
+////
+//////        timer.PrintRegisterState();
+//////        lcd.PrintRegisterState();
+////    }
+//}
+
 unsigned int CPU::ExecuteNext(const u8 opcode) {
-    HardwareTick(4);
+    gameboy->HardwareTick(4);
 
     switch (opcode) {
     // ******** 8-bit loads ********
@@ -1114,7 +1120,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             Jump(GetImmediateWord());
             return 16;
         } else {
-            HardwareTick(8);
+            gameboy->HardwareTick(8);
             pc += 2;
             return 12;
         }
@@ -1123,7 +1129,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             Jump(GetImmediateWord());
             return 16;
         } else {
-            HardwareTick(8);
+            gameboy->HardwareTick(8);
             pc += 2;
             return 12;
         }
@@ -1132,7 +1138,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             Jump(GetImmediateWord());
             return 16;
         } else {
-            HardwareTick(8);
+            gameboy->HardwareTick(8);
             pc += 2;
             return 12;
         }
@@ -1141,7 +1147,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             Jump(GetImmediateWord());
             return 16;
         } else {
-            HardwareTick(8);
+            gameboy->HardwareTick(8);
             pc += 2;
             return 12;
         }
@@ -1164,7 +1170,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             RelativeJump(GetImmediateSignedByte());
             return 12;
         } else {
-            HardwareTick(4);
+            gameboy->HardwareTick(4);
             ++pc;
             return 8;
         }
@@ -1173,7 +1179,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             RelativeJump(GetImmediateSignedByte());
             return 12;
         } else {
-            HardwareTick(4);
+            gameboy->HardwareTick(4);
             ++pc;
             return 8;
         }
@@ -1182,7 +1188,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             RelativeJump(GetImmediateSignedByte());
             return 12;
         } else {
-            HardwareTick(4);
+            gameboy->HardwareTick(4);
             ++pc;
             return 8;
         }
@@ -1191,7 +1197,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             RelativeJump(GetImmediateSignedByte());
             return 12;
         } else {
-            HardwareTick(4);
+            gameboy->HardwareTick(4);
             ++pc;
             return 8;
         }
@@ -1214,7 +1220,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             Call(GetImmediateWord());
             return 24;
         } else {
-            HardwareTick(8);
+            gameboy->HardwareTick(8);
             pc += 2;
             return 12;
         }
@@ -1223,7 +1229,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             Call(GetImmediateWord());
             return 24;
         } else {
-            HardwareTick(8);
+            gameboy->HardwareTick(8);
             pc += 2;
             return 12;
         }
@@ -1232,7 +1238,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             Call(GetImmediateWord());
             return 24;
         } else {
-            HardwareTick(8);
+            gameboy->HardwareTick(8);
             pc += 2;
             return 12;
         }
@@ -1241,7 +1247,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             Call(GetImmediateWord());
             return 24;
         } else {
-            HardwareTick(8);
+            gameboy->HardwareTick(8);
             pc += 2;
             return 12;
         }
@@ -1258,7 +1264,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     NC: Carry flag reset
     //     Z:  Carry flag set
     case 0xC0:
-        HardwareTick(4); // For the comparison.
+        gameboy->HardwareTick(4); // For the comparison.
         if (!f.Zero()) {
             Return();
             return 20;
@@ -1266,7 +1272,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             return 8;
         }
     case 0xC8:
-        HardwareTick(4); // For the comparison.
+        gameboy->HardwareTick(4); // For the comparison.
         if (f.Zero()) {
             Return();
             return 20;
@@ -1274,7 +1280,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             return 8;
         }
     case 0xD0:
-        HardwareTick(4); // For the comparison.
+        gameboy->HardwareTick(4); // For the comparison.
         if (!f.Carry()) {
             Return();
             return 20;
@@ -1282,7 +1288,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             return 8;
         }
     case 0xD8:
-        HardwareTick(4); // For the comparison.
+        gameboy->HardwareTick(4); // For the comparison.
         if (f.Carry()) {
             Return();
             return 20;

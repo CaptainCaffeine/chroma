@@ -19,42 +19,47 @@
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
 #include "core/memory/Memory.h"
-#include "core/Timer.h"
-#include "core/LCD.h"
-#include "core/Serial.h"
 #include "core/cpu/Flags.h"
 
 namespace Core {
 
+class Timer;
+class LCD;
+class Serial;
+class GameBoy;
+
 class CPU {
 public:
-    CPU(Memory& memory, Timer& tima, LCD& display, Serial& serial_io);
+    CPU(Memory& memory);
 
     void RunFor(int cycles);
+
+    // GameBoy core functions
+    void LinkToGameBoy(GameBoy* gb);
+    void EnableInterruptsDelayed();
 private:
     enum class Reg8 {A, B, C, D, E, H, L};
     enum class Reg16 {AF, BC, DE, HL, SP};
     enum class CPUMode {Running, Halted, HaltBug};
 
     Memory& mem;
-    Timer& timer;
-    LCD& lcd;
-    Serial& serial;
+    GameBoy* gameboy;
 
     // Registers
     u8 a, b, c, d, e, h, l;
     u16 sp = 0xFFFE, pc = 0x0100;
     Flags f;
 
-    // Internal CPU status
+    // Interpreter execution
+    CPUMode cpu_mode = CPUMode::Running;
+    unsigned int ExecuteNext(const u8 opcode);
+
+    // Interrupts
     bool interrupt_master_enable = true;
     bool enable_interrupts_delayed = false;
-    CPUMode cpu_mode = CPUMode::Running;
 
     int HandleInterrupts();
     void ServiceInterrupt(const u16 addr);
-    void HardwareTick(unsigned int cycles);
-    unsigned int ExecuteNext(const u8 opcode);
 
     // Register interaction
     u8 Read8(Reg8 R) const; // Only used twice in ResetBit and SetBit
@@ -75,9 +80,6 @@ private:
     void PrintInterrupt();
     void BlarggRamDebug();
     bool stop_printing = false;
-
-    // Serial Stub
-    void DisconnectedSerial();
 
     // Ops
     // 8-bit loads

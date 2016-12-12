@@ -6,6 +6,7 @@ set(COMMON_HEADERS
     common/CommonEnums.h)
 
 set(CORE_SOURCES
+    core/GameBoy.cpp
     core/cpu/CPU.cpp
     core/cpu/Ops.cpp
     core/Disassembler.cpp
@@ -19,6 +20,7 @@ set(CORE_SOURCES
     core/CartridgeHeader.cpp)
 
 set(CORE_HEADERS
+    core/GameBoy.h
     core/cpu/CPU.h
     core/cpu/Flags.h
     core/Disassembler.h
