@@ -175,7 +175,7 @@ void LCD::RenderScanline() {
         }
 
         // The number of window pixels to copy depends on the number of background pixels copied.
-        std::copy_n(win_row_pixels.begin(), 160 - num_bg_pixels, framebuffer.begin() + ly * 160 + num_bg_pixels);
+        std::copy_n(win_row_pixels.begin(), 160 - num_bg_pixels, row_buffer.begin() + num_bg_pixels);
     }
 
     if (BGEnabled()) {
@@ -184,11 +184,17 @@ void LCD::RenderScanline() {
         // The `bg_row_pixels` buffer is 22 full tiles wide and contains 176 pixels.
         // We determine which 160 pixels get transferred to the framebuffer from the SCX register.
         auto bg_start_iter = bg_row_pixels.begin() + (scroll_x % 8);
-        std::copy_n(bg_start_iter, num_bg_pixels, framebuffer.begin() + ly * 160);
+        std::copy_n(bg_start_iter, num_bg_pixels, row_buffer.begin());
     } else {
         // If disabled, we need to blank what isn't covered by the window.
-        std::fill_n(framebuffer.begin() + ly * 160, num_bg_pixels, 0xFFFFFF00);
+        std::fill_n(row_buffer.begin(), num_bg_pixels, 0xFFFFFF00);
     }
+
+    if (SpritesEnabled()) {
+        RenderSprites();
+    }
+
+    std::copy(row_buffer.begin(), row_buffer.end(), framebuffer.begin() + ly * 160);
 }
 
 void LCD::RenderBackground() {
@@ -236,16 +242,10 @@ void LCD::RenderBackground() {
         u8 lsb = tile_data[tile_data_index];
         u8 msb = tile_data[tile_data_index + 1];
 
-        // Combine the bytes together to get the palette indicies.
-        std::array<unsigned int, 8> pixel_indicies;
-        for (std::size_t j = 0; j < 7; ++j) {
-            pixel_indicies[j] = ((lsb >> (7-j)) & 0x01) | ((msb >> (6-j)) & 0x02);
-        }
-        pixel_indicies[7] = (lsb & 0x01) | ((msb << 1) & 0x02); // Can't shift right by -1...
+        DecodePixelColoursFromPalette(lsb, msb, bg_palette, false);
 
-        // Get the colours corresponding to the palette indicies.
-        for (auto plt_index : pixel_indicies) {
-            *row_pixel++ = shades[(bg_palette >> (plt_index * 2)) & 0x03];
+        for (const auto& pixel_colour : pixel_colours) {
+            *row_pixel++ = pixel_colour;
         }
 
         // Increment the tile index to the next tile, and wrap around if we hit the end.
@@ -304,16 +304,10 @@ void LCD::RenderWindow() {
         u8 lsb = tile_data[tile_data_index];
         u8 msb = tile_data[tile_data_index + 1];
 
-        // Combine the bytes together to get the palette indicies.
-        std::array<unsigned int, 8> pixel_indicies;
-        for (std::size_t j = 0; j < 7; ++j) {
-            pixel_indicies[j] = ((lsb >> (7-j)) & 0x01) | ((msb >> (6-j)) & 0x02);
-        }
-        pixel_indicies[7] = (lsb & 0x01) | ((msb << 1) & 0x02); // Can't shift right by -1...
+        DecodePixelColoursFromPalette(lsb, msb, bg_palette, false);
 
-        // Get the colours corresponding to the palette indicies.
-        for (auto plt_index : pixel_indicies) {
-            *row_pixel++ = shades[(bg_palette >> (plt_index * 2)) & 0x03];
+        for (const auto& pixel_colour : pixel_colours) {
+            *row_pixel++ = pixel_colour;
         }
 
         // Increment the tile index to the next tile.
@@ -322,6 +316,114 @@ void LCD::RenderWindow() {
 
     // Increment internal window Y position.
     ++window_y_frame_val;
+}
+
+void LCD::RenderSprites() {
+    mem->CopyOAM(oam_ram.begin());
+    std::vector<SpriteAttrs> oam_sprites;
+
+    // The sprite_gap is the distance between the bottom of the sprite and its Y position (8 for 8x8, 0 for 8x16).
+    unsigned int sprite_gap = SpriteSize() % 16;
+    // The tile index mask is 0xFF for 8x8, 0xFE for 8x16.
+    u8 index_mask = (sprite_gap >> 3) | 0xFE;
+
+    // Store the first 10 sprites from OAM which are on this scanline.
+    for (std::size_t i = 0; i < oam_ram.size(); i += 4) {
+        // Check that the sprite is not off the screen.
+        if (oam_ram[i] > sprite_gap && oam_ram[i] < 160) {
+            // Check that the sprite is on the current scanline.
+            if (ly < oam_ram[i] - sprite_gap && static_cast<int>(ly) >= static_cast<int>(oam_ram[i]) - 16) {
+                oam_sprites.emplace_back(oam_ram[i], oam_ram[i+1], oam_ram[i+2] & index_mask, oam_ram[i+3]);
+            }
+        }
+
+        if (oam_sprites.size() == 10) {
+            break;
+        }
+    }
+
+    // Remove all sprites with an off-screen X position.
+    oam_sprites.erase(std::remove_if(oam_sprites.begin(), oam_sprites.end(), [](SpriteAttrs sa) {
+                          return sa.x_pos >= 168 || sa.x_pos == 0;
+                      }),
+                      oam_sprites.end());
+
+    // Sprite drawing priority is based on its position in OAM and its X position. Sprite are drawn in descending X
+    // order. If two sprites overlap, the one that has a lower position in OAM is drawn on top. oam_sprites already
+    // contains the sprites for this line in decreasing OAM position, so we sort them by decreasing X position.
+    std::stable_sort(oam_sprites.begin(), oam_sprites.end(), [](SpriteAttrs sa1, SpriteAttrs sa2) {
+        return sa2.x_pos < sa1.x_pos;
+    });
+
+    FetchSpriteTiles(oam_sprites);
+
+    // Each row of 8 pixels in a tile is 2 bytes. The first byte contains the low bit of the palette index for
+    // each pixel, and the second byte contains the high bit of the palette index. The object palettes in
+    // DMG mode are in the OBP0 and OBP1 registers at 0xFF48 and 0xFF49.
+
+    for (const SpriteAttrs& sa : oam_sprites) {
+        // Determine which row of the sprite tile is being drawn.
+        unsigned int tile_row = (ly - (sa.y_pos - 16));
+
+        // If this sprite has the Y flip flag set, get the mirrored row in the other half of the sprite.
+        if (sa.attrs & 0x40) {
+            tile_row = (SpriteSize() - 1) - tile_row;
+        }
+
+        // Two bytes per row.
+        tile_row *= 2;
+
+        // Get the two bytes containing the row of the tile.
+        u8 lsb = sa.sprite_tiles[tile_row];
+        u8 msb = sa.sprite_tiles[tile_row + 1];
+
+        if (sa.attrs & 0x10) {
+            DecodePixelColoursFromPalette(lsb, msb, obj_palette1, true);
+        } else {
+            DecodePixelColoursFromPalette(lsb, msb, obj_palette0, true);
+        }
+
+        // If this sprite has the X flip flag set, reverse the pixels.
+        if (sa.attrs & 0x20) {
+            std::reverse(pixel_colours.begin(), pixel_colours.end());
+        }
+
+        auto pixel_iter = pixel_colours.cbegin();
+        auto pixel_end_iter = pixel_colours.cend();
+
+        // If the sprite's X pos is less than 8 or greater than 159, part of the sprite will be cut off.
+        unsigned int draw_start_pos = sa.x_pos - 8;
+        if (sa.x_pos < 8) {
+            pixel_iter += 8 - sa.x_pos;
+            draw_start_pos = 0;
+        } else if (sa.x_pos > 160) {
+            pixel_end_iter -= (sa.x_pos - 160);
+        }
+
+        // Bit 7 in the sprite's OAM attribute byte decides whether or not the sprite will be drawn above or below
+        // the background and window. If drawn below, then bg pixels of colour 0x00 are transparent. If drawn above,
+        // the sprite pixels of colour 0x00 are transparent.
+        auto row_buffer_iter = row_buffer.begin() + draw_start_pos;
+        if (sa.attrs & 0x80) {
+            // Draw the sprite below the background.
+            while (pixel_iter != pixel_end_iter) {
+                if ((*pixel_iter & 0xFF) != 0xFF && *row_buffer_iter == shades[bg_palette & 0x03]) {
+                    *row_buffer_iter = *pixel_iter;
+                }
+                ++pixel_iter;
+                ++row_buffer_iter;
+            }
+        } else {
+            // Draw the sprite above the background.
+            while (pixel_iter != pixel_end_iter) {
+                if ((*pixel_iter & 0xFF) != 0xFF) {
+                    *row_buffer_iter = *pixel_iter;
+                }
+                ++pixel_iter;
+                ++row_buffer_iter;
+            }
+        }
+    }
 }
 
 template<typename T, std::size_t N>
@@ -333,6 +435,34 @@ void LCD::FetchTiles(const std::array<T, N>& tile_indicies) {
         u16 tile_addr = region_start_addr + index * static_cast<T>(tile_bytes);
         mem->CopyFromVRAM(tile_addr, tile_bytes, tile_data_iter);
         tile_data_iter += tile_bytes;
+    }
+}
+
+void LCD::FetchSpriteTiles(std::vector<SpriteAttrs>& sprites) {
+    std::size_t tile_size = tile_bytes;
+    if (SpriteSize() == 16) {
+        tile_size *= 2;
+    }
+
+    for (SpriteAttrs& sa : sprites) {
+        u16 tile_addr = 0x8000 | (static_cast<u16>(sa.tile_index) << 4);
+        mem->CopyFromVRAM(tile_addr, tile_size, sa.sprite_tiles.begin());
+    }
+}
+
+void LCD::DecodePixelColoursFromPalette(u8 lsb, u8 msb, u8 palette, bool sprite) {
+    for (std::size_t j = 0; j < 7; ++j) {
+        pixel_colours[j] = ((lsb >> (7-j)) & 0x01) | ((msb >> (6-j)) & 0x02);
+    }
+    pixel_colours[7] = (lsb & 0x01) | ((msb << 1) & 0x02); // Can't shift right by -1...
+
+    for (auto& index : pixel_colours) {
+        if (sprite && index == 0) {
+            // Palette index 0 is transparent for sprites.
+            index = 0xFFFFFFFF;
+        } else {
+            index = shades[(palette >> (index * 2)) & 0x03];
+        }
     }
 }
 

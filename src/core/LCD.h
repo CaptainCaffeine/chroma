@@ -17,6 +17,7 @@
 #pragma once
 
 #include <array>
+#include <vector>
 
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
@@ -24,6 +25,13 @@
 namespace Core {
 
 class Memory;
+
+struct SpriteAttrs {
+    SpriteAttrs(u8 y, u8 x, u8 index, u8 attributes) : y_pos(y), x_pos(x), tile_index(index), attrs(attributes) {};
+
+    u8 y_pos, x_pos, tile_index, attrs;
+    std::array<u8, 2*16> sprite_tiles;
+};
 
 class LCD {
 public:
@@ -107,8 +115,26 @@ private:
     std::array<s8, num_tiles> signed_row_tile_map;
     std::array<u8, num_tiles*tile_bytes> tile_data;
 
+    // The Sprite Attribute Table (OAM) contains 40 sprite attributes each 4 bytes long.
+    // Byte 0: the Y position of the sprite, minus 16.
+    // Byte 1: the X position of the sprite, minus 8.
+    // Byte 2: the tile number, an unsigned offset which indicates a tile at 0x8NN0. Sprite tiles have the same
+    //         format as background tiles. If the current sprite size is 8x16, bit 0 of this value is ignored, as
+    //         the sprites take up 2 tiles of space.
+    // Byte 3: the sprite attributes:
+    //     Bit 7: Sprite-background priority (0=sprite above BG, 1=sprite behind BG colours 1-3. Sprites are
+    //            always on top of colour 0.)
+    //     Bit 6: Y flip
+    //     Bit 5: X flip
+    //     Bit 4: Palette number (0=OBP0, 1=OBP1) (DMG mode only)
+    //     Bit 3: Tile VRAM bank (0=bank 0, 1=bank 1) (CGB mode only)
+    //     Bit 2-0: Palette number (selects OBP0-7) (CGB mode only)
+    std::array<u8, 40*4> oam_ram;
+
+    std::array<u32, 8> pixel_colours;
     std::array<u32, 176> bg_row_pixels;
     std::array<u32, 168> win_row_pixels;
+    std::array<u32, 160> row_buffer{};
     std::array<u32, 160*144> framebuffer{};
 
     u8 window_y_frame_val = 0x00;
@@ -116,8 +142,11 @@ private:
     void RenderScanline();
     void RenderBackground();
     void RenderWindow();
+    void RenderSprites();
     template<typename T, std::size_t N>
     void FetchTiles(const std::array<T, N>& tile_indicies);
+    void FetchSpriteTiles(std::vector<SpriteAttrs>& sprites);
+    void DecodePixelColoursFromPalette(u8 lsb, u8 msb, u8 palette, bool sprite);
 
     // STAT functions
     void SetSTATMode(unsigned int mode) { stat = (stat & 0xFC) | mode; }
@@ -137,6 +166,7 @@ private:
     bool WindowEnabled() const { return (lcdc & 0x20) && (window_x < 167) && (window_y_frame_val < 144); }
     u16 WindowTileMapStartAddr() const { return (lcdc & 0x40) ? 0x9C00 : 0x9800; }
     bool SpritesEnabled() const { return lcdc & 0x02; }
+    int SpriteSize() const { return (lcdc & 0x04) ? 16 : 8; }
 };
 
 } // End namespace Core
