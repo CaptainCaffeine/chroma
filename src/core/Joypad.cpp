@@ -14,42 +14,29 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#pragma once
-
-#include <vector>
-#include <tuple>
-
-#include "common/CommonTypes.h"
-#include "common/CommonEnums.h"
-#include "core/memory/Memory.h"
-#include "core/Timer.h"
-#include "core/Serial.h"
-#include "core/LCD.h"
 #include "core/Joypad.h"
-#include "core/cpu/CPU.h"
-#include "emu/SDL_Utils.h"
+#include "core/memory/Memory.h"
 
 namespace Core {
 
-struct CartridgeHeader;
+void Joypad::UpdateJoypad() {
+    // Set all button inputs high.
+    p1 |= 0x0F;
 
-class GameBoy {
-public:
-    GameBoy(const Console gb_type, const CartridgeHeader& header, Emu::SDLContext& context, std::vector<u8> rom);
+    if (ButtonKeysSelected()) {
+        p1 = (p1 & 0xF0) | (button_states >> 4);
+    }
 
-    Emu::SDLContext& sdl_context;
+    if (DirectionKeysSelected()) {
+        p1 = (p1 & 0xF0) | (button_states & 0x0F);
+    }
 
-    // Game Boy hardware components.
-    Timer timer;
-    Serial serial;
-    LCD lcd;
-    Joypad joypad;
-    Memory mem;
-    CPU cpu;
+    bool interrupt_signal = (p1 & 0x0F) == 0x0F;
+    if (!interrupt_signal && prev_interrupt_signal) {
+        mem->RequestInterrupt(Interrupt::Joypad);
+    }
 
-    void EmulatorLoop();
-    std::tuple<bool, bool> PollEvents(bool pause);
-    void HardwareTick(unsigned int cycles);
-};
+    prev_interrupt_signal = interrupt_signal;
+}
 
 } // End namespace Core

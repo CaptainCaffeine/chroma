@@ -11,6 +11,7 @@ set(CORE_SOURCES
     core/cpu/Ops.cpp
     core/Disassembler.cpp
     core/Logging.cpp
+    core/Joypad.cpp
     core/Serial.cpp
     core/Timer.cpp
     core/LCD.cpp
@@ -24,6 +25,7 @@ set(CORE_HEADERS
     core/cpu/CPU.h
     core/cpu/Flags.h
     core/Disassembler.h
+    core/Joypad.h
     core/Serial.h
     core/Timer.h
     core/LCD.h

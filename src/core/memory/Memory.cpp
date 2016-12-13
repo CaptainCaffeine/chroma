@@ -19,16 +19,18 @@
 #include "core/Timer.h"
 #include "core/Serial.h"
 #include "core/LCD.h"
+#include "core/Joypad.h"
 
 namespace Core {
 
 Memory::Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima, Serial& sio, LCD& display,
-               std::vector<u8> rom_contents)
+               Joypad& pad, std::vector<u8> rom_contents)
         : console(gb_type)
         , game_mode(header.game_mode)
         , timer(tima)
         , serial(sio)
         , lcd(display)
+        , joypad(pad)
         , mbc_mode(header.mbc_mode)
         , ext_ram_present(header.ext_ram_present)
         , rumble_present(header.rumble_present)
@@ -52,7 +54,6 @@ Memory::Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima
     // 160 bytes object attribute memory.
     oam = std::vector<u8>(0xA0);
     // 127 bytes high RAM + interrupt enable register.
-    // (this is advertised as "fast-access" ram, but a few people deny that HRAM is actually faster than WRAM at all)
     hram = std::vector<u8>(0x80);
 
     IORegisterInit();
@@ -61,14 +62,14 @@ Memory::Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima
 void Memory::IORegisterInit() {
     if (game_mode == GameMode::DMG) {
         if (console == Console::DMG) {
-            joypad = 0xCF; // DMG starts with joypad inputs enabled.
+            joypad.p1 = 0xCF; // DMG starts with joypad inputs enabled.
             timer.divider = 0xABCC;
         } else {
-            joypad = 0xFF; // CGB starts with joypad inputs disabled, even in DMG mode.
+            joypad.p1 = 0xFF; // CGB starts with joypad inputs disabled, even in DMG mode.
             timer.divider = 0x267C;
         }
     } else {
-        joypad = 0xFF; // Probably?
+        joypad.p1 = 0xFF; // Probably?
         timer.divider = 0x1EA0;
     }
 }
@@ -185,7 +186,7 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
     switch (addr) {
     // P1 -- Joypad
     case 0xFF00:
-        return joypad | 0xC0;
+        return joypad.p1 | 0xC0;
     // SB -- Serial Data Transfer
     case 0xFF01:
         return serial.serial_data;
@@ -338,7 +339,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     switch (addr) {
     // P1 -- Joypad
     case 0xFF00:
-        joypad = (joypad & 0x0F) | (data & 0x30);
+        joypad.p1 = (joypad.p1 & 0x0F) | (data & 0x30);
         break;
     // SB -- Serial Data Transfer
     case 0xFF01:

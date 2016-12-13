@@ -29,11 +29,12 @@ struct CartridgeHeader;
 class Timer;
 class Serial;
 class LCD;
+class Joypad;
 
 class Memory {
 public:
     Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima, Serial& sio, LCD& display,
-           std::vector<u8> rom_contents);
+           Joypad& pad, std::vector<u8> rom_contents);
 
     const Console console;
     const GameMode game_mode;
@@ -70,6 +71,7 @@ private:
     Timer& timer;
     Serial& serial;
     LCD& lcd;
+    Joypad& joypad;
 
     const MBC mbc_mode;
     const bool ext_ram_present;
@@ -106,13 +108,13 @@ private:
 
     // ******** I/O registers ******** 
     // P1 register: 0xFF00
-    //     bit 0: P10 Input Right or A (0=Pressed)
-    //     bit 1: P11 Input Left or B (0=Pressed)
-    //     bit 2: P12 Input Up or Select (0=Pressed)
-    //     bit 3: P13 Input Down or Start (0=Pressed)
-    //     bit 4: P14 Select Direction Keys (0=Select)
     //     bit 5: P15 Select Button Keys (0=Select)
-    u8 joypad; // Not implemented.
+    //     bit 4: P14 Select Direction Keys (0=Select)
+    //     bit 3: P13 Input Down or Start (0=Pressed)
+    //     bit 2: P12 Input Up or Select (0=Pressed)
+    //     bit 1: P11 Input Left or B (0=Pressed)
+    //     bit 0: P10 Input Right or A (0=Pressed)
+    // Implementation located in Joypad class.
 
     // SB register: 0xFF01
     // SC register: 0xFF02
@@ -130,11 +132,11 @@ private:
     // Implementations located in Timer class.
 
     // IF register: 0xFF0F
-    //     bit 0: VBLANK
-    //     bit 1: LCD Status
-    //     bit 2: Timer Overflow
-    //     bit 3: Serial Transfer Complete
     //     bit 4: Joypad (high-to-low of I/O regs P10-P13)
+    //     bit 3: Serial Transfer Complete
+    //     bit 2: Timer Overflow
+    //     bit 1: LCD Status
+    //     bit 0: VBLANK
     u8 interrupt_flags = 0x01;
 
     // NR10 register: 0xFF10

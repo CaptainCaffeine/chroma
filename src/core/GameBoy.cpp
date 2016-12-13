@@ -24,7 +24,8 @@ GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Emu::SDLC
         , timer(Timer())
         , serial(Serial(gb_type, header.game_mode))
         , lcd(LCD())
-        , mem(Memory(gb_type, header, timer, serial, lcd, std::move(rom)))
+        , joypad(Joypad())
+        , mem(Memory(gb_type, header, timer, serial, lcd, joypad, std::move(rom)))
         , cpu(CPU(mem)) {
 
     // Link together circular dependencies after all components are constructed. For the CPU and LCD, these are
@@ -33,18 +34,17 @@ GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Emu::SDLC
     timer.LinkToMemory(&mem);
     serial.LinkToMemory(&mem);
     lcd.LinkToMemory(&mem);
+    joypad.LinkToMemory(&mem);
 }
 
 void GameBoy::EmulatorLoop() {
-    SDL_Event e;
-    bool quit = false;
+    bool quit = false, pause = false;
     while (!quit) {
-        while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) {
-                quit = true;
-            } else if (e.type == SDL_KEYDOWN) {
-                quit = true;
-            }
+        std::tie(quit, pause) = PollEvents(pause);
+
+        if (pause) {
+            SDL_Delay(40);
+            continue;
         }
 
         // This is the number of cycles needed for VBLANK. In the future, I want VBLANK to exit the RunFor function.
@@ -53,6 +53,90 @@ void GameBoy::EmulatorLoop() {
     }
 
     Emu::CleanupSDL(sdl_context);
+}
+
+std::tuple<bool, bool> GameBoy::PollEvents(bool pause) {
+    SDL_Event e;
+    bool quit = false;
+    while (SDL_PollEvent(&e)) {
+        if (e.type == SDL_QUIT) {
+            quit = true;
+        } else if (e.type == SDL_KEYDOWN) {
+            switch (e.key.keysym.sym) {
+            case SDLK_q:
+            case SDLK_ESCAPE:
+                quit = true;
+                break;
+            case SDLK_p:
+                pause = !pause;
+                break;
+
+            case SDLK_w:
+                joypad.UpPressed(true);
+                break;
+            case SDLK_a:
+                joypad.LeftPressed(true);
+                break;
+            case SDLK_s:
+                joypad.DownPressed(true);
+                break;
+            case SDLK_d:
+                joypad.RightPressed(true);
+                break;
+
+            case SDLK_k:
+                joypad.APressed(true);
+                break;
+            case SDLK_j:
+                joypad.BPressed(true);
+                break;
+
+            case SDLK_RETURN:
+            case SDLK_i:
+                joypad.StartPressed(true);
+                break;
+            case SDLK_u:
+                joypad.SelectPressed(true);
+                break;
+            default:
+                break;
+            }
+        } else if (e.type == SDL_KEYUP) {
+            switch (e.key.keysym.sym) {
+            case SDLK_w:
+                joypad.UpPressed(false);
+                break;
+            case SDLK_a:
+                joypad.LeftPressed(false);
+                break;
+            case SDLK_s:
+                joypad.DownPressed(false);
+                break;
+            case SDLK_d:
+                joypad.RightPressed(false);
+                break;
+
+            case SDLK_k:
+                joypad.APressed(false);
+                break;
+            case SDLK_j:
+                joypad.BPressed(false);
+                break;
+
+            case SDLK_RETURN:
+            case SDLK_i:
+                joypad.StartPressed(false);
+                break;
+            case SDLK_u:
+                joypad.SelectPressed(false);
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    return std::make_tuple(quit, pause);
 }
 
 void GameBoy::HardwareTick(unsigned int cycles) {
@@ -65,6 +149,7 @@ void GameBoy::HardwareTick(unsigned int cycles) {
         timer.UpdateTimer();
         lcd.UpdateLCD();
         serial.UpdateSerial();
+        joypad.UpdateJoypad();
 
         mem.IF_written_this_cycle = false;
 
