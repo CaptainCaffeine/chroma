@@ -118,6 +118,7 @@ void LCD::UpdateLY() {
 
             // Changes to the window Y position register are ignored until next VBLANK.
             window_y_frame_val = window_y;
+            window_progress = 0x00;
         } else {
             ++ly;
         }
@@ -261,14 +262,14 @@ void LCD::RenderWindow() {
     // The behaviour of WY differs from SCY. At the beginning of a frame, the LCD hardware stores the current value
     // of WY and ignores all writes to that register until the next VBLANK. In addition, the row of window pixels
     // rendered to a scanline is not directly dependent on LY. While the window is enabled, the rows of the window
-    // are rendered one after another like the background, but if it is disabled during HBLANK and later re-enabled
-    // before the frame has ended, the window will resume drawing from the exact scanline at which it left off;
-    // ignoring the LY increments that happened while it was disabled.
+    // are rendered one after another starting at the top of the window. However, if it is disabled during HBLANK
+    // and later re-enabled before the frame has ended, the window will resume drawing from the exact row
+    // at which it left off; ignoring the LY increments that happened while it was disabled.
 
     // The window tile map is located at either 0x9800-0x9BFF or 0x9C00-0x9FFF, and consists of 32 rows
     // of 32 bytes each to index the window tiles. We first determine which row we need to fetch from the
-    // current internal value of the window Y position.
-    u16 tile_map_addr = WindowTileMapStartAddr() + (window_y_frame_val / 8) * tile_map_row_bytes;
+    // current internal value of the window progression.
+    u16 tile_map_addr = WindowTileMapStartAddr() + (window_progress / 8) * tile_map_row_bytes;
 
     // Get the row of tile indicies from VRAM.
     mem->CopyFromVRAM(tile_map_addr, tile_map_row_bytes, row_tile_map.begin());
@@ -291,7 +292,7 @@ void LCD::RenderWindow() {
     // DMG mode is in the BGP register at 0xFF47.
 
     // Determine which row of pixels we're on.
-    unsigned int tile_row = (window_y_frame_val) % 8;
+    unsigned int tile_row = (window_progress) % 8;
     // The window always starts rendering at the leftmost/first tile.
     std::size_t tile_data_index = tile_row * 2;
     // Stop rendering when we hit the edge of the screen.
@@ -314,8 +315,8 @@ void LCD::RenderWindow() {
         tile_data_index += 16;
     }
 
-    // Increment internal window Y position.
-    ++window_y_frame_val;
+    // Increment internal window progression.
+    ++window_progress;
 }
 
 void LCD::RenderSprites() {

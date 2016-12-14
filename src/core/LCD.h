@@ -138,6 +138,7 @@ private:
     std::array<u32, 160*144> framebuffer{};
 
     u8 window_y_frame_val = 0x00;
+    u8 window_progress = 0x00;
 
     void RenderScanline();
     void RenderBackground();
@@ -163,7 +164,10 @@ private:
     bool BGEnabled() const { return lcdc & 0x01; }
     u16 BGTileMapStartAddr() const { return (lcdc & 0x08) ? 0x9C00 : 0x9800; }
     // The window can be disabled by either disabling it in LCDC or by pushing it off the screen.
-    bool WindowEnabled() const { return (lcdc & 0x20) && (window_x < 167) && (window_y_frame_val < 144); }
+    bool WindowEnabled() const { return (lcdc & 0x20)
+                                        && (window_x < 167)
+                                        && (window_y_frame_val < 144)
+                                        && (ly >= window_y_frame_val); }
     u16 WindowTileMapStartAddr() const { return (lcdc & 0x40) ? 0x9C00 : 0x9800; }
     bool SpritesEnabled() const { return lcdc & 0x02; }
     int SpriteSize() const { return (lcdc & 0x04) ? 16 : 8; }
