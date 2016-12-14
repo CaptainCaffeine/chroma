@@ -320,7 +320,7 @@ void LCD::RenderWindow() {
 
 void LCD::RenderSprites() {
     mem->CopyOAM(oam_ram.begin());
-    std::vector<SpriteAttrs> oam_sprites;
+    std::deque<SpriteAttrs> oam_sprites;
 
     // The sprite_gap is the distance between the bottom of the sprite and its Y position (8 for 8x8, 0 for 8x16).
     unsigned int sprite_gap = SpriteSize() % 16;
@@ -333,7 +333,7 @@ void LCD::RenderSprites() {
         if (oam_ram[i] > sprite_gap && oam_ram[i] < 160) {
             // Check that the sprite is on the current scanline.
             if (ly < oam_ram[i] - sprite_gap && static_cast<int>(ly) >= static_cast<int>(oam_ram[i]) - 16) {
-                oam_sprites.emplace_back(oam_ram[i], oam_ram[i+1], oam_ram[i+2] & index_mask, oam_ram[i+3]);
+                oam_sprites.emplace_front(oam_ram[i], oam_ram[i+1], oam_ram[i+2] & index_mask, oam_ram[i+3]);
             }
         }
 
@@ -438,7 +438,7 @@ void LCD::FetchTiles(const std::array<T, N>& tile_indicies) {
     }
 }
 
-void LCD::FetchSpriteTiles(std::vector<SpriteAttrs>& sprites) {
+void LCD::FetchSpriteTiles(std::deque<SpriteAttrs>& sprites) {
     std::size_t tile_size = tile_bytes;
     if (SpriteSize() == 16) {
         tile_size *= 2;

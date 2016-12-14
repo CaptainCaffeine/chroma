@@ -17,7 +17,7 @@
 #pragma once
 
 #include <array>
-#include <vector>
+#include <deque>
 
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
@@ -145,7 +145,7 @@ private:
     void RenderSprites();
     template<typename T, std::size_t N>
     void FetchTiles(const std::array<T, N>& tile_indicies);
-    void FetchSpriteTiles(std::vector<SpriteAttrs>& sprites);
+    void FetchSpriteTiles(std::deque<SpriteAttrs>& sprites);
     void DecodePixelColoursFromPalette(u8 lsb, u8 msb, u8 palette, bool sprite);
 
     // STAT functions
