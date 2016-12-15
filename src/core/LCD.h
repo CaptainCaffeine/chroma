@@ -25,6 +25,7 @@
 namespace Core {
 
 class Memory;
+class GameBoy;
 
 struct SpriteAttrs {
     SpriteAttrs(u8 y, u8 x, u8 index, u8 attributes) : y_pos(y), x_pos(x), tile_index(index), attrs(attributes) {};
@@ -37,9 +38,8 @@ class LCD {
 public:
     void UpdateLCD();
 
-    const u32* GetRawPointerToFramebuffer() const { return framebuffer.data(); };
-
     void LinkToMemory(Memory* memory) { mem = memory; }
+    void LinkToGameBoy(GameBoy* gb) { gameboy = gb; }
 
     // Debug functions
     void PrintRegisterState();
@@ -90,6 +90,7 @@ public:
     u8 window_x = 0x00;
 private:
     Memory* mem;
+    GameBoy* gameboy;
 
     u8 lcd_on = 0x80;
     void UpdatePowerOnState();

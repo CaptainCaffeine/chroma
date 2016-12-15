@@ -37,6 +37,10 @@ class GameBoy {
 public:
     GameBoy(const Console gb_type, const CartridgeHeader& header, Emu::SDLContext& context, std::vector<u8> rom);
 
+    void EmulatorLoop();
+    void RenderFrame(const u32* fb_ptr);
+    void HardwareTick(unsigned int cycles);
+private:
     Emu::SDLContext& sdl_context;
 
     // Game Boy hardware components.
@@ -47,9 +51,7 @@ public:
     Memory mem;
     CPU cpu;
 
-    void EmulatorLoop();
     std::tuple<bool, bool> PollEvents(bool pause);
-    void HardwareTick(unsigned int cycles);
 };
 
 } // End namespace Core

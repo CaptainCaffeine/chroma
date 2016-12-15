@@ -18,6 +18,7 @@
 
 #include "core/LCD.h"
 #include "core/memory/Memory.h"
+#include "core/GameBoy.h"
 
 namespace Core {
 
@@ -73,6 +74,9 @@ void LCD::UpdateLCD() {
             SetSTATMode(1);
             // The OAM STAT interrupt is also triggered on entering Mode 1.
             stat_interrupt_signal |= Mode2CheckEnabled();
+
+            // Draw the completed frame.
+            gameboy->RenderFrame(framebuffer.data());
         }
     }
 

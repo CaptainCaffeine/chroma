@@ -30,6 +30,7 @@ GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Emu::SDLC
 
     // Link together circular dependencies after all components are constructed. For the CPU and LCD, these are
     // necessary. However, currently Timer and Serial only need a reference to Memory to request interrupts.
+    lcd.LinkToGameBoy(this);
     cpu.LinkToGameBoy(this);
     timer.LinkToMemory(&mem);
     serial.LinkToMemory(&mem);
@@ -47,9 +48,9 @@ void GameBoy::EmulatorLoop() {
             continue;
         }
 
-        // This is the number of cycles needed for VBLANK. In the future, I want VBLANK to exit the RunFor function.
-        cpu.RunFor(0x11250);
-        Emu::RenderFrame(lcd.GetRawPointerToFramebuffer(), sdl_context);
+        // This is half the number of cycles needed for VBLANK, thus inputs are checked roughly twice a frame. Inputs
+        // are still checked if the LCD is off.
+        cpu.RunFor(35112);
     }
 
     Emu::CleanupSDL(sdl_context);
@@ -137,6 +138,10 @@ std::tuple<bool, bool> GameBoy::PollEvents(bool pause) {
     }
 
     return std::make_tuple(quit, pause);
+}
+
+void GameBoy::RenderFrame(const u32* fb_ptr) {
+    Emu::RenderFrame(fb_ptr, sdl_context);
 }
 
 void GameBoy::HardwareTick(unsigned int cycles) {
