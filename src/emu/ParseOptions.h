@@ -24,11 +24,11 @@
 namespace Emu {
 
 std::vector<std::string> GetTokens(char** begin, char** end);
-bool ContainsOption(std::vector<std::string> tokens, std::string option);
-std::string GetOptionParam(std::vector<std::string> tokens, std::string option);
+bool ContainsOption(const std::vector<std::string>& tokens, const std::string& option);
+std::string GetOptionParam(const std::vector<std::string>& tokens, const std::string& option);
 
 void DisplayHelp();
 
-std::vector<u8> LoadROM(std::string filename);
+std::vector<u8> LoadROM(const std::string& filename);
 
 } // End namespace Emu

@@ -53,9 +53,6 @@ int main(int argc, char** argv) {
     if (rom.empty()) {
         // Could not open provided file, or provided file empty.
         return 1;
-    } else if (rom.size() < 0x8000) {
-        std::cerr << "Rom size of " << rom.size() << " bytes is too small to be a Game Boy game." << std::endl;
-        return 1;
     }
 
     Emu::SDLContext sdl_context;

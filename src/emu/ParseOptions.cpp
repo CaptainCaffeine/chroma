@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <sys/stat.h>
 
 #include "ParseOptions.h"
 
@@ -31,11 +32,11 @@ std::vector<std::string> GetTokens(char** begin, char** end) {
     return tokens;
 }
 
-bool ContainsOption(std::vector<std::string> tokens, std::string option) {
+bool ContainsOption(const std::vector<std::string>& tokens, const std::string& option) {
     return std::find(tokens.cbegin(), tokens.cend(), option) != tokens.cend();
 }
 
-std::string GetOptionParam(std::vector<std::string> tokens, std::string option) {
+std::string GetOptionParam(const std::vector<std::string>& tokens, const std::string& option) {
     auto itr = std::find(tokens.cbegin(), tokens.cend(), option);
     if (itr != tokens.cend() && ++itr != tokens.cend()) {
         return *itr;
@@ -50,16 +51,36 @@ void DisplayHelp() {
     std::cout << "  -m [dmg,cgb]\tspecify device to emulate (default: dmg)" << std::endl;
 }
 
-std::vector<u8> LoadROM(std::string filename) {
+std::vector<u8> LoadROM(const std::string& filename) {
     std::ifstream rom_file(filename);
     if (!rom_file) {
         std::cerr << "Error when attempting to open " << filename << std::endl;
         return std::vector<u8>();
     }
 
+    // Check that the path points to a regular file.
+    struct stat stat_info;
+    if (stat(filename.c_str(), &stat_info) == 0) {
+        if (stat_info.st_mode & S_IFDIR) {
+            std::cerr << "Provided path is a directory: " << filename << std::endl;
+            return std::vector<u8>();
+        } else if (!(stat_info.st_mode & S_IFREG)) {
+            std::cerr << "Provided path is not a regular file: " << filename << std::endl;
+            return std::vector<u8>();
+        }
+    }
+
     rom_file.seekg(0, std::ios_base::end);
-    auto rom_size = rom_file.tellg();
+    const auto rom_size = rom_file.tellg();
     rom_file.seekg(0, std::ios_base::beg);
+
+    if (rom_size < 0x8000) {
+        std::cerr << "Rom size of " << rom_size << " bytes is too small to be a Game Boy game." << std::endl;
+        return std::vector<u8>();
+    } else if (rom_size > 0x800000) {
+        std::cerr << "Rom size of " << rom_size << " bytes is too large to be a Game Boy game." << std::endl;
+        return std::vector<u8>();
+    }
 
     std::vector<u8> rom_contents(rom_size);
     rom_file.read(reinterpret_cast<char*>(rom_contents.data()), rom_size);
