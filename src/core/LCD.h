@@ -110,7 +110,7 @@ private:
     static constexpr std::size_t num_tiles = 32;
     static constexpr std::size_t tile_map_row_bytes = 32;
     static constexpr std::size_t tile_bytes = 16;
-    const std::array<unsigned int, 4> shades{0xFFFFFF00, 0xAAAAAA00, 0x55555500, 0x00000000};
+    const std::array<unsigned int, 4> shades{{0xFFFFFF00, 0xAAAAAA00, 0x55555500, 0x00000000}};
 
     std::array<u8, num_tiles> row_tile_map;
     std::array<s8, num_tiles> signed_row_tile_map;

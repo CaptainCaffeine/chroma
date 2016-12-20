@@ -52,7 +52,7 @@ private:
     bool tima_overflow_not_interrupted = false;
     u8 prev_tima_val = 0x00;
 
-    const std::array<unsigned int, 4> select_div_bit {0x0200, 0x0008, 0x0020, 0x0080};
+    const std::array<unsigned int, 4> select_div_bit{{0x0200, 0x0008, 0x0020, 0x0080}};
 
     bool DivFrequencyBitSet() const { return select_div_bit[tac & 0x03] & divider; }
     bool TimerEnabled() const { return tac & 0x04; }
