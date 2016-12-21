@@ -50,8 +50,8 @@ public:
     void ClearInterrupt(Interrupt intr) {
         if (!IF_written_this_cycle) { interrupt_flags &= ~static_cast<unsigned int>(intr); }
     }
-    bool IsPending(Interrupt intr) const { return interrupt_flags & hram.back() & static_cast<unsigned int>(intr); }
-    bool RequestedEnabledInterrupts() const { return interrupt_flags & hram.back(); }
+    bool IsPending(Interrupt intr) const { return interrupt_flags & interrupt_enable & static_cast<unsigned int>(intr); }
+    bool RequestedEnabledInterrupts() const { return interrupt_flags & interrupt_enable; }
     bool IF_written_this_cycle = false;
 
     // DMA functions
@@ -132,7 +132,7 @@ private:
     // Implementations located in Timer class.
 
     // IF register: 0xFF0F
-    //     bit 4: Joypad (high-to-low of I/O regs P10-P13)
+    //     bit 4: Joypad
     //     bit 3: Serial Transfer Complete
     //     bit 2: Timer Overflow
     //     bit 1: LCD Status
@@ -238,6 +238,14 @@ private:
     unsigned int vram_bank_num = 0x00;
     // SVBK register: 0xFF70
     unsigned int wram_bank_num = 0x00;
+
+    // IE register: 0xFFFF
+    //     bit 4: Joypad
+    //     bit 3: Serial Transfer Complete
+    //     bit 2: Timer Overflow
+    //     bit 1: LCD Status
+    //     bit 0: VBLANK
+    u8 interrupt_enable = 0x00;
 
     // ******** MBC control registers ******** 
     int rom_bank_num = 0x01;

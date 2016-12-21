@@ -53,8 +53,8 @@ Memory::Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima
 
     // 160 bytes object attribute memory.
     oam = std::vector<u8>(0xA0);
-    // 127 bytes high RAM + interrupt enable register.
-    hram = std::vector<u8>(0x80);
+    // 127 bytes high RAM.
+    hram = std::vector<u8>(0x7F);
 
     IORegisterInit();
 }
@@ -80,9 +80,12 @@ u8 Memory::ReadMem8(const u16 addr) const {
         if (addr < 0xFF80) {
             // I/O registers
             return ReadIORegisters(addr);
-        } else {
-            // High RAM + interrupt enable (IE) register at 0xFFFF
+        } else if (addr < 0xFFFF) {
+            // High RAM
             return hram[addr - 0xFF80];
+        } else {
+            // Interrupt enable (IE) register
+            return interrupt_enable;
         }
     } else if (!dma_blocking_memory) {
         if (addr < 0x4000) {
@@ -139,9 +142,12 @@ void Memory::WriteMem8(const u16 addr, const u8 data) {
         if (addr < 0xFF80) {
             // I/O registers
             WriteIORegisters(addr, data);
-        } else {
-            // High RAM + interrupt enable (IE) register.
+        } else if (addr < 0xFFFF) {
+            // High RAM
             hram[addr - 0xFF80] = data;
+        } else {
+            // Interrupt enable (IE) register
+            interrupt_enable = data;
         }
     } else if (!dma_blocking_memory) {
         if (addr < 0x8000) {
