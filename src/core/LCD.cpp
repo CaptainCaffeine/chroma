@@ -306,11 +306,11 @@ void LCD::RenderWindow() {
     // The window always starts rendering at the leftmost/first tile.
     std::size_t tile_data_index = tile_row * 2;
     // Stop rendering when we hit the edge of the screen.
-    auto row_end_tile = win_row_pixels.begin() + ((166 - window_x) / 8 + 1) * 16;
+    auto end_pixel = win_row_pixels.begin() + ((166 - window_x) / 8 + 1) * 8;
 
     // Decode the tile data and determine the pixel colors.
     auto row_pixel = win_row_pixels.begin();
-    while (row_pixel != row_end_tile) {
+    while (row_pixel != end_pixel) {
         // Get the two bytes describing the row of the current tile.
         u8 lsb = tile_data[tile_data_index];
         u8 msb = tile_data[tile_data_index + 1];
