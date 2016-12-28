@@ -21,6 +21,7 @@ namespace Core {
 
 GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Emu::SDLContext& context, std::vector<u8> rom)
         : sdl_context(context)
+        , front_buffer(160*144)
         , timer(Timer())
         , serial(Serial(gb_type, header.game_mode))
         , lcd(LCD())
@@ -48,9 +49,10 @@ void GameBoy::EmulatorLoop() {
             continue;
         }
 
-        // This is half the number of cycles needed for VBLANK, thus inputs are checked roughly twice a frame. Inputs
-        // are still checked if the LCD is off.
-        cpu.RunFor(35112);
+        // This is the number of cycles between VBLANKs, when the LCD is on.
+        cpu.RunFor(70224);
+
+        Emu::RenderFrame(front_buffer.data(), sdl_context);
     }
 
     Emu::CleanupSDL(sdl_context);
@@ -140,8 +142,8 @@ std::tuple<bool, bool> GameBoy::PollEvents(bool pause) {
     return std::make_tuple(quit, pause);
 }
 
-void GameBoy::RenderFrame(const u32* fb_ptr) {
-    Emu::RenderFrame(fb_ptr, sdl_context);
+void GameBoy::SwapBuffers(std::vector<u32>& back_buffer) {
+    front_buffer.swap(back_buffer);
 }
 
 void GameBoy::HardwareTick(unsigned int cycles) {

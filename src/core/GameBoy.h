@@ -38,10 +38,11 @@ public:
     GameBoy(const Console gb_type, const CartridgeHeader& header, Emu::SDLContext& context, std::vector<u8> rom);
 
     void EmulatorLoop();
-    void RenderFrame(const u32* fb_ptr);
+    void SwapBuffers(std::vector<u32>& back_buffer);
     void HardwareTick(unsigned int cycles);
 private:
     Emu::SDLContext& sdl_context;
+    std::vector<u32> front_buffer;
 
     // Game Boy hardware components.
     Timer timer;

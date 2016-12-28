@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <vector>
 #include <array>
 #include <deque>
 
@@ -36,6 +37,8 @@ struct SpriteAttrs {
 
 class LCD {
 public:
+    LCD();
+
     void UpdateLCD();
 
     void LinkToMemory(Memory* memory) { mem = memory; }
@@ -56,7 +59,7 @@ public:
     //     bit 0: BG Enabled (0=On DMG, this sets the background to white.
     //                          On CGB in DMG mode, this disables both the window and background. 
     //                          In CGB mode, this gives all sprites priority over the background and window.)
-    u8 lcdc = 0x91; // TODO: Verify that 0x91 is the correct initial value for this register.
+    u8 lcdc = 0x91;
     // STAT register: 0xFF41
     //     bit 6: LY=LYC Check Enable
     //     bit 5: Mode 2 OAM Check Enable
@@ -136,7 +139,7 @@ private:
     std::array<u32, 176> bg_row_pixels;
     std::array<u32, 168> win_row_pixels;
     std::array<u32, 160> row_buffer{};
-    std::array<u32, 160*144> framebuffer{};
+    std::vector<u32> back_buffer;
 
     u8 window_y_frame_val = 0x00;
     u8 window_progress = 0x00;

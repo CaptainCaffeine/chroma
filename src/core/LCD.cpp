@@ -22,6 +22,8 @@
 
 namespace Core {
 
+LCD::LCD() : back_buffer(160*144) {}
+
 void LCD::UpdateLCD() {
     // Check if the LCD has been set on or off.
     UpdatePowerOnState();
@@ -75,8 +77,8 @@ void LCD::UpdateLCD() {
             // The OAM STAT interrupt is also triggered on entering Mode 1.
             stat_interrupt_signal |= Mode2CheckEnabled();
 
-            // Draw the completed frame.
-            gameboy->RenderFrame(framebuffer.data());
+            // Swap front and back buffers now that we've completed a frame.
+            gameboy->SwapBuffers(back_buffer);
         }
     }
 
@@ -103,6 +105,10 @@ void LCD::UpdatePowerOnState() {
             SetSTATMode(0);
             stat_interrupt_signal = 0;
             prev_interrupt_signal = 0;
+
+            // Clear the framebuffer.
+            std::fill_n(back_buffer.begin(), 160*144, 0xFFFFFF00);
+            gameboy->SwapBuffers(back_buffer);
         }
     }
 }
@@ -199,7 +205,7 @@ void LCD::RenderScanline() {
         RenderSprites();
     }
 
-    std::copy(row_buffer.begin(), row_buffer.end(), framebuffer.begin() + ly * 160);
+    std::copy(row_buffer.begin(), row_buffer.end(), back_buffer.begin() + ly * 160);
 }
 
 void LCD::RenderBackground() {
