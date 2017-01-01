@@ -19,8 +19,9 @@
 
 namespace Core {
 
-GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Emu::SDLContext& context, std::vector<u8> rom)
-        : sdl_context(context)
+GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logging logger, Emu::SDLContext& context, std::vector<u8> rom)
+        : logging(std::move(logger))
+        , sdl_context(context)
         , front_buffer(160*144)
         , timer(Timer())
         , serial(Serial(gb_type, header.game_mode))
@@ -160,8 +161,12 @@ void GameBoy::HardwareTick(unsigned int cycles) {
 
         mem.IF_written_this_cycle = false;
 
-//        timer.PrintRegisterState();
-//        lcd.PrintRegisterState();
+        // Log I/O registers if logging enabled.
+        if (logging.log_level == LogLevel::Timer) {
+            logging.LogTimerRegisterState(timer);
+        } else if (logging.log_level == LogLevel::LCD) {
+            logging.LogLCDRegisterState(lcd);
+        }
     }
 }
 

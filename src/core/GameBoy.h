@@ -21,6 +21,7 @@
 
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
+#include "core/Logging.h"
 #include "core/memory/Memory.h"
 #include "core/Timer.h"
 #include "core/Serial.h"
@@ -35,7 +36,9 @@ struct CartridgeHeader;
 
 class GameBoy {
 public:
-    GameBoy(const Console gb_type, const CartridgeHeader& header, Emu::SDLContext& context, std::vector<u8> rom);
+    Log::Logging logging;
+
+    GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logging logger, Emu::SDLContext& context, std::vector<u8> rom);
 
     void EmulatorLoop();
     void SwapBuffers(std::vector<u32>& back_buffer);

@@ -24,7 +24,7 @@ set(CORE_HEADERS
     core/GameBoy.h
     core/cpu/CPU.h
     core/cpu/Flags.h
-    core/Disassembler.h
+    core/Logging.h
     core/Joypad.h
     core/Serial.h
     core/Timer.h

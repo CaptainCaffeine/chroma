@@ -20,18 +20,19 @@
 
 #include "common/CommonTypes.h"
 
+// Forward declaration for cross-namespace friend declaration.
+namespace Log { class Logging; }
+
 namespace Core {
 
 class Memory;
 
 class Timer {
+    friend class Log::Logging;
 public:
     void UpdateTimer();
 
     void LinkToMemory(Memory* memory) { mem = memory; }
-
-    // Debug Functions
-    void PrintRegisterState();
 
     // ******** Timer I/O registers ********
     // DIV register: 0xFF04

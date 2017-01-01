@@ -17,18 +17,19 @@
 #include <iomanip>
 #include <sstream>
 
-#include "core/Disassembler.h"
+#include "core/Logging.h"
+#include "core/memory/Memory.h"
 
-namespace Core {
+namespace Log {
 
-std::string NextByteAsStr(const Memory& mem, const u16 pc) {
+std::string NextByteAsStr(const Core::Memory& mem, const u16 pc) {
     std::ostringstream hex_str;
     hex_str << std::hex << std::uppercase;
     hex_str << "0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(pc+1));
     return hex_str.str();
 }
 
-std::string NextSignedByteAsStr(const Memory& mem, const u16 pc) {
+std::string NextSignedByteAsStr(const Core::Memory& mem, const u16 pc) {
     std::ostringstream hex_str;
     hex_str << std::hex << std::uppercase;
     s8 sbyte = mem.ReadMem8(pc+1);
@@ -40,7 +41,7 @@ std::string NextSignedByteAsStr(const Memory& mem, const u16 pc) {
     return hex_str.str();
 }
 
-std::string NextWordAsStr(const Memory& mem, const u16 pc) {
+std::string NextWordAsStr(const Core::Memory& mem, const u16 pc) {
     std::ostringstream hex_str;
     hex_str << std::hex << std::uppercase;
     hex_str << "0x";
@@ -185,13 +186,13 @@ void SetBitString(std::ostringstream& instr, const std::string bit, const std::s
     instr << "SET " << bit << ", " << reg;
 }
 
-void UnknownOpcodeString(std::ostringstream& instr, const Memory& mem, const u16 pc) {
+void UnknownOpcodeString(std::ostringstream& instr, const Core::Memory& mem, const u16 pc) {
     instr << "Unknown Opcode: ";
     instr << std::hex << std::setfill('0') << std::setw(2) << std::uppercase;
     instr << "0x" << static_cast<unsigned int>(mem.ReadMem8(pc));
 }
 
-std::string Disassemble(const Memory& mem, const u16 pc) {
+std::string Logging::Disassemble(const Core::Memory& mem, const u16 pc) const {
     std::ostringstream instr_stream;
 
     switch (mem.ReadMem8(pc)) {
@@ -2005,4 +2006,4 @@ std::string Disassemble(const Memory& mem, const u16 pc) {
     return instr_stream.str();
 }
 
-} // End namespace Core
+} // End namespace Log

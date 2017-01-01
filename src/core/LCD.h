@@ -23,6 +23,9 @@
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
 
+// Forward declaration for cross-namespace friend declaration.
+namespace Log { class Logging; }
+
 namespace Core {
 
 class Memory;
@@ -36,6 +39,7 @@ struct SpriteAttrs {
 };
 
 class LCD {
+    friend class Log::Logging;
 public:
     LCD();
 
@@ -43,9 +47,6 @@ public:
 
     void LinkToMemory(Memory* memory) { mem = memory; }
     void LinkToGameBoy(GameBoy* gb) { gameboy = gb; }
-
-    // Debug functions
-    void PrintRegisterState();
 
     // ******** LCD I/O registers ********
     // LCDC register: 0xFF40

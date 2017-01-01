@@ -20,12 +20,16 @@
 #include "common/CommonEnums.h"
 #include "core/cpu/Flags.h"
 
+// Forward declaration for cross-namespace friend declaration.
+namespace Log { class Logging; }
+
 namespace Core {
 
 class Memory;
 class GameBoy;
 
 class CPU {
+    friend class Log::Logging;
 public:
     CPU(Memory& memory);
 
@@ -71,10 +75,6 @@ private:
     u8 GetImmediateByte();
     s8 GetImmediateSignedByte();
     u16 GetImmediateWord();
-
-    // Debug
-    void PrintRegisterState();
-    void PrintInterrupt();
 
     // Ops
     // 8-bit loads

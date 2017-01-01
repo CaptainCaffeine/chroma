@@ -30,5 +30,6 @@ std::string GetOptionParam(const std::vector<std::string>& tokens, const std::st
 void DisplayHelp();
 
 std::vector<u8> LoadROM(const std::string& filename);
+std::ofstream OpenLogFile(const std::string& rom_path);
 
 } // End namespace Emu

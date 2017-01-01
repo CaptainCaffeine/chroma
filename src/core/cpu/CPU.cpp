@@ -185,7 +185,9 @@ void CPU::RunFor(int cycles) {
     while (cycles > 0) {
         cycles -= HandleInterrupts();
 
-//        PrintRegisterState();
+        if (gameboy->logging.log_level != LogLevel::None) {
+            gameboy->logging.LogCPURegisterState(mem, *this);
+        }
 
         if (cpu_mode == CPUMode::Running) {
             cycles -= ExecuteNext(mem.ReadMem8(pc++));
@@ -202,7 +204,10 @@ void CPU::RunFor(int cycles) {
 int CPU::HandleInterrupts() {
     if (interrupt_master_enable) {
         if (mem.RequestedEnabledInterrupts()) {
-//            PrintInterrupt();
+            if (gameboy->logging.log_level != LogLevel::None) {
+                gameboy->logging.LogInterrupt(mem);
+            }
+
             gameboy->HardwareTick(12);
 
             // Disable interrupts, clear the corresponding bit in IF, and jump to the interrupt routine.

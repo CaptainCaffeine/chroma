@@ -17,10 +17,12 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <fstream>
 
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
 #include "core/CartridgeHeader.h"
+#include "core/Logging.h"
 #include "core/GameBoy.h"
 #include "emu/ParseOptions.h"
 #include "emu/SDL_Utils.h"
@@ -34,14 +36,14 @@ int main(int argc, char** argv) {
     }
 
     Console gameboy_type;
-    std::string mode_string = Emu::GetOptionParam(tokens, "-m");
-    if (!mode_string.empty()) {
-        if (mode_string == "dmg") {
+    std::string gb_string = Emu::GetOptionParam(tokens, "-m");
+    if (!gb_string.empty()) {
+        if (gb_string == "dmg") {
             gameboy_type = Console::DMG;
-        } else if (mode_string == "cgb") {
+        } else if (gb_string == "cgb") {
             gameboy_type = Console::CGB;
         } else {
-            std::cerr << "Invalid mode specified: " << mode_string << ". Valid modes are dmg and cgb." << std::endl;
+            std::cerr << "Invalid console specified: " << gb_string << ". Valid consoles are dmg and cgb." << std::endl;
             return 1;
         }
     } else {
@@ -49,7 +51,27 @@ int main(int argc, char** argv) {
         gameboy_type = Console::DMG;
     }
 
-    std::vector<u8> rom = Emu::LoadROM(tokens.back());
+    LogLevel log_level;
+    std::string log_string = Emu::GetOptionParam(tokens, "-l");
+    if (!log_string.empty()) {
+        if (log_string == "regular") {
+            log_level = LogLevel::Regular;
+        } else if (log_string == "timer") {
+            log_level = LogLevel::Timer;
+        } else if (log_string == "lcd") {
+            log_level = LogLevel::LCD;
+        } else {
+            std::cerr << "Invalid log level specified: " << log_string << ". Valid levels are regular, timer, and lcd." << std::endl;
+            return 1;
+        }
+    } else {
+        // If no log level specified, then no logging by default.
+        log_level = LogLevel::None;
+    }
+
+    const std::string rom_path{tokens.back()};
+
+    std::vector<u8> rom = Emu::LoadROM(rom_path);
     if (rom.empty()) {
         // Could not open provided file, or provided file empty.
         return 1;
@@ -61,8 +83,15 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    std::ofstream log_stream = Emu::OpenLogFile(rom_path);
+    if (!log_stream) {
+        // Could not open log file.
+        return 1;
+    }
+
     Core::CartridgeHeader cart_header = Core::GetCartridgeHeaderInfo(gameboy_type, rom);
-    Core::GameBoy gameboy_core(gameboy_type, cart_header, sdl_context, std::move(rom));
+    Log::Logging logger(log_level, std::move(log_stream));
+    Core::GameBoy gameboy_core(gameboy_type, cart_header, std::move(logger), sdl_context, std::move(rom));
 
     gameboy_core.EmulatorLoop();
 

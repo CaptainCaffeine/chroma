@@ -17,12 +17,37 @@
 #pragma once
 
 #include <string>
+#include <fstream>
 
 #include "common/CommonTypes.h"
-#include "core/memory/Memory.h"
+#include "common/CommonEnums.h"
 
 namespace Core {
 
-std::string Disassemble(const Memory& mem, const u16 pc);
+class Memory;
+class CPU;
+class Timer;
+class LCD;
 
 } // End namespace Core
+
+namespace Log {
+
+class Logging {
+public:
+    const LogLevel log_level;
+
+    Logging(const LogLevel log_lvl, std::ofstream log_stream);
+
+    void LogCPURegisterState(const Core::Memory& mem, const Core::CPU& cpu);
+    void LogInterrupt(const Core::Memory& mem);
+    void LogTimerRegisterState(const Core::Timer& timer);
+    void LogLCDRegisterState(const Core::LCD& lcd);
+
+    std::string Disassemble(const Core::Memory& mem, const u16 pc) const;
+private:
+    std::ofstream log_file;
+};
+
+
+} // End namespace Log

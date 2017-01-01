@@ -47,8 +47,9 @@ std::string GetOptionParam(const std::vector<std::string>& tokens, const std::st
 void DisplayHelp() {
     std::cout << "Usage: chroma [options] <path/to/rom>\n\n";
     std::cout << "Options:\n";
-    std::cout << "  -h\t\tdisplay help\n";
-    std::cout << "  -m [dmg,cgb]\tspecify device to emulate (default: dmg)" << std::endl;
+    std::cout << "  -h\t\t\t\tdisplay help\n";
+    std::cout << "  -m [dmg, cgb]\t\t\tspecify device to emulate (default: dmg)\n";
+    std::cout << "  -l [regular, timer, lcd]\tspecify log level (default: none)" << std::endl;
 }
 
 std::vector<u8> LoadROM(const std::string& filename) {
@@ -86,6 +87,20 @@ std::vector<u8> LoadROM(const std::string& filename) {
     rom_file.read(reinterpret_cast<char*>(rom_contents.data()), rom_size);
 
     return rom_contents;
+}
+
+std::ofstream OpenLogFile(const std::string& rom_path) {
+    // Get path of directory containing the ROM, then add log file name.
+    auto last_slash = rom_path.find_last_of("/\\");
+    const std::string log_file_path = rom_path.substr(0, last_slash + 1) + "log.txt";
+
+    std::ofstream log_file(log_file_path);
+    if (!log_file) {
+        std::cerr << "Error when attempting to open " << log_file_path << " for writing" << std::endl;
+        return log_file;
+    }
+
+    return log_file;
 }
 
 } // End namespace Emu
