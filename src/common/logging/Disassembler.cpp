@@ -17,7 +17,7 @@
 #include <iomanip>
 #include <sstream>
 
-#include "core/Logging.h"
+#include "common/logging/Logging.h"
 #include "core/memory/Memory.h"
 
 namespace Log {

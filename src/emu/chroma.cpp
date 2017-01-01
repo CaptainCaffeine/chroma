@@ -21,8 +21,8 @@
 
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
+#include "common/logging/Logging.h"
 #include "core/CartridgeHeader.h"
-#include "core/Logging.h"
 #include "core/GameBoy.h"
 #include "emu/ParseOptions.h"
 #include "emu/SDL_Utils.h"

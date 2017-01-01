@@ -16,7 +16,7 @@
 
 #include <iomanip>
 
-#include "core/Logging.h"
+#include "common/logging/Logging.h"
 #include "core/memory/Memory.h"
 #include "core/Timer.h"
 #include "core/LCD.h"

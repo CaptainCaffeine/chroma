@@ -1,16 +1,19 @@
 # Specify includes relative to the src directory
 include_directories(.)
 
+set(COMMON_SOURCES
+    common/logging/Disassembler.cpp
+    common/logging/Logging.cpp)
+
 set(COMMON_HEADERS
     common/CommonTypes.h
-    common/CommonEnums.h)
+    common/CommonEnums.h
+    common/logging/Logging.h)
 
 set(CORE_SOURCES
     core/GameBoy.cpp
     core/cpu/CPU.cpp
     core/cpu/Ops.cpp
-    core/Disassembler.cpp
-    core/Logging.cpp
     core/Joypad.cpp
     core/Serial.cpp
     core/Timer.cpp
@@ -24,7 +27,6 @@ set(CORE_HEADERS
     core/GameBoy.h
     core/cpu/CPU.h
     core/cpu/Flags.h
-    core/Logging.h
     core/Joypad.h
     core/Serial.h
     core/Timer.h
@@ -41,6 +43,11 @@ set(EMU_HEADERS
     emu/SDL_Utils.h
     emu/ParseOptions.h)
 
-add_executable(chroma ${EMU_SOURCES} ${EMU_HEADERS} ${CORE_SOURCES} ${CORE_HEADERS} ${COMMON_HEADERS})
+add_executable(chroma ${EMU_SOURCES}
+                      ${EMU_HEADERS}
+                      ${CORE_SOURCES}
+                      ${CORE_HEADERS}
+                      ${COMMON_SOURCES}
+                      ${COMMON_HEADERS})
 
 target_link_libraries(chroma ${SDL2_LIBRARY})
