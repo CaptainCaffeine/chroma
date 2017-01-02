@@ -16,29 +16,33 @@
 
 #pragma once
 
+#include <memory>
 #include <vector>
 #include <tuple>
 
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
-#include "common/logging/Logging.h"
-#include "core/memory/Memory.h"
-#include "core/Timer.h"
-#include "core/Serial.h"
-#include "core/LCD.h"
-#include "core/Joypad.h"
-#include "core/cpu/CPU.h"
-#include "emu/SDL_Utils.h"
+
+namespace Log { class Logging; }
+namespace Emu { struct SDLContext; }
 
 namespace Core {
 
 struct CartridgeHeader;
+class Timer;
+class Serial;
+class LCD;
+class Joypad;
+class Memory;
+class CPU;
 
 class GameBoy {
 public:
-    Log::Logging logging;
+    Log::Logging& logging;
 
-    GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logging logger, Emu::SDLContext& context, std::vector<u8> rom);
+    GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logging& logger, Emu::SDLContext& context,
+            std::vector<u8> rom);
+    ~GameBoy();
 
     void EmulatorLoop();
     void SwapBuffers(std::vector<u32>& back_buffer);
@@ -48,12 +52,12 @@ private:
     std::vector<u32> front_buffer;
 
     // Game Boy hardware components.
-    Timer timer;
-    Serial serial;
-    LCD lcd;
-    Joypad joypad;
-    Memory mem;
-    CPU cpu;
+    std::unique_ptr<Timer> timer;
+    std::unique_ptr<Serial> serial;
+    std::unique_ptr<LCD> lcd;
+    std::unique_ptr<Joypad> joypad;
+    std::unique_ptr<Memory> mem;
+    std::unique_ptr<CPU> cpu;
 
     std::tuple<bool, bool> PollEvents(bool pause);
 };

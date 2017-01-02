@@ -14,31 +14,43 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include "common/logging/Logging.h"
 #include "core/CartridgeHeader.h"
 #include "core/GameBoy.h"
+#include "core/memory/Memory.h"
+#include "core/Timer.h"
+#include "core/Serial.h"
+#include "core/LCD.h"
+#include "core/Joypad.h"
+#include "core/cpu/CPU.h"
+#include "emu/SDL_Utils.h"
 
 namespace Core {
 
-GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logging logger, Emu::SDLContext& context, std::vector<u8> rom)
-        : logging(std::move(logger))
+GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logging& logger, Emu::SDLContext& context,
+                 std::vector<u8> rom)
+        : logging(logger)
         , sdl_context(context)
         , front_buffer(160*144)
-        , timer(Timer())
-        , serial(Serial(gb_type, header.game_mode))
-        , lcd(LCD())
-        , joypad(Joypad())
-        , mem(Memory(gb_type, header, timer, serial, lcd, joypad, std::move(rom)))
-        , cpu(CPU(mem)) {
+        , timer(new Timer())
+        , serial(new Serial(gb_type, header.game_mode))
+        , lcd(new LCD())
+        , joypad(new Joypad())
+        , mem(new Memory(gb_type, header, *timer, *serial, *lcd, *joypad, std::move(rom)))
+        , cpu(new CPU(*mem)) {
 
     // Link together circular dependencies after all components are constructed. For the CPU and LCD, these are
     // necessary. However, currently Timer and Serial only need a reference to Memory to request interrupts.
-    lcd.LinkToGameBoy(this);
-    cpu.LinkToGameBoy(this);
-    timer.LinkToMemory(&mem);
-    serial.LinkToMemory(&mem);
-    lcd.LinkToMemory(&mem);
-    joypad.LinkToMemory(&mem);
+    lcd->LinkToGameBoy(this);
+    cpu->LinkToGameBoy(this);
+    timer->LinkToMemory(mem.get());
+    serial->LinkToMemory(mem.get());
+    lcd->LinkToMemory(mem.get());
+    joypad->LinkToMemory(mem.get());
 }
+
+// Needed to use forward declarations as template parameters in GameBoy.h.
+GameBoy::~GameBoy() = default;
 
 void GameBoy::EmulatorLoop() {
     bool quit = false, pause = false;
@@ -51,7 +63,7 @@ void GameBoy::EmulatorLoop() {
         }
 
         // This is the number of cycles between VBLANKs, when the LCD is on.
-        cpu.RunFor(70224);
+        cpu->RunFor(70224);
 
         Emu::RenderFrame(front_buffer.data(), sdl_context);
     }
@@ -76,31 +88,31 @@ std::tuple<bool, bool> GameBoy::PollEvents(bool pause) {
                 break;
 
             case SDLK_w:
-                joypad.UpPressed(true);
+                joypad->UpPressed(true);
                 break;
             case SDLK_a:
-                joypad.LeftPressed(true);
+                joypad->LeftPressed(true);
                 break;
             case SDLK_s:
-                joypad.DownPressed(true);
+                joypad->DownPressed(true);
                 break;
             case SDLK_d:
-                joypad.RightPressed(true);
+                joypad->RightPressed(true);
                 break;
 
             case SDLK_k:
-                joypad.APressed(true);
+                joypad->APressed(true);
                 break;
             case SDLK_j:
-                joypad.BPressed(true);
+                joypad->BPressed(true);
                 break;
 
             case SDLK_RETURN:
             case SDLK_i:
-                joypad.StartPressed(true);
+                joypad->StartPressed(true);
                 break;
             case SDLK_u:
-                joypad.SelectPressed(true);
+                joypad->SelectPressed(true);
                 break;
             default:
                 break;
@@ -108,31 +120,31 @@ std::tuple<bool, bool> GameBoy::PollEvents(bool pause) {
         } else if (e.type == SDL_KEYUP) {
             switch (e.key.keysym.sym) {
             case SDLK_w:
-                joypad.UpPressed(false);
+                joypad->UpPressed(false);
                 break;
             case SDLK_a:
-                joypad.LeftPressed(false);
+                joypad->LeftPressed(false);
                 break;
             case SDLK_s:
-                joypad.DownPressed(false);
+                joypad->DownPressed(false);
                 break;
             case SDLK_d:
-                joypad.RightPressed(false);
+                joypad->RightPressed(false);
                 break;
 
             case SDLK_k:
-                joypad.APressed(false);
+                joypad->APressed(false);
                 break;
             case SDLK_j:
-                joypad.BPressed(false);
+                joypad->BPressed(false);
                 break;
 
             case SDLK_RETURN:
             case SDLK_i:
-                joypad.StartPressed(false);
+                joypad->StartPressed(false);
                 break;
             case SDLK_u:
-                joypad.SelectPressed(false);
+                joypad->SelectPressed(false);
                 break;
             default:
                 break;
@@ -150,22 +162,22 @@ void GameBoy::SwapBuffers(std::vector<u32>& back_buffer) {
 void GameBoy::HardwareTick(unsigned int cycles) {
     for (; cycles != 0; cycles -= 4) {
         // Enable interrupts if EI was previously called.
-        cpu.EnableInterruptsDelayed();
+        cpu->EnableInterruptsDelayed();
 
         // Update the rest of the system hardware.
-        mem.UpdateOAM_DMA();
-        timer.UpdateTimer();
-        lcd.UpdateLCD();
-        serial.UpdateSerial();
-        joypad.UpdateJoypad();
+        mem->UpdateOAM_DMA();
+        timer->UpdateTimer();
+        lcd->UpdateLCD();
+        serial->UpdateSerial();
+        joypad->UpdateJoypad();
 
-        mem.IF_written_this_cycle = false;
+        mem->IF_written_this_cycle = false;
 
         // Log I/O registers if logging enabled.
         if (logging.log_level == LogLevel::Timer) {
-            logging.LogTimerRegisterState(timer);
+            logging.LogTimerRegisterState(*timer);
         } else if (logging.log_level == LogLevel::LCD) {
-            logging.LogLCDRegisterState(lcd);
+            logging.LogLCDRegisterState(*lcd);
         }
     }
 }

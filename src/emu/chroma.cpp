@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
 
     Core::CartridgeHeader cart_header = Core::GetCartridgeHeaderInfo(gameboy_type, rom);
     Log::Logging logger(log_level, std::move(log_stream));
-    Core::GameBoy gameboy_core(gameboy_type, cart_header, std::move(logger), sdl_context, std::move(rom));
+    Core::GameBoy gameboy_core(gameboy_type, cart_header, logger, sdl_context, std::move(rom));
 
     gameboy_core.EmulatorLoop();
 
