@@ -171,44 +171,34 @@ void LCD::CheckSTATInterruptSignal() {
 }
 
 void LCD::RenderScanline() {
-    unsigned int num_bg_pixels = 160;
-
+    std::size_t num_bg_pixels;
     if (WindowEnabled()) {
-        RenderWindow();
-
         num_bg_pixels = (window_x < 7) ? 0 : window_x - 7;
-
-        // The `win_row_pixels` buffer is 21 full tiles wide and contains 168 pixels.
-        // If WX is less than 7, some of the first tile is cut off.
-        auto win_start_iter = win_row_pixels.begin();
-        if (window_x < 7) {
-            win_start_iter += 7 - window_x;
-        }
-
-        // The number of window pixels to copy depends on the number of background pixels copied.
-        std::copy_n(win_row_pixels.begin(), 160 - num_bg_pixels, row_buffer.begin() + num_bg_pixels);
+    } else {
+        num_bg_pixels = 160;
     }
 
     if (BGEnabled()) {
-        RenderBackground();
-
-        // The `bg_row_pixels` buffer is 22 full tiles wide and contains 176 pixels.
-        // We determine which 160 pixels get transferred to the framebuffer from the SCX register.
-        auto bg_start_iter = bg_row_pixels.begin() + (scroll_x % 8);
-        std::copy_n(bg_start_iter, num_bg_pixels, row_buffer.begin());
+        RenderBackground(num_bg_pixels);
     } else {
         // If disabled, we need to blank what isn't covered by the window.
         std::fill_n(row_buffer.begin(), num_bg_pixels, 0xFFFFFF00);
+    }
+
+    if (WindowEnabled()) {
+        RenderWindow(num_bg_pixels);
     }
 
     if (SpritesEnabled()) {
         RenderSprites();
     }
 
-    std::copy(row_buffer.begin(), row_buffer.end(), back_buffer.begin() + ly * 160);
+    // Copy the row buffer into the back buffer. The last 8 pixels of the row buffer are extra off-the-end space
+    // to simplify the background & window rendering code, and so they are discarded.
+    std::copy(row_buffer.begin(), row_buffer.end() - 8, back_buffer.begin() + ly * 160);
 }
 
-void LCD::RenderBackground() {
+void LCD::RenderBackground(std::size_t num_bg_pixels) {
     // The background is composed of 32x32 tiles of 8x8 pixels. The scroll registers (SCY and SCX) allow the
     // top-left corner of the screen to be positioned anywhere on the background, and the background wraps around
     // when it hits the edge.
@@ -225,30 +215,32 @@ void LCD::RenderBackground() {
     // The background tiles are located at either 0x8000-0x8FFF or 0x8800-0x97FF. For the first region, the
     // tile map indicies are unsigned offsets from 0x8000; for the second region, the indicies are signed
     // offsets from 0x9000.
+
     // Fetch the tile bitmaps pointed to by the indicies in the tile map row. Each tile is 16 bytes.
     if (TileDataStartAddr() == 0x9000) {
-        // Tile map indexes are signed, with 0 at 0x9000.
         std::copy(row_tile_map.cbegin(), row_tile_map.cend(), signed_row_tile_map.begin());
         FetchTiles(signed_row_tile_map);
     } else {
-        // Tile map indexes are unsigned, with 0 at 0x8000.
         FetchTiles(row_tile_map);
     }
-
-    // Determine which row of pixels we're on.
-    unsigned int tile_row = (scroll_y + ly) % 8;
-    // Determine in which tile we start reading data.
-    unsigned int start_tile = scroll_x / 8;
 
     // Each row of 8 pixels in a tile is 2 bytes. The first byte contains the low bit of the palette index for
     // each pixel, and the second byte contains the high bit of the palette index. The background palette in
     // DMG mode is in the BGP register at 0xFF47.
 
-    // Decode the tile data and determine the pixel colors.
+    // Determine which row of pixels we're on, and in which tile we start reading data.
+    unsigned int tile_row = (scroll_y + ly) % 8;
+    unsigned int start_tile = scroll_x / 8;
+    // Two bytes per tile row, 16 bytes per tile.
     std::size_t tile_data_index = tile_row * 2 + start_tile * 16;
 
-    auto row_pixel = bg_row_pixels.begin();
-    while (row_pixel != bg_row_pixels.end()) {
+    // If necessary, throw away the first few pixels of the first tile, based on SCX.
+    std::size_t row_pixel = RenderFirstTile(0, tile_data_index, scroll_x % 8);
+
+    // Increment the tile index to the next tile, and wrap around if we hit the end.
+    tile_data_index = (tile_data_index + 16) % tile_data.size();
+
+    while (row_pixel < num_bg_pixels) {
         // Get the two bytes describing the row of the current tile.
         u8 lsb = tile_data[tile_data_index];
         u8 msb = tile_data[tile_data_index + 1];
@@ -256,15 +248,14 @@ void LCD::RenderBackground() {
         DecodePixelColoursFromPalette(lsb, msb, bg_palette, false);
 
         for (const auto& pixel_colour : pixel_colours) {
-            *row_pixel++ = pixel_colour;
+            row_buffer[row_pixel++] = pixel_colour;
         }
 
-        // Increment the tile index to the next tile, and wrap around if we hit the end.
         tile_data_index = (tile_data_index + 16) % tile_data.size();
     }
 }
 
-void LCD::RenderWindow() {
+void LCD::RenderWindow(std::size_t num_bg_pixels) {
     // The window is composed of 32x32 tiles of 8x8 pixels (of which only 21x18 tiles can be seen). Unlike the
     // background, the window cannot be scrolled; it is always displayed from its top-left corner and does not
     // wrap around. Instead, the position of its top-left corner can be set with the WY and WX registers.
@@ -287,13 +278,12 @@ void LCD::RenderWindow() {
     // The window tiles are located at either 0x8000-0x8FFF or 0x8800-0x97FF. For the first region, the
     // tile map indicies are unsigned offsets from 0x8000; for the second region, the indicies are signed
     // offsets from 0x9000.
+
     // Fetch the tile bitmaps pointed to by the indicies in the tile map row. Each tile is 16 bytes.
     if (TileDataStartAddr() == 0x9000) {
-        // Tile map indexes are signed, with 0 at 0x9000.
         std::copy(row_tile_map.cbegin(), row_tile_map.cend(), signed_row_tile_map.begin());
         FetchTiles(signed_row_tile_map);
     } else {
-        // Tile map indexes are unsigned, with 0 at 0x8000.
         FetchTiles(row_tile_map);
     }
 
@@ -303,14 +293,16 @@ void LCD::RenderWindow() {
 
     // Determine which row of pixels we're on.
     unsigned int tile_row = (window_progress) % 8;
-    // The window always starts rendering at the leftmost/first tile.
+    // Two bytes per tile row. The window always starts rendering at the leftmost/first tile.
     std::size_t tile_data_index = tile_row * 2;
-    // Stop rendering when we hit the edge of the screen.
-    auto end_pixel = win_row_pixels.begin() + ((166 - window_x) / 8 + 1) * 8;
 
-    // Decode the tile data and determine the pixel colors.
-    auto row_pixel = win_row_pixels.begin();
-    while (row_pixel != end_pixel) {
+    // If necessary, throw away the first few pixels of the first tile, based on WX.
+    std::size_t row_pixel = RenderFirstTile(num_bg_pixels, tile_data_index, (window_x < 7) ? 7 - window_x : 0);
+
+    // Increment the tile index to the next tile.
+    tile_data_index += 16;
+
+    while (row_pixel < 160) {
         // Get the two bytes describing the row of the current tile.
         u8 lsb = tile_data[tile_data_index];
         u8 msb = tile_data[tile_data_index + 1];
@@ -318,15 +310,30 @@ void LCD::RenderWindow() {
         DecodePixelColoursFromPalette(lsb, msb, bg_palette, false);
 
         for (const auto& pixel_colour : pixel_colours) {
-            *row_pixel++ = pixel_colour;
+            row_buffer[row_pixel++] = pixel_colour;
         }
 
-        // Increment the tile index to the next tile.
         tile_data_index += 16;
     }
 
     // Increment internal window progression.
     ++window_progress;
+}
+
+std::size_t LCD::RenderFirstTile(std::size_t start_pixel, std::size_t tile_data_index, std::size_t throwaway) {
+    // Get the two bytes describing the row of the current tile.
+    u8 lsb = tile_data[tile_data_index];
+    u8 msb = tile_data[tile_data_index + 1];
+
+    DecodePixelColoursFromPalette(lsb, msb, bg_palette, false);
+
+    // Throw away the first pixels of the tile.
+    for (std::size_t pixel = throwaway; pixel < 8; ++pixel) {
+        row_buffer[start_pixel++] = pixel_colours[pixel];
+    }
+
+    // Return the number of pixels written to the row buffer.
+    return start_pixel;
 }
 
 void LCD::RenderSprites() {
@@ -381,7 +388,7 @@ void LCD::RenderSprites() {
             tile_row = (SpriteSize() - 1) - tile_row;
         }
 
-        // Two bytes per row.
+        // Two bytes per tile row.
         tile_row *= 2;
 
         // Get the two bytes containing the row of the tile.

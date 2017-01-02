@@ -137,17 +137,16 @@ private:
     std::array<u8, 40*4> oam_ram;
 
     std::array<u32, 8> pixel_colours;
-    std::array<u32, 176> bg_row_pixels;
-    std::array<u32, 168> win_row_pixels;
-    std::array<u32, 160> row_buffer{};
+    std::array<u32, 168> row_buffer;
     std::vector<u32> back_buffer;
 
     u8 window_y_frame_val = 0x00;
     u8 window_progress = 0x00;
 
     void RenderScanline();
-    void RenderBackground();
-    void RenderWindow();
+    void RenderBackground(std::size_t num_bg_pixels);
+    void RenderWindow(std::size_t num_bg_pixels);
+    std::size_t RenderFirstTile(std::size_t start_pixel, std::size_t tile_data_index, std::size_t throwaway);
     void RenderSprites();
     template<typename T, std::size_t N>
     void FetchTiles(const std::array<T, N>& tile_indicies);
