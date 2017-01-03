@@ -101,6 +101,7 @@ private:
 
     int scanline_cycles = 452; // This should be set in constructor to adapt for CGB double speed.
     void UpdateLY();
+    int Mode3Cycles() const;
 
     bool stat_interrupt_signal = false, prev_interrupt_signal = false;
     void CheckSTATInterruptSignal();

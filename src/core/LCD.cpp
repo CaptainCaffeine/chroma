@@ -38,33 +38,30 @@ void LCD::UpdateLCD() {
     stat_interrupt_signal = false;
 
     UpdateLY();
-
     UpdateLYCompareSignal();
 
     if (ly == 0) {
         if (STATMode() != 1) {
             if (scanline_cycles == 4) {
                 SetSTATMode(2);
-            } else if (scanline_cycles == 80) {
+            } else if (scanline_cycles == 84) {
                 SetSTATMode(3);
                 RenderScanline();
-            } else if (scanline_cycles == 252) {
+            } else if (scanline_cycles == Mode3Cycles()) {
                 // Inaccurate. The duration of Mode 3 varies depending on the number of sprites drawn
                 // for the scanline, but I don't know by how much.
                 SetSTATMode(0);
             }
         }
     } else if (ly <= 143) {
-        if (scanline_cycles == 0) {
-            // AntonioND claims the Mode 2 STAT interrupt happens the cycle before Mode 2 is entered, except for
-            // scanline 0? Does this actually happen?
-            stat_interrupt_signal |= Mode2CheckEnabled();
-        } else if (scanline_cycles == 4) {
+        // AntonioND claims that except for scanline 0, the Mode 2 STAT interrupt happens the cycle before Mode 2
+        // is entered. However, doing this causes most of Mooneye-GB's STAT timing tests to fail.
+        if (scanline_cycles == 4) {
             SetSTATMode(2);
-        } else if (scanline_cycles == 80) {
+        } else if (scanline_cycles == 84) {
             SetSTATMode(3);
             RenderScanline();
-        } else if (scanline_cycles == 252) {
+        } else if (scanline_cycles == Mode3Cycles()) {
             // Inaccurate. The duration of Mode 3 varies depending on the number of sprites drawn
             // for the scanline, but I don't know by how much. I also don't know the exact timings of the Mode 0
             // interrupt, so I'm assuming it's triggered as soon as Mode 0 is entered.
@@ -133,6 +130,21 @@ void LCD::UpdateLY() {
             ++ly;
         }
     }
+}
+
+int LCD::Mode3Cycles() const {
+    // The cycles taken by mode 3 increase by a number of factors.
+    int cycles = 256;
+
+    // Mode 3 cycles increase depending on how much of the first tile is cut off by the current value of SCX.
+    int scx_mod = scroll_x % 8;
+    if (scx_mod > 0 && scx_mod < 5) {
+        cycles += 4;
+    } else if (scx_mod > 4) {
+        cycles += 8;
+    }
+
+    return cycles;
 }
 
 // Handles setting the LYC=LY compare bit and corresponding STAT interrupt on DMG. When LY changes, the LY=LYC bit is 
