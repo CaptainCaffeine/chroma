@@ -40,10 +40,8 @@ void Memory::UpdateOAM_DMA() {
         dma_blocking_memory = true;
     } else if (state_oam_dma == DMAState::Active) {
         // Write the byte which was read last cycle to OAM.
-        if ((lcd.stat & 0x02) != 1) {
+        if (!(lcd.stat & 0x02)) {
             oam[bytes_read - 1] = oam_transfer_byte;
-        } else {
-            oam[bytes_read - 1] = 0xFF;
         }
 
         if (bytes_read == 160) {
