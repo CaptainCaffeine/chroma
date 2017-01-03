@@ -32,7 +32,9 @@ void Joypad::UpdateJoypad() {
     }
 
     bool interrupt_signal = (p1 & 0x0F) == 0x0F;
-    if (!interrupt_signal && prev_interrupt_signal) {
+
+    signal_went_low = !interrupt_signal && prev_interrupt_signal;
+    if (signal_went_low) {
         mem->RequestInterrupt(Interrupt::Joypad);
     }
 

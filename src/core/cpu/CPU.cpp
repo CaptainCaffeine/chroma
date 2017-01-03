@@ -184,6 +184,12 @@ u16 CPU::GetImmediateWord() {
 // Execute instructions until the specified number of cycles has passed.
 void CPU::RunFor(int cycles) {
     while (cycles > 0) {
+        if (cpu_mode == CPUMode::Stopped) {
+            StoppedTick();
+            cycles -= 4;
+            continue;
+        }
+
         cycles -= HandleInterrupts();
 
         if (gameboy->logging.log_level != LogLevel::None) {
@@ -196,7 +202,7 @@ void CPU::RunFor(int cycles) {
             cycles -= ExecuteNext(mem.ReadMem8(pc));
             cpu_mode = CPUMode::Running;
         } else if (cpu_mode == CPUMode::Halted) {
-            gameboy->HardwareTick(4);
+            gameboy->HaltedTick(4);
             cycles -= 4;
         }
     }
@@ -263,6 +269,32 @@ void CPU::ServiceInterrupt(const u16 addr) {
 void CPU::EnableInterruptsDelayed() {
     interrupt_master_enable = interrupt_master_enable || enable_interrupts_delayed;
     enable_interrupts_delayed = false;
+}
+
+void CPU::StoppedTick() {
+    gameboy->HaltedTick(4);
+
+    if (gameboy->JoypadPress()) {
+        if (speed_switch_cycles != 0) {
+            // The CPU hangs if there is an enabled joypad press during a speed switch.
+        } else {
+            // Exit STOP mode.
+            cpu_mode = CPUMode::Running;
+        }
+    }
+
+    if (speed_switch_cycles > 0) {
+        if (speed_switch_cycles == 4) {
+            // Speed switch finished. Toggle the CPU speed and set the prepare bit in KEY1 to zero.
+            mem.WriteMem8(0xFF4D, ~mem.ReadMem8(0xFF4D));
+            mem.cgb_double_speed = !mem.cgb_double_speed;
+
+            // Exit STOP mode.
+            cpu_mode = CPUMode::Running;
+        }
+
+        speed_switch_cycles -= 4;
+    }
 }
 
 unsigned int CPU::ExecuteNext(const u8 opcode) {

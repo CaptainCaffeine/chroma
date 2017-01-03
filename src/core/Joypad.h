@@ -31,6 +31,8 @@ public:
     // Start, Select, B, A, Down, Up, Left, Right.
     u8 button_states = 0xFF;
 
+    bool signal_went_low = false;
+
     void StartPressed(bool val) { (val) ? (button_states &= ~start) : (button_states |= start); }
     void SelectPressed(bool val) { (val) ? (button_states &= ~select) : (button_states |= select); }
     void BPressed(bool val) { (val) ? (button_states &= ~b) : (button_states |= b); }

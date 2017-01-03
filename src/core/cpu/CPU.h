@@ -41,7 +41,7 @@ public:
 private:
     enum class Reg8 {A, B, C, D, E, H, L};
     enum class Reg16 {AF, BC, DE, HL, SP};
-    enum class CPUMode {Running, Halted, HaltBug};
+    enum class CPUMode {Running, Halted, HaltBug, Stopped};
 
     Memory& mem;
     GameBoy* gameboy;
@@ -53,7 +53,9 @@ private:
 
     // Interpreter execution
     CPUMode cpu_mode = CPUMode::Running;
+    unsigned int speed_switch_cycles = 0;
     unsigned int ExecuteNext(const u8 opcode);
+    void StoppedTick();
 
     // Interrupts
     bool interrupt_master_enable = true;

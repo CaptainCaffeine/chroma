@@ -47,6 +47,8 @@ public:
     void EmulatorLoop();
     void SwapBuffers(std::vector<u32>& back_buffer);
     void HardwareTick(unsigned int cycles);
+    void HaltedTick(unsigned int cycles);
+    bool JoypadPress() const;
 private:
     Emu::SDLContext& sdl_context;
     std::vector<u32> front_buffer;
