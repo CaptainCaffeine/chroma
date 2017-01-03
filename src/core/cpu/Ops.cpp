@@ -462,7 +462,7 @@ void CPU::AddHL(Reg16 R) {
         break;
     default:
         assert(false && "Reg16::AF passed to CPU::Add16.");
-        break;
+        return;
     }
 
     u16 tmp16 = l + lo;
