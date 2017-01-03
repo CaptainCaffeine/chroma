@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <stdexcept>
+
 #include "common/logging/Logging.h"
 #include "core/cpu/CPU.h"
 #include "core/memory/Memory.h"
@@ -277,6 +279,7 @@ void CPU::StoppedTick() {
     if (gameboy->JoypadPress()) {
         if (speed_switch_cycles != 0) {
             // The CPU hangs if there is an enabled joypad press during a speed switch.
+            throw std::runtime_error("The CPU has hung. Reason: enabled joypad press during a speed switch.");
         } else {
             // Exit STOP mode.
             cpu_mode = CPUMode::Running;
@@ -2204,6 +2207,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         }
 
     default:
+        throw std::runtime_error("The CPU has hung. Reason: unknown opcode.");
         return 4;
     }
 }

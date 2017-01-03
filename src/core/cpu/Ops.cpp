@@ -1226,6 +1226,8 @@ void CPU::Stop() {
 
         // A speed switch takes 128*1024-80=130992 cycles to complete, plus 4 cycles to decode the STOP instruction.
         speed_switch_cycles = 130992;
+    } else if ((mem.ReadMem8(0xFF00) & 0x30) == 0x30) {
+        throw std::runtime_error("The CPU has hung. Reason: STOP mode was entered with all joypad inputs disabled.");
     }
 
     cpu_mode = CPUMode::Stopped;

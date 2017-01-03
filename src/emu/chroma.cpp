@@ -18,6 +18,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <stdexcept>
 
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
@@ -93,7 +94,11 @@ int main(int argc, char** argv) {
     Log::Logging logger(log_level, std::move(log_stream));
     Core::GameBoy gameboy_core(gameboy_type, cart_header, logger, sdl_context, std::move(rom));
 
-    gameboy_core.EmulatorLoop();
+    try {
+        gameboy_core.EmulatorLoop();
+    } catch (const std::runtime_error& e) {
+        std::cerr << e.what() << "\n";
+    }
 
     std::cout << "End emulation." << std::endl;
     return 0;
