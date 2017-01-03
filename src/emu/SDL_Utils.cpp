@@ -14,20 +14,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <iostream>
+#include <stdexcept>
 
 #include "emu/SDL_Utils.h"
 
 namespace Emu {
 
-void PrintSDLError(const std::string& error_function) {
-    std::cerr << "SDL_" << error_function << " Error: " << SDL_GetError() << std::endl;
+const std::string GetSDLErrorString(const std::string& error_function) {
+    return {"SDL_" + error_function + " Error: " + SDL_GetError()};
 }
 
-int InitSDL(SDLContext& context) {
+void InitSDL(SDLContext& context) {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        PrintSDLError("Init");
-        return 1;
+        throw std::runtime_error(GetSDLErrorString("Init"));
     }
 
     context.window = SDL_CreateWindow("Chroma",
@@ -37,17 +36,15 @@ int InitSDL(SDLContext& context) {
                                        144,
                                        SDL_WINDOW_SHOWN);
     if (context.window == nullptr) {
-        PrintSDLError("CreateWindow");
         SDL_Quit();
-        return 1;
+        throw std::runtime_error(GetSDLErrorString("CreateWindow"));
     }
 
     context.renderer = SDL_CreateRenderer(context.window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (context.renderer == nullptr) {
-        PrintSDLError("CreateRenderer");
         SDL_DestroyWindow(context.window);
         SDL_Quit();
-        return 1;
+        throw std::runtime_error(GetSDLErrorString("CreateRenderer"));
     }
 
     context.texture = SDL_CreateTexture(context.renderer,
@@ -56,16 +53,13 @@ int InitSDL(SDLContext& context) {
                                         160,
                                         144);
     if (context.texture == nullptr) {
-        PrintSDLError("CreateTexture");
         SDL_DestroyRenderer(context.renderer);
         SDL_DestroyWindow(context.window);
         SDL_Quit();
-        return 1;
+        throw std::runtime_error(GetSDLErrorString("CreateTexture"));
     }
 
     SDL_SetTextureBlendMode(context.texture, SDL_BLENDMODE_NONE);
-
-    return 0;
 }
 
 void RenderFrame(const u32* fb_ptr, SDLContext& context) {

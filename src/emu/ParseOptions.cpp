@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <stdexcept>
 #include <sys/stat.h>
 
 #include "ParseOptions.h"
@@ -52,22 +53,53 @@ void DisplayHelp() {
     std::cout << "  -l [regular, timer, lcd]\tspecify log level (default: none)" << std::endl;
 }
 
+Console GetGameBoyType(const std::vector<std::string>& tokens) {
+    const std::string gb_string = Emu::GetOptionParam(tokens, "-m");
+    if (!gb_string.empty()) {
+        if (gb_string == "dmg") {
+            return Console::DMG;
+        } else if (gb_string == "cgb") {
+            return Console::CGB;
+        } else {
+            throw std::invalid_argument("Invalid console specified: " + gb_string);
+        }
+    } else {
+        // If no console specified, default is DMG.
+        return Console::DMG;
+    }
+}
+
+LogLevel GetLogLevel(const std::vector<std::string>& tokens) {
+    const std::string log_string = Emu::GetOptionParam(tokens, "-l");
+    if (!log_string.empty()) {
+        if (log_string == "regular") {
+            return LogLevel::Regular;
+        } else if (log_string == "timer") {
+            return LogLevel::Timer;
+        } else if (log_string == "lcd") {
+            return LogLevel::LCD;
+        } else {
+            throw std::invalid_argument("Invalid log level specified: " + log_string);
+        }
+    } else {
+        // If no log level specified, then no logging by default.
+        return LogLevel::None;
+    }
+}
+
 std::vector<u8> LoadROM(const std::string& filename) {
     std::ifstream rom_file(filename);
     if (!rom_file) {
-        std::cerr << "Error when attempting to open " << filename << std::endl;
-        return std::vector<u8>();
+        throw std::invalid_argument("Error when attempting to open " + filename);
     }
 
     // Check that the path points to a regular file.
     struct stat stat_info;
     if (stat(filename.c_str(), &stat_info) == 0) {
         if (stat_info.st_mode & S_IFDIR) {
-            std::cerr << "Provided path is a directory: " << filename << std::endl;
-            return std::vector<u8>();
+            throw std::invalid_argument("Provided path is a directory: " + filename);
         } else if (!(stat_info.st_mode & S_IFREG)) {
-            std::cerr << "Provided path is not a regular file: " << filename << std::endl;
-            return std::vector<u8>();
+            throw std::invalid_argument("Provided path is not a regular file: " + filename);
         }
     }
 
@@ -76,11 +108,11 @@ std::vector<u8> LoadROM(const std::string& filename) {
     rom_file.seekg(0, std::ios_base::beg);
 
     if (rom_size < 0x8000) {
-        std::cerr << "Rom size of " << rom_size << " bytes is too small to be a Game Boy game." << std::endl;
-        return std::vector<u8>();
+        throw std::invalid_argument("Rom size of " + std::to_string(rom_size)
+                                    + " bytes is too small to be a Game Boy game.");
     } else if (rom_size > 0x800000) {
-        std::cerr << "Rom size of " << rom_size << " bytes is too large to be a Game Boy game." << std::endl;
-        return std::vector<u8>();
+        throw std::invalid_argument("Rom size of " + std::to_string(rom_size)
+                                    + " bytes is too large to be a Game Boy game.");
     }
 
     std::vector<u8> rom_contents(rom_size);
@@ -96,8 +128,7 @@ std::ofstream OpenLogFile(const std::string& rom_path) {
 
     std::ofstream log_file(log_file_path);
     if (!log_file) {
-        std::cerr << "Error when attempting to open " << log_file_path << " for writing" << std::endl;
-        return log_file;
+        throw std::invalid_argument("Error when attempting to open " + log_file_path + " for writing.");
     }
 
     return log_file;

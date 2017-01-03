@@ -37,57 +37,43 @@ int main(int argc, char** argv) {
     }
 
     Console gameboy_type;
-    std::string gb_string = Emu::GetOptionParam(tokens, "-m");
-    if (!gb_string.empty()) {
-        if (gb_string == "dmg") {
-            gameboy_type = Console::DMG;
-        } else if (gb_string == "cgb") {
-            gameboy_type = Console::CGB;
-        } else {
-            std::cerr << "Invalid console specified: " << gb_string << ". Valid consoles are dmg and cgb." << std::endl;
-            return 1;
-        }
-    } else {
-        // If no console specified, default is DMG.
-        gameboy_type = Console::DMG;
-    }
-
     LogLevel log_level;
-    std::string log_string = Emu::GetOptionParam(tokens, "-l");
-    if (!log_string.empty()) {
-        if (log_string == "regular") {
-            log_level = LogLevel::Regular;
-        } else if (log_string == "timer") {
-            log_level = LogLevel::Timer;
-        } else if (log_string == "lcd") {
-            log_level = LogLevel::LCD;
-        } else {
-            std::cerr << "Invalid log level specified: " << log_string << ". Valid levels are regular, timer, and lcd." << std::endl;
-            return 1;
-        }
-    } else {
-        // If no log level specified, then no logging by default.
-        log_level = LogLevel::None;
+    try {
+        gameboy_type = Emu::GetGameBoyType(tokens);
+        log_level = Emu::GetLogLevel(tokens);
+    } catch (const std::invalid_argument& e) {
+        std::cerr << e.what() << "\n\n";
+        Emu::DisplayHelp();
+        return 1;
     }
 
     const std::string rom_path{tokens.back()};
 
-    std::vector<u8> rom = Emu::LoadROM(rom_path);
-    if (rom.empty()) {
-        // Could not open provided file, or provided file empty.
+    std::vector<u8> rom;
+    try {
+        rom = Emu::LoadROM(rom_path);
+    } catch (const std::invalid_argument& e) {
+        std::cerr << e.what() << "\n";
         return 1;
     }
 
     Emu::SDLContext sdl_context;
-    if (Emu::InitSDL(sdl_context)) {
-        // SDL failed to create a renderer.
+    try {
+        Emu::InitSDL(sdl_context);
+    } catch (const std::runtime_error& e) {
+        std::cerr << e.what() << "\n";
         return 1;
     }
 
-    std::ofstream log_stream = Emu::OpenLogFile(rom_path);
-    if (!log_stream) {
-        // Could not open log file.
-        return 1;
+    std::ofstream log_stream;
+    // Leave log_stream unopened if logging disabled.
+    if (log_level != LogLevel::None) {
+        try {
+            log_stream = Emu::OpenLogFile(rom_path);
+        } catch (const std::invalid_argument& e) {
+            std::cerr << e.what() << "\n";
+            return 1;
+        }
     }
 
     Core::CartridgeHeader cart_header = Core::GetCartridgeHeaderInfo(gameboy_type, rom);

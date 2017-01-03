@@ -33,8 +33,7 @@ struct SDLContext {
     void* texture_pixels;
 };
 
-void PrintSDLError(const std::string& error_function);
-int InitSDL(SDLContext& context);
+void InitSDL(SDLContext& context);
 void RenderFrame(const u32* fb_ptr, SDLContext& context);
 void CleanupSDL(SDLContext& context);
 
