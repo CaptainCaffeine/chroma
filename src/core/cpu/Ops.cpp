@@ -1182,15 +1182,15 @@ void CPU::Call(u16 addr) {
 }
 
 void CPU::Return() {
-    // Internal delay
-    gameboy->HardwareTick(4);
-
     u8 byte_lo = mem.ReadMem8(sp++);
     gameboy->HardwareTick(4);
     u8 byte_hi = mem.ReadMem8(sp++);
     gameboy->HardwareTick(4);
 
     pc = (static_cast<u16>(byte_hi) << 8) | static_cast<u16>(byte_lo);
+
+    // Internal delay
+    gameboy->HardwareTick(4);
 }
 
 // System Control
