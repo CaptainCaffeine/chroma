@@ -136,6 +136,7 @@ private:
     //     Bit 3: Tile VRAM bank (0=bank 0, 1=bank 1) (CGB mode only)
     //     Bit 2-0: Palette number (selects OBP0-7) (CGB mode only)
     std::array<u8, 40*4> oam_ram;
+    std::deque<SpriteAttrs> oam_sprites;
 
     std::array<u32, 8> pixel_colours;
     std::array<u32, 168> row_buffer;

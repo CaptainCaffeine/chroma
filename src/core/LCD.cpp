@@ -63,8 +63,7 @@ void LCD::UpdateLCD() {
             RenderScanline();
         } else if (scanline_cycles == Mode3Cycles()) {
             // Inaccurate. The duration of Mode 3 varies depending on the number of sprites drawn
-            // for the scanline, but I don't know by how much. I also don't know the exact timings of the Mode 0
-            // interrupt, so I'm assuming it's triggered as soon as Mode 0 is entered.
+            // for the scanline, but I don't know by how much.
             SetSTATMode(0);
         }
     } else if (ly == 144) {
@@ -143,6 +142,12 @@ int LCD::Mode3Cycles() const {
     } else if (scx_mod > 4) {
         cycles += 8;
     }
+
+    // The number and attributes of sprites on this scanline increase the mode 3 cycles.
+    // cycles += (1 + 2 * num_sprites - (num_sprites + 1) / 2) * 4;
+    // The above is an expression I found through experimentation to account for the cycles added by sprites in
+    // the first 10 testcases of Mooneye-GB's intr_2_mode0_timing_sprites test. It only considers the number
+    // of sprites. However, I couldn't get anywhere with it.
 
     return cycles;
 }
@@ -350,7 +355,7 @@ std::size_t LCD::RenderFirstTile(std::size_t start_pixel, std::size_t tile_data_
 
 void LCD::RenderSprites() {
     mem->CopyOAM(oam_ram.begin());
-    std::deque<SpriteAttrs> oam_sprites;
+    oam_sprites.clear();
 
     // The sprite_gap is the distance between the bottom of the sprite and its Y position (8 for 8x8, 0 for 8x16).
     unsigned int sprite_gap = SpriteSize() % 16;

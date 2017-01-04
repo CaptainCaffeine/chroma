@@ -77,10 +77,9 @@ void Logging::LogLCDRegisterState(const Core::LCD& lcd) {
     log_file << ", STAT = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(lcd.stat);
     log_file << ", LY = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(lcd.ly);
     log_file << ", LYC = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(lcd.ly_compare);
-    log_file << ", LCD On = 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(lcd.lcd_on);
     log_file << ", cycles = " << std::dec << std::setw(3) << lcd.scanline_cycles;
-    log_file << ", bg_en = " << std::setw(1) << lcd.BGEnabled();
-    log_file << ", win_en = " << std::setw(1) << lcd.WindowEnabled();
+    log_file << ", m3cycles = " << std::dec << std::setw(3) << lcd.Mode3Cycles();
+    log_file << ", num_objs = " << std::dec << std::setw(2) << lcd.oam_sprites.size();
     log_file << ", stat_sig = " << std::setw(1) << lcd.stat_interrupt_signal << "\n";
 }
 

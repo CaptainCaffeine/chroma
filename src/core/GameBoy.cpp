@@ -161,6 +161,13 @@ void GameBoy::SwapBuffers(std::vector<u32>& back_buffer) {
 
 void GameBoy::HardwareTick(unsigned int cycles) {
     for (; cycles != 0; cycles -= 4) {
+        // Log I/O registers if logging enabled.
+        if (logging.log_level == LogLevel::Timer) {
+            logging.LogTimerRegisterState(*timer);
+        } else if (logging.log_level == LogLevel::LCD) {
+            logging.LogLCDRegisterState(*lcd);
+        }
+
         // Enable interrupts if EI was previously called.
         cpu->EnableInterruptsDelayed();
 
@@ -172,13 +179,6 @@ void GameBoy::HardwareTick(unsigned int cycles) {
         joypad->UpdateJoypad();
 
         mem->IF_written_this_cycle = false;
-
-        // Log I/O registers if logging enabled.
-        if (logging.log_level == LogLevel::Timer) {
-            logging.LogTimerRegisterState(*timer);
-        } else if (logging.log_level == LogLevel::LCD) {
-            logging.LogLCDRegisterState(*lcd);
-        }
     }
 }
 
