@@ -75,53 +75,59 @@ void Memory::IORegisterInit() {
 }
 
 u8 Memory::ReadMem8(const u16 addr) const {
-    if (addr >= 0xFF00) {
-        // 0xFF00-0xFFFF are still accessible during OAM DMA.
-        if (addr < 0xFF80) {
-            // I/O registers
-            return ReadIORegisters(addr);
-        } else if (addr < 0xFFFF) {
-            // High RAM
-            return hram[addr - 0xFF80];
+    if (addr < 0x8000) {
+        // ROM
+        if (dma_bus_block != Bus::External) {
+            if (addr < 0x4000) {
+                // Fixed ROM bank
+                return rom[addr];
+            } else {
+                // Switchable ROM bank.
+                return rom[addr + 0x4000*((rom_bank_num % num_rom_banks) - 1)];
+            }
         } else {
-            // Interrupt enable (IE) register
-            return interrupt_enable;
+            // If OAM DMA is currently transferring from the external bus, return the last byte read by the DMA.
+            return oam_transfer_byte;
         }
-    } else if (!dma_blocking_memory) {
-        if (addr < 0x4000) {
-            // Fixed ROM bank
-            return rom[addr];
-        } else if (addr < 0x8000) {
-            // Switchable ROM bank.
-            return rom[addr + 0x4000*((rom_bank_num % num_rom_banks) - 1)];
-        } else if (addr < 0xA000) {
-            // VRAM -- switchable in CGB mode
+    } else if (addr < 0xA000) {
+        // VRAM -- switchable in CGB mode
+        if (dma_bus_block != Bus::VRAM) {
             // Not accessible during screen mode 3.
             if ((lcd.stat & 0x03) != 3) {
                 return vram[addr - 0x8000 + 0x2000*vram_bank_num];
             } else {
                 return 0xFF;
             }
-        } else if (addr < 0xC000) {
-            // External RAM bank.
-            return ReadExternalRAM(addr);
-        } else if (addr < 0xD000) {
-            // WRAM bank 0
-            return wram[addr - 0xC000];
-        } else if (addr < 0xE000) {
-            // WRAM bank 1 (switchable from 1-7 in CGB mode)
-            return wram[addr - 0xC000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
-        } else if (addr < 0xFE00) {
-            // Echo of C000-DDFF
-            return wram[addr - 0xE000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
-            // For some unlicensed games and flashcarts on pre-CGB devices, reads from this region read both WRAM and
-            // exernal RAM, and bitwise AND the two values together (source: AntonioND timing docs).
-        } else if (addr < 0xFEA0) {
+        } else {
+            // If OAM DMA is currently transferring from VRAM, return the last byte read by the DMA.
+            return oam_transfer_byte;
+        }
+    } else if (addr < 0xFE00) {
+        if (dma_bus_block != Bus::External) {
+            if (addr < 0xC000) {
+                // External RAM bank.
+                return ReadExternalRAM(addr);
+            } else if (addr < 0xD000) {
+                // WRAM bank 0
+                return wram[addr - 0xC000];
+            } else if (addr < 0xE000) {
+                // WRAM bank 1 (switchable from 1-7 in CGB mode)
+                return wram[addr - 0xC000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
+            } else {
+                // Echo of C000-DDFF
+                return wram[addr - 0xE000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
+            }
+        } else {
+            // If OAM DMA is currently transferring from the external bus, return the last byte read by the DMA.
+            return oam_transfer_byte;
+        }
+    } else if (addr < 0xFF00) {
+        if (addr < 0xFEA0) {
             // OAM (Sprite Attribute Table)
-            // Not accessible during screen modes 2 or 3.
-            if ((lcd.stat & 0x02) == 0) {
+            if (dma_bus_block == Bus::None && !(lcd.stat & 0x02)) {
                 return oam[addr - 0xFE00];
             } else {
+                // Inaccessible during OAM DMA, and during screen modes 2 and 3.
                 return 0xFF;
             }
         } else {
@@ -132,13 +138,66 @@ u8 Memory::ReadMem8(const u16 addr) const {
             return 0x00;
         }
     } else {
-        return 0xFF;
+        // 0xFF00-0xFFFF is still accessible during OAM DMA.
+        if (addr < 0xFF80) {
+            // I/O registers
+            return ReadIORegisters(addr);
+        } else if (addr < 0xFFFF) {
+            // High RAM
+            return hram[addr - 0xFF80];
+        } else {
+            // Interrupt enable (IE) register
+            return interrupt_enable;
+        }
     }
 }
 
 void Memory::WriteMem8(const u16 addr, const u8 data) {
-    if (addr >= 0xFF00) {
-        // 0xFF00-0xFFFF are still accessible during OAM DMA.
+    if (addr < 0x8000) {
+        // MBC control registers -- writes to this region do not write the ROM.
+        // If OAM DMA is currently transferring from the external bus, the write is ignored.
+        if (dma_bus_block != Bus::External) {
+            WriteMBCControlRegisters(addr, data);
+        }
+    } else if (addr < 0xA000) {
+        // VRAM -- switchable in CGB mode
+        // If OAM DMA is currently transferring from the VRAM bus, the write is ignored.
+        if (dma_bus_block != Bus::VRAM && (lcd.stat & 0x03) != 3) {
+            // Not accessible during screen mode 3.
+            vram[addr - 0x8000 + 0x2000*vram_bank_num] = data;
+        }
+    } else if (addr < 0xFE00) {
+        // If OAM DMA is currently transferring from the external bus, the write is ignored.
+        if (dma_bus_block != Bus::External) {
+            if (addr < 0xC000) {
+                // External RAM bank.
+                WriteExternalRAM(addr, data);
+            } else if (addr < 0xD000) {
+                // WRAM bank 0
+                wram[addr - 0xC000] = data;
+            } else if (addr < 0xE000) {
+                // WRAM bank 1 (switchable from 1-7 in CGB mode)
+                wram[addr - 0xC000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)] = data;
+            } else {
+                // Echo of C000-DDFF
+                wram[addr - 0xE000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)] = data;
+            }
+        }
+    } else if (addr < 0xFF00) {
+        // OAM (Sprite Attribute Table)
+        // Inaccessible during OAM DMA.
+        if (dma_bus_block == Bus::None && addr < 0xFEA0) {
+            // Inaccessible during screen modes 2 and 3.
+            if (!(lcd.stat & 0x02)) {
+                oam[addr - 0xFE00] = data;
+            }
+        }
+        // 0xFEA0-0xFEFF: Unusable region
+        // Pre-CGB devices: writes are ignored
+        // CGB: writes are *not* ignored, refer to TCAGBD
+        // AGB: writes are ignored
+    } else {
+        // 0xFF00-0xFFFF is still accessible during OAM DMA.
         if (addr < 0xFF80) {
             // I/O registers
             WriteIORegisters(addr, data);
@@ -148,42 +207,6 @@ void Memory::WriteMem8(const u16 addr, const u8 data) {
         } else {
             // Interrupt enable (IE) register
             interrupt_enable = data;
-        }
-    } else if (!dma_blocking_memory) {
-        if (addr < 0x8000) {
-            // MBC control registers -- writes to this region do not write the ROM.
-            WriteMBCControlRegisters(addr, data);
-        } else if (addr < 0xA000) {
-            // VRAM -- switchable in CGB mode
-            // Not accessible during screen mode 3.
-            if ((lcd.stat & 0x03) != 3) {
-                vram[addr - 0x8000 + 0x2000*vram_bank_num] = data;
-            }
-        } else if (addr < 0xC000) {
-            // External RAM bank.
-            WriteExternalRAM(addr, data);
-        } else if (addr < 0xD000) {
-            // WRAM bank 0
-            wram[addr - 0xC000] = data;
-        } else if (addr < 0xE000) {
-            // WRAM bank 1 (switchable from 1-7 in CGB mode)
-            wram[addr - 0xC000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)] = data;
-        } else if (addr < 0xFE00) {
-            // Echo of C000-DDFF
-            wram[addr - 0xE000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)] = data;
-            // For some unlicensed games and flashcarts on pre-CGB devices, writes to this region write to both WRAM 
-            // and external RAM (source: AntonioND timing docs).
-        } else if (addr < 0xFEA0) {
-            // OAM (Sprite Attribute Table)
-            // Not accessible during screen modes 2 or 3.
-            if ((lcd.stat & 0x02) == 0) {
-                oam[addr - 0xFE00] = data;
-            }
-        } else {
-            // Unusable region
-            // Pre-CGB devices: writes are ignored
-            // CGB: writes are *not* ignored, refer to TCAGBD
-            // AGB: writes are ignored
         }
     }
 }

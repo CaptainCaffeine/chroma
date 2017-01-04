@@ -92,8 +92,9 @@ private:
 
     // DMA utilities
     enum class DMAState {Inactive, RegWritten, Starting, Active};
+    enum class Bus {None, External, VRAM};
     DMAState state_oam_dma = DMAState::Inactive;
-    bool dma_blocking_memory = false;
+    Bus dma_bus_block = Bus::None;
 
     u16 oam_transfer_addr;
     u8 oam_transfer_byte;

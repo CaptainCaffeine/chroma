@@ -32,12 +32,21 @@ void Memory::UpdateOAM_DMA() {
 
         state_oam_dma = DMAState::Active;
 
-        // The current OAM DMA state is not enough to determine if the external bus is currently being blocked.
-        // The bus only becomes unblocked when the DMA state transitions from active to inactive. When starting 
+        // The Game Boy has two major memory buses: the external bus (0x0000-0x7FFF, 0xA000-0xFDFF) and the VRAM
+        // bus (0x8000-0x9FFF). I/O registers, OAM, and HRAM are all internal to the CPU. OAM DMA will only block
+        // one of these buses at a time. Reads from a blocked bus will return whatever byte OAM DMA read on that
+        // cycle. Writes are (probably) ignored.
+
+        // The current OAM DMA state is not enough to determine if the external/VRAM bus is currently being blocked.
+        // The bus only becomes unblocked when the DMA state transitions from Active to Inactive. When starting
         // a DMA while none are currently active, memory remains accessible for the two cycles when the DMA state is
         // RegWritten and Starting. But, if a DMA is started while one is already active, the state goes from
         // Active to RegWritten, without becoming Inactive, so memory remains inaccessible for those two cycles.
-        dma_blocking_memory = true;
+        if (oam_transfer_addr >= 0x8000 && oam_transfer_addr < 0xA000) {
+            dma_bus_block = Bus::VRAM;
+        } else {
+            dma_bus_block = Bus::External;
+        }
     } else if (state_oam_dma == DMAState::Active) {
         // Write the byte which was read last cycle to OAM.
         if (!(lcd.stat & 0x02)) {
@@ -47,7 +56,7 @@ void Memory::UpdateOAM_DMA() {
         if (bytes_read == 160) {
             // Don't read on the last cycle.
             state_oam_dma = DMAState::Inactive;
-            dma_blocking_memory = false;
+            dma_bus_block = Bus::None;
             return;
         }
 
