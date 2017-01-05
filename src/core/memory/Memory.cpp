@@ -501,7 +501,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         // On DMG, if the STAT register is written during mode 1 or 0 while the LCD is on, bit 1 of the IF register
         // is set. This causes a STAT interrupt if it's enabled in IE.
         if (console == Console::DMG && (lcd.lcdc & 0x80) && !(lcd.stat & 0x02)) {
-            interrupt_flags |= 0x02;
+            lcd.SetSTATSignal();
         }
         break;
     // SCY -- BG Scroll Y

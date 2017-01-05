@@ -48,6 +48,8 @@ public:
     void LinkToMemory(Memory* memory) { mem = memory; }
     void LinkToGameBoy(GameBoy* gb) { gameboy = gb; }
 
+    void SetSTATSignal() { stat_interrupt_signal = true; }
+
     // ******** LCD I/O registers ********
     // LCDC register: 0xFF40
     //     bit 7: LCD On

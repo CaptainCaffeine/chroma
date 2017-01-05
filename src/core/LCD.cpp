@@ -35,7 +35,6 @@ void LCD::UpdateLCD() {
     // DMG ONLY FOR NOW -- cgb timings also include dmg mode, single speed, and double speed.
 
     scanline_cycles += 4;
-    stat_interrupt_signal = false;
 
     UpdateLY();
     UpdateLYCompareSignal();
@@ -185,6 +184,7 @@ void LCD::CheckSTATInterruptSignal() {
         mem->RequestInterrupt(Interrupt::STAT);
     }
     prev_interrupt_signal = stat_interrupt_signal;
+    stat_interrupt_signal = false;
 }
 
 void LCD::RenderScanline() {
