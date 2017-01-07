@@ -208,14 +208,30 @@ private:
     // LY register: 0xFF44
     // LYC register: 0xFF45
     // BGP register: 0xFF47
-    //     bits 7-6: background colour 3
-    //     bits 5-4: background colour 2
-    //     bits 3-2: background colour 1
-    //     bits 1-0: background colour 0
+    //     bits 7-6: Background Colour 3
+    //     bits 5-4: Background Colour 2
+    //     bits 3-2: Background Colour 1
+    //     bits 1-0: Background Colour 0
     // OBP0 register: 0xFF48
     // OBP1 register: 0xFF49
     // WY register: 0xFF4A
     // WX register: 0xFF4B
+    // BGPI register: 0xFF68
+    //     bits 7: Auto Increment (1=Increment after write)
+    //     bits 5-0: Palette Index (0x00-0x3F)
+    // BGPD register: 0xFF69
+    //     bits 7-0 in first byte, 8-14 in second byte
+    //     bits 14-10: Blue Intensity
+    //     bits 9-5:   Green Intensity
+    //     bits 0-4:   Red Intensity
+    // OBPI register: 0xFF6A
+    //     bits 7: Auto Increment (1=Increment after write)
+    //     bits 5-0: Palette Index (0x00-0x3F)
+    // OBP1 register: 0xFF6B
+    //     bits 7-0 in first byte, 8-14 in second byte
+    //     bits 14-10: Blue Intensity
+    //     bits 9-5:   Green Intensity
+    //     bits 0-4:   Red Intensity
     // Implementations located in LCD class.
 
     // DMA register: 0xFF46

@@ -343,14 +343,44 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
     // KEY1 -- Speed Switch
     case 0xFF4D:
         return speed_switch | ((game_mode == GameMode::CGB) ? 0x7E : 0xFF);
-    // HDMA5 -- HDMA Length, Mode, and Start
-    case 0xFF55:
-        return ((game_mode == GameMode::CGB) ? hdma_control : 0xFF);
     // VBK -- VRAM bank number
     case 0xFF4F:
         if (console == Console::CGB) {
             // CGB in DMG mode always has bank 0 selected.
             return ((game_mode == GameMode::CGB) ? (static_cast<u8>(vram_bank_num) | 0xFE) : 0xFE);
+        } else {
+            return 0xFF;
+        }
+    // HDMA5 -- HDMA Length, Mode, and Start
+    case 0xFF55:
+        return ((game_mode == GameMode::CGB) ? hdma_control : 0xFF);
+    // BGPI -- BG Palette Index (CGB mode only)
+    case 0xFF68:
+        if (game_mode == GameMode::CGB) {
+            return lcd.bg_palette_index | 0x40;
+        } else {
+            return 0xFF;
+        }
+    // BGPD -- BG Palette Data (CGB mode only)
+    case 0xFF69:
+        // Palette RAM is not accessible during mode 3.
+        if (game_mode == GameMode::CGB && (lcd.stat & 0x03) != 3) {
+            return lcd.bg_palette_data[lcd.bg_palette_index & 0x3F];
+        } else {
+            return 0xFF;
+        }
+    // OBPI -- Sprite Palette Index (CGB mode only)
+    case 0xFF6A:
+        if (game_mode == GameMode::CGB) {
+            return lcd.obj_palette_index & 0x40;
+        } else {
+            return 0xFF;
+        }
+    // OBPD -- Sprite Palette Data (CGB mode only)
+    case 0xFF6B:
+        // Palette RAM is not accessible during mode 3.
+        if (game_mode == GameMode::CGB && (lcd.stat & 0x03) != 3) {
+            return lcd.obj_palette_data[lcd.obj_palette_index & 0x3F];
         } else {
             return 0xFF;
         }
@@ -549,6 +579,12 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     case 0xFF4D:
         speed_switch = data & 0x01;
         break;
+    // VBK -- VRAM bank number
+    case 0xFF4F:
+        if (game_mode == GameMode::CGB) {
+            vram_bank_num = data & 0x01;
+        }
+        break;
     // HDMA1 -- HDMA Source High Byte
     case 0xFF51:
         hdma_source_hi = data;
@@ -569,10 +605,38 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     case 0xFF55:
         hdma_control = data;
         break;
-    // VBK -- VRAM bank number
-    case 0xFF4F:
+    // BGPI -- BG Palette Index (CGB mode only)
+    case 0xFF68:
         if (game_mode == GameMode::CGB) {
-            vram_bank_num = data & 0x01;
+            lcd.bg_palette_index = data & 0xBF;
+        }
+        break;
+    // BGPD -- BG Palette Data (CGB mode only)
+    case 0xFF69:
+        // Palette RAM is not accessible during mode 3.
+        if (game_mode == GameMode::CGB && (lcd.stat & 0x03) != 3) {
+            lcd.bg_palette_data[lcd.bg_palette_index & 0x3F] = data;
+            // Increment index if auto-increment specified.
+            if (lcd.bg_palette_index & 0x80) {
+                lcd.bg_palette_index = (lcd.bg_palette_index + 1) & 0xBF;
+            }
+        }
+        break;
+    // OBPI -- Sprite Palette Index (CGB mode only)
+    case 0xFF6A:
+        if (game_mode == GameMode::CGB) {
+            lcd.obj_palette_index = data & 0xBF;
+        }
+        break;
+    // OBPD -- Sprite Palette Data (CGB mode only)
+    case 0xFF6B:
+        // Palette RAM is not accessible during mode 3.
+        if (game_mode == GameMode::CGB && (lcd.stat & 0x03) != 3) {
+            lcd.obj_palette_data[lcd.obj_palette_index & 0x3F] = data;
+            // Increment index if auto-increment specified.
+            if (lcd.obj_palette_index & 0x80) {
+                lcd.obj_palette_index = (lcd.obj_palette_index + 1) & 0xBF;
+            }
         }
         break;
     // SVBK -- WRAM bank number

@@ -81,19 +81,42 @@ public:
     u8 ly_compare = 0x00;
 
     // BGP register: 0xFF47
-    //     bits 7-6: background colour 3
-    //     bits 5-4: background colour 2
-    //     bits 3-2: background colour 1
-    //     bits 1-0: background colour 0
+    //     bits 7-6: Background Colour 3
+    //     bits 5-4: Background Colour 2
+    //     bits 3-2: Background Colour 1
+    //     bits 1-0: Background Colour 0
     u8 bg_palette = 0xFC;
     // OBP0 register: 0xFF48
     u8 obj_palette0 = 0xFF;
     // OBP1 register: 0xFF49
     u8 obj_palette1 = 0xFF;
+
     // WY register: 0xFF4A
     u8 window_y = 0x00;
     // WX register: 0xFF4B
     u8 window_x = 0x00;
+
+    // BGPI register: 0xFF68
+    //     bits 7: Auto Increment (1=Increment after write)
+    //     bits 5-0: Palette Index (0x00-0x3F)
+    u8 bg_palette_index = 0x00;
+    // BGPD register: 0xFF69
+    //     bits 7-0 in first byte, 8-14 in second byte
+    //     bits 14-10: Blue Intensity
+    //     bits 9-5:   Green Intensity
+    //     bits 0-4:   Red Intensity
+    std::array<u8, 64> bg_palette_data{};
+    // OBPI register: 0xFF6A
+    //     bits 7: Auto Increment (1=Increment after write)
+    //     bits 5-0: Palette Index (0x00-0x3F)
+    u8 obj_palette_index = 0x00;
+    // OBP1 register: 0xFF6B
+    //     bits 7-0 in first byte, 8-14 in second byte
+    //     bits 14-10: Blue Intensity
+    //     bits 9-5:   Green Intensity
+    //     bits 0-4:   Red Intensity
+    std::array<u8, 64> obj_palette_data{};
+
 private:
     Memory* mem;
     GameBoy* gameboy;
