@@ -34,7 +34,7 @@ struct SDLContext {
 };
 
 void InitSDL(SDLContext& context);
-void RenderFrame(const u32* fb_ptr, SDLContext& context);
+void RenderFrame(const u16* fb_ptr, SDLContext& context);
 void CleanupSDL(SDLContext& context);
 
 } // End namespace Emu

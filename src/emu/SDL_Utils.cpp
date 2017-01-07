@@ -48,7 +48,7 @@ void InitSDL(SDLContext& context) {
     }
 
     context.texture = SDL_CreateTexture(context.renderer,
-                                        SDL_PIXELFORMAT_RGBA8888,
+                                        SDL_PIXELFORMAT_ABGR1555,
                                         SDL_TEXTUREACCESS_STREAMING,
                                         160,
                                         144);
@@ -62,9 +62,9 @@ void InitSDL(SDLContext& context) {
     SDL_SetTextureBlendMode(context.texture, SDL_BLENDMODE_NONE);
 }
 
-void RenderFrame(const u32* fb_ptr, SDLContext& context) {
+void RenderFrame(const u16* fb_ptr, SDLContext& context) {
     SDL_LockTexture(context.texture, nullptr, &context.texture_pixels, &context.texture_pitch);
-    memcpy(context.texture_pixels, fb_ptr, 160*144*sizeof(u32));
+    memcpy(context.texture_pixels, fb_ptr, 160*144*sizeof(u16));
     SDL_UnlockTexture(context.texture);
 
     SDL_RenderClear(context.renderer);

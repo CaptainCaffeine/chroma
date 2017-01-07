@@ -140,7 +140,7 @@ private:
     static constexpr std::size_t num_tiles = 32;
     static constexpr std::size_t tile_map_row_bytes = 32;
     static constexpr std::size_t tile_bytes = 16;
-    const std::array<unsigned int, 4> shades{{0xFFFFFF00, 0xAAAAAA00, 0x55555500, 0x00000000}};
+    const std::array<u16, 4> shades{{0x7FFF, 0x56B5, 0x294A, 0x0000}};
 
     std::array<u8, num_tiles> row_tile_map;
     std::array<s8, num_tiles> signed_row_tile_map;
@@ -163,9 +163,9 @@ private:
     std::array<u8, 40*4> oam_ram;
     std::deque<SpriteAttrs> oam_sprites;
 
-    std::array<u32, 8> pixel_colours;
-    std::array<u32, 168> row_buffer;
-    std::vector<u32> back_buffer;
+    std::array<u16, 8> pixel_colours;
+    std::array<u16, 168> row_buffer;
+    std::vector<u16> back_buffer;
 
     u8 window_y_frame_val = 0x00;
     u8 window_progress = 0x00;

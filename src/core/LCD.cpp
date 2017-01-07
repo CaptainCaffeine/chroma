@@ -102,7 +102,7 @@ void LCD::UpdatePowerOnState() {
             prev_interrupt_signal = 0;
 
             // Clear the framebuffer.
-            std::fill_n(back_buffer.begin(), 160*144, 0xFFFFFF00);
+            std::fill_n(back_buffer.begin(), 160*144, 0x7FFF);
             gameboy->SwapBuffers(back_buffer);
         }
     }
@@ -199,7 +199,7 @@ void LCD::RenderScanline() {
         RenderBackground(num_bg_pixels);
     } else {
         // If disabled, we need to blank what isn't covered by the window.
-        std::fill_n(row_buffer.begin(), num_bg_pixels, 0xFFFFFF00);
+        std::fill_n(row_buffer.begin(), num_bg_pixels, 0x7FFF);
     }
 
     if (WindowEnabled()) {
@@ -442,7 +442,7 @@ void LCD::RenderSprites() {
         if (sa.attrs & 0x80) {
             // Draw the sprite below the background.
             while (pixel_iter != pixel_end_iter) {
-                if ((*pixel_iter & 0xFF) != 0xFF && *row_buffer_iter == shades[bg_palette & 0x03]) {
+                if (!(*pixel_iter & 0x8000) && *row_buffer_iter == shades[bg_palette & 0x03]) {
                     *row_buffer_iter = *pixel_iter;
                 }
                 ++pixel_iter;
@@ -451,7 +451,7 @@ void LCD::RenderSprites() {
         } else {
             // Draw the sprite above the background.
             while (pixel_iter != pixel_end_iter) {
-                if ((*pixel_iter & 0xFF) != 0xFF) {
+                if (!(*pixel_iter & 0x8000)) {
                     *row_buffer_iter = *pixel_iter;
                 }
                 ++pixel_iter;
@@ -493,8 +493,8 @@ void LCD::DecodePixelColoursFromPalette(u8 lsb, u8 msb, u8 palette, bool sprite)
 
     for (auto& index : pixel_colours) {
         if (sprite && index == 0) {
-            // Palette index 0 is transparent for sprites.
-            index = 0xFFFFFFFF;
+            // Palette index 0 is transparent for sprites. Set the alpha bit.
+            index |= 0x8000;
         } else {
             index = shades[(palette >> (index * 2)) & 0x03];
         }

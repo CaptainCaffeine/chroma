@@ -155,7 +155,7 @@ std::tuple<bool, bool> GameBoy::PollEvents(bool pause) {
     return std::make_tuple(quit, pause);
 }
 
-void GameBoy::SwapBuffers(std::vector<u32>& back_buffer) {
+void GameBoy::SwapBuffers(std::vector<u16>& back_buffer) {
     front_buffer.swap(back_buffer);
 }
 

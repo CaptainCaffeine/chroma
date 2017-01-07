@@ -45,13 +45,13 @@ public:
     ~GameBoy();
 
     void EmulatorLoop();
-    void SwapBuffers(std::vector<u32>& back_buffer);
+    void SwapBuffers(std::vector<u16>& back_buffer);
     void HardwareTick(unsigned int cycles);
     void HaltedTick(unsigned int cycles);
     bool JoypadPress() const;
 private:
     Emu::SDLContext& sdl_context;
-    std::vector<u32> front_buffer;
+    std::vector<u16> front_buffer;
 
     // Game Boy hardware components.
     std::unique_ptr<Timer> timer;
