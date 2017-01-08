@@ -38,6 +38,8 @@ public:
     // GameBoy core functions
     void LinkToGameBoy(GameBoy* gb) { gameboy = gb; }
     void EnableInterruptsDelayed();
+
+    bool IsHalted() const { return cpu_mode == CPUMode::Halted; }
 private:
     enum class Reg8 {A, B, C, D, E, H, L};
     enum class Reg16 {AF, BC, DE, HL, SP};

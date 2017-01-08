@@ -33,7 +33,11 @@ Logging::Logging(LogLevel log_lvl, std::ofstream log_stream)
 void Logging::LogCPURegisterState(const Core::Memory& mem, const Core::CPU& cpu) {
     log_file << std::hex << std::uppercase;
     log_file << "\n";
-    log_file << Disassemble(mem, cpu.pc) << "\n";
+    if (cpu.IsHalted()) {
+        log_file << "Halted\n";
+    } else {
+        log_file << Disassemble(mem, cpu.pc) << "\n";
+    }
     log_file << "PC = 0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.pc);
     log_file << ", SP = 0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.sp);
     log_file << ", AF = 0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.Read16(Core::CPU::Reg16::AF));
