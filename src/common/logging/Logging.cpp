@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <algorithm>
+#include <iostream>
 #include <iomanip>
 
 #include "common/logging/Logging.h"
@@ -24,9 +26,9 @@
 
 namespace Log {
 
-Logging::Logging(const LogLevel log_lvl, std::ofstream log_stream)
-    : log_level(log_lvl)
-    , log_file(std::move(log_stream)) {}
+Logging::Logging(LogLevel log_lvl, std::ofstream log_stream)
+        : log_level(log_lvl)
+        , log_file(std::move(log_stream)) {}
 
 void Logging::LogCPURegisterState(const Core::Memory& mem, const Core::CPU& cpu) {
     log_file << std::hex << std::uppercase;
@@ -81,6 +83,35 @@ void Logging::LogLCDRegisterState(const Core::LCD& lcd) {
     log_file << ", m3cycles = " << std::dec << std::setw(3) << lcd.Mode3Cycles();
     log_file << ", num_objs = " << std::dec << std::setw(2) << lcd.oam_sprites.size();
     log_file << ", stat_sig = " << std::setw(1) << lcd.stat_interrupt_signal << "\n";
+}
+
+void Logging::SwitchLogLevel() {
+    // Don't spam if logging not enabled.
+    if (log_level == alt_level) {
+        return;
+    }
+
+    std::swap(log_level, alt_level);
+
+    std::string switch_str = "Log level changed to ";
+    switch (log_level) {
+    case LogLevel::None:
+        switch_str += "None";
+        break;
+    case LogLevel::Regular:
+        switch_str += "Regular";
+        break;
+    case LogLevel::LCD:
+        switch_str += "LCD";
+        break;
+    case LogLevel::Timer:
+        switch_str += "Timer";
+        break;
+    }
+    switch_str += "\n";
+
+    log_file << "\n" << switch_str;
+    std::cout << switch_str;
 }
 
 } // End namespace Log

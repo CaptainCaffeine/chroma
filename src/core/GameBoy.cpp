@@ -86,6 +86,9 @@ std::tuple<bool, bool> GameBoy::PollEvents(bool pause) {
             case SDLK_p:
                 pause = !pause;
                 break;
+            case SDLK_b:
+                logging.SwitchLogLevel();
+                break;
 
             case SDLK_w:
                 joypad->UpPressed(true);

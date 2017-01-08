@@ -35,9 +35,9 @@ namespace Log {
 
 class Logging {
 public:
-    const LogLevel log_level;
+    LogLevel log_level;
 
-    Logging(const LogLevel log_lvl, std::ofstream log_stream);
+    Logging(LogLevel log_lvl, std::ofstream log_stream);
 
     void LogCPURegisterState(const Core::Memory& mem, const Core::CPU& cpu);
     void LogInterrupt(const Core::Memory& mem);
@@ -45,9 +45,12 @@ public:
     void LogLCDRegisterState(const Core::LCD& lcd);
 
     std::string Disassemble(const Core::Memory& mem, const u16 pc) const;
+
+    void SwitchLogLevel();
 private:
+    LogLevel alt_level = LogLevel::None;
+
     std::ofstream log_file;
 };
-
 
 } // End namespace Log
