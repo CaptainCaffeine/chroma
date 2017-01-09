@@ -64,13 +64,37 @@ void Memory::IORegisterInit() {
         if (console == Console::DMG) {
             joypad.p1 = 0xCF; // DMG starts with joypad inputs enabled.
             timer.divider = 0xABCC;
+
+            oam_dma_start = 0xFF;
+
+            lcd.obj_palette_data[0] = 0xFF;
+            lcd.obj_palette_data[1] = 0xFF;
+
+            lcd.bg_palette_index = 0xFF;
+            lcd.obj_palette_index = 0xFF;
         } else {
             joypad.p1 = 0xFF; // CGB starts with joypad inputs disabled, even in DMG mode.
             timer.divider = 0x267C;
+
+            oam_dma_start = 0x00;
+
+            lcd.obj_palette_data[0] = 0x00;
+            lcd.obj_palette_data[1] = 0x00;
+
+            lcd.bg_palette_index = 0x88;
+            lcd.obj_palette_index = 0x90;
         }
+
+        lcd.bg_palette_data[0] = 0xFC;
     } else {
         joypad.p1 = 0xFF; // Probably?
         timer.divider = 0x1EA0;
+        oam_dma_start = 0x00;
+
+        lcd.ly = 144;
+
+        lcd.bg_palette_index = 0x88;
+        lcd.obj_palette_index = 0x90;
     }
 }
 
@@ -327,13 +351,25 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         return oam_dma_start;
     // BGP -- BG Palette Data
     case 0xFF47:
-        return lcd.bg_palette;
+        if (game_mode == GameMode::DMG) {
+            return lcd.bg_palette_data[0];
+        } else {
+            return 0xFF;
+        }
     // OBP0 -- Sprite Palette 0 Data
     case 0xFF48:
-        return lcd.obj_palette0;
+        if (game_mode == GameMode::DMG) {
+            return lcd.obj_palette_data[0];
+        } else {
+            return 0x00;
+        }
     // OBP1 -- Sprite Palette 1 Data
     case 0xFF49:
-        return lcd.obj_palette1;
+        if (game_mode == GameMode::DMG) {
+            return lcd.obj_palette_data[1];
+        } else {
+            return 0x00;
+        }
     // WY -- Window Y Position
     case 0xFF4A:
         return lcd.window_y;
@@ -354,9 +390,12 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
     // HDMA5 -- HDMA Length, Mode, and Start
     case 0xFF55:
         return ((game_mode == GameMode::CGB) ? hdma_control : 0xFF);
-    // BGPI -- BG Palette Index (CGB mode only)
+    // RP -- Infrared Communications
+    case 0xFF56:
+        return ((game_mode == GameMode::CGB) ? (infrared | 0x3C) : 0xFF);
+    // BGPI -- BG Palette Index (CGB only)
     case 0xFF68:
-        if (game_mode == GameMode::CGB) {
+        if (console == Console::CGB) {
             return lcd.bg_palette_index | 0x40;
         } else {
             return 0xFF;
@@ -369,10 +408,10 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         } else {
             return 0xFF;
         }
-    // OBPI -- Sprite Palette Index (CGB mode only)
+    // OBPI -- Sprite Palette Index (CGB only)
     case 0xFF6A:
-        if (game_mode == GameMode::CGB) {
-            return lcd.obj_palette_index & 0x40;
+        if (console == Console::CGB) {
+            return lcd.obj_palette_index | 0x40;
         } else {
             return 0xFF;
         }
@@ -387,6 +426,20 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
     // SVBK -- WRAM bank number
     case 0xFF70:
         return ((game_mode == GameMode::CGB) ? (static_cast<u8>(wram_bank_num) | 0xF8) : 0xFF);
+    // Undocumented
+    case 0xFF6C:
+        return ((game_mode == GameMode::CGB) ? (undocumented[1] | 0xFE) : 0xFF);
+    case 0xFF72:
+        return ((console == Console::CGB) ? undocumented[2] : 0xFF);
+    case 0xFF73:
+        return ((console == Console::CGB) ? undocumented[3] : 0xFF);
+    case 0xFF74:
+        return ((game_mode == GameMode::CGB) ? undocumented[4] : 0xFF);
+    case 0xFF75:
+        return ((console == Console::CGB) ? (undocumented[5] | 0x8F) : 0xFF);
+    case 0xFF76:
+    case 0xFF77:
+        return ((console == Console::CGB) ? 0x00 : 0xFF);
 
     // Unused/unusable I/O registers all return 0xFF when read.
     default:
@@ -557,15 +610,21 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // BGP -- BG Palette Data
     case 0xFF47:
-        lcd.bg_palette = data;
+        if (game_mode == GameMode::DMG) {
+            lcd.bg_palette_data[0] = data;
+        }
         break;
     // OBP0 -- Sprite Palette 0 Data
     case 0xFF48:
-        lcd.obj_palette0 = data;
+        if (game_mode == GameMode::DMG) {
+            lcd.obj_palette_data[0] = data;
+        }
         break;
     // OBP1 -- Sprite Palette 1 Data
     case 0xFF49:
-        lcd.obj_palette1 = data;
+        if (game_mode == GameMode::DMG) {
+            lcd.obj_palette_data[1] = data;
+        }
         break;
     // WY -- Window Y Position
     case 0xFF4A:
@@ -605,6 +664,12 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     case 0xFF55:
         hdma_control = data;
         break;
+    // RP -- Infrared Communications
+    case 0xFF56:
+        if (game_mode == GameMode::CGB) {
+            infrared = data & 0xC1;
+        }
+        break;
     // BGPI -- BG Palette Index (CGB mode only)
     case 0xFF68:
         if (game_mode == GameMode::CGB) {
@@ -643,6 +708,32 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     case 0xFF70:
         if (game_mode == GameMode::CGB) {
             wram_bank_num = data & 0x07;
+        }
+        break;
+    // Undocumented
+    case 0xFF6C:
+        if (game_mode == GameMode::CGB) {
+            undocumented[1] = data & 0x01;
+        }
+        break;
+    case 0xFF72:
+        if (console == Console::CGB) {
+            undocumented[2] = data;
+        }
+        break;
+    case 0xFF73:
+        if (console == Console::CGB) {
+            undocumented[3] = data;
+        }
+        break;
+    case 0xFF74:
+        if (game_mode == GameMode::CGB) {
+            undocumented[4] = data;
+        }
+        break;
+    case 0xFF75:
+        if (console == Console::CGB) {
+            undocumented[5] = data & 0x70;
         }
         break;
 

@@ -183,7 +183,8 @@ private:
     // NR52 register: 0xFF26
     u8 sound_on = 0x81;
     // Wave Pattern RAM: 0xFF30-0xFF3F
-    std::array<u8, 0x10> wave_ram{};
+    std::array<u8, 0x10> wave_ram{{0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
+                                   0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF}};
 
     // LCDC register: 0xFF40
     //     bit 7: LCD On
@@ -235,7 +236,7 @@ private:
     // Implementations located in LCD class.
 
     // DMA register: 0xFF46
-    u8 oam_dma_start = 0xFF;
+    u8 oam_dma_start;
 
     // KEY1 register: 0xFF4D
     u8 speed_switch = 0x00;
@@ -251,6 +252,9 @@ private:
     // HDMA5 register: 0xFF55
     u8 hdma_control = 0x00; // Not implemented. What is the initial value of this register?
 
+    // RP register: 0xFF56
+    u8 infrared = 0x02; // Not implemented.
+
     // VBK register: 0xFF4F
     unsigned int vram_bank_num = 0x00;
     // SVBK register: 0xFF70
@@ -263,6 +267,9 @@ private:
     //     bit 1: LCD Status
     //     bit 0: VBLANK
     u8 interrupt_enable = 0x00;
+
+    // Undocumented CGB registers: 0xFF6C, 0xFF72, 0xFF73, 0xFF74, 0xFF75, 0xFF76, 0xFF77
+    std::array<u8, 5> undocumented{{ 0x00, 0x00, 0x00, 0x00, 0x00 }};
 
     // ******** MBC control registers ******** 
     int rom_bank_num = 0x01;

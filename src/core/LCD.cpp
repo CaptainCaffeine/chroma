@@ -262,7 +262,7 @@ void LCD::RenderBackground(std::size_t num_bg_pixels) {
         u8 lsb = tile_data[tile_data_index];
         u8 msb = tile_data[tile_data_index + 1];
 
-        DecodePixelColoursFromPalette(lsb, msb, bg_palette, false);
+        DecodePixelColoursFromPalette(lsb, msb, bg_palette_data[0], false);
 
         for (const auto& pixel_colour : pixel_colours) {
             row_buffer[row_pixel++] = pixel_colour;
@@ -324,7 +324,7 @@ void LCD::RenderWindow(std::size_t num_bg_pixels) {
         u8 lsb = tile_data[tile_data_index];
         u8 msb = tile_data[tile_data_index + 1];
 
-        DecodePixelColoursFromPalette(lsb, msb, bg_palette, false);
+        DecodePixelColoursFromPalette(lsb, msb, bg_palette_data[0], false);
 
         for (const auto& pixel_colour : pixel_colours) {
             row_buffer[row_pixel++] = pixel_colour;
@@ -342,7 +342,7 @@ std::size_t LCD::RenderFirstTile(std::size_t start_pixel, std::size_t tile_data_
     u8 lsb = tile_data[tile_data_index];
     u8 msb = tile_data[tile_data_index + 1];
 
-    DecodePixelColoursFromPalette(lsb, msb, bg_palette, false);
+    DecodePixelColoursFromPalette(lsb, msb, bg_palette_data[0], false);
 
     // Throw away the first pixels of the tile.
     for (std::size_t pixel = throwaway; pixel < 8; ++pixel) {
@@ -413,9 +413,9 @@ void LCD::RenderSprites() {
         u8 msb = sa.sprite_tiles[tile_row + 1];
 
         if (sa.attrs & 0x10) {
-            DecodePixelColoursFromPalette(lsb, msb, obj_palette1, true);
+            DecodePixelColoursFromPalette(lsb, msb, obj_palette_data[1], true);
         } else {
-            DecodePixelColoursFromPalette(lsb, msb, obj_palette0, true);
+            DecodePixelColoursFromPalette(lsb, msb, obj_palette_data[0], true);
         }
 
         // If this sprite has the X flip flag set, reverse the pixels.
@@ -442,7 +442,7 @@ void LCD::RenderSprites() {
         if (sa.attrs & 0x80) {
             // Draw the sprite below the background.
             while (pixel_iter != pixel_end_iter) {
-                if (!(*pixel_iter & 0x8000) && *row_buffer_iter == shades[bg_palette & 0x03]) {
+                if (!(*pixel_iter & 0x8000) && *row_buffer_iter == shades[bg_palette_data[0] & 0x03]) {
                     *row_buffer_iter = *pixel_iter;
                 }
                 ++pixel_iter;
