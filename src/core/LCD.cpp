@@ -553,7 +553,6 @@ void LCD::RenderSprites() {
 
     // Each row of 8 pixels in a tile is 2 bytes. The first byte contains the low bit of the palette index for
     // each pixel, and the second byte contains the high bit of the palette index.
-
     for (const SpriteAttrs& sa : oam_sprites) {
         // Determine which row of the sprite tile is being drawn.
         std::size_t tile_row = (ly - (sa.y_pos - 16));
@@ -579,10 +578,9 @@ void LCD::RenderSprites() {
             std::reverse(pixel_colours.begin(), pixel_colours.end());
         }
 
-        auto pixel_iter = pixel_colours.cbegin();
-        auto pixel_end_iter = pixel_colours.cend();
+        auto pixel_iter = pixel_colours.cbegin(), pixel_end_iter = pixel_colours.cend();
 
-        // If the sprite's X pos is less than 8 or greater than 159, part of the sprite will be cut off.
+        // If the sprite's X position is less than 8 or greater than 159, part of the sprite will be cut off.
         std::size_t row_pixel = sa.x_pos - 8;
         if (sa.x_pos < 8) {
             pixel_iter += 8 - sa.x_pos;
@@ -591,58 +589,30 @@ void LCD::RenderSprites() {
             pixel_end_iter -= (sa.x_pos - 160);
         }
 
-        // Bit 7 in the sprite's OAM attribute byte decides whether or not the sprite will be drawn above or below
-        // the background and window. If drawn below, then bg pixels of colour 0x00 are transparent. If drawn above,
-        // the sprite pixels of colour 0x00 are transparent.
+        // If the sprite is drawn below the background, then it is only drawn on pixels of colour 0 for the palette
+        // of that tile.
+        u16 bg_info_mask = 0x0000;
         if (mem->game_mode == GameMode::CGB) {
-            if (!BGEnabled()) {
-                // Ignore both BG and OAM priority flags. Draw the sprite above the background.
-                while (pixel_iter != pixel_end_iter) {
-                    if (!(*pixel_iter & 0x8000)) {
-                        row_buffer[row_pixel] = *pixel_iter;
-                    }
-                    ++pixel_iter;
-                    ++row_pixel;
-                }
-            } else if (sa.behind_bg) {
-                // Draw the sprite below the background.
-                while (pixel_iter != pixel_end_iter) {
-                    if (!(*pixel_iter & 0x8000) && !(row_bg_info[row_pixel] & 0x06)) {
-                        row_buffer[row_pixel] = *pixel_iter;
-                    }
-                    ++pixel_iter;
-                    ++row_pixel;
-                }
-            } else {
-                // Draw the sprite above the background, unless the BG priority bit is set.
-                while (pixel_iter != pixel_end_iter) {
-                    if (!(*pixel_iter & 0x8000) && !(row_bg_info[row_pixel] & 0x01)) {
-                        row_buffer[row_pixel] = *pixel_iter;
-                    }
-                    ++pixel_iter;
-                    ++row_pixel;
+            // If the BG is "disabled" on CGB, both BG and OAM priority flags are ignored and the sprite is drawn
+            // above the background.
+            if (BGEnabled()) {
+                if (sa.behind_bg) {
+                    bg_info_mask = 0x0006;
+                } else {
+                    // Draw the sprite above the background, unless the BG priority bit is set.
+                    bg_info_mask = 0x0001;
                 }
             }
-        } else {
-            if (sa.behind_bg) {
-                // Draw the sprite below the background.
-                while (pixel_iter != pixel_end_iter) {
-                    if (!(*pixel_iter & 0x8000) && !(row_bg_info[row_pixel] & 0x06)) {
-                        row_buffer[row_pixel] = *pixel_iter;
-                    }
-                    ++pixel_iter;
-                    ++row_pixel;
-                }
-            } else {
-                // Draw the sprite above the background.
-                while (pixel_iter != pixel_end_iter) {
-                    if (!(*pixel_iter & 0x8000)) {
-                        row_buffer[row_pixel] = *pixel_iter;
-                    }
-                    ++pixel_iter;
-                    ++row_pixel;
-                }
+        } else if (sa.behind_bg) {
+            bg_info_mask = 0x0006;
+        }
+
+        while (pixel_iter != pixel_end_iter) {
+            if (!(*pixel_iter & 0x8000) && !(row_bg_info[row_pixel] & bg_info_mask)) {
+                row_buffer[row_pixel] = *pixel_iter;
             }
+            ++pixel_iter;
+            ++row_pixel;
         }
     }
 }
