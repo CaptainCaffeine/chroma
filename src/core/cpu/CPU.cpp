@@ -290,7 +290,7 @@ void CPU::StoppedTick() {
         if (speed_switch_cycles == 4) {
             // Speed switch finished. Toggle the CPU speed and set the prepare bit in KEY1 to zero.
             mem.WriteMem8(0xFF4D, ~mem.ReadMem8(0xFF4D));
-            mem.cgb_double_speed = !mem.cgb_double_speed;
+            mem.double_speed = mem.double_speed ^ 1;
 
             // Exit STOP mode.
             cpu_mode = CPUMode::Running;

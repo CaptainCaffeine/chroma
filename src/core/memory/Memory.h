@@ -38,7 +38,7 @@ public:
 
     const Console console;
     const GameMode game_mode;
-    bool cgb_double_speed = false;
+    unsigned int double_speed = 0;
 
     u8 ReadMem8(const u16 addr) const;
     void WriteMem8(const u16 addr, const u8 data);
@@ -59,8 +59,8 @@ public:
 
     // LCD functions
     template<typename DestIter>
-    void CopyFromVRAM(const u16 start_addr, const std::size_t num_bytes, DestIter dest) const {
-        std::copy_n(vram.cbegin() + (start_addr - 0x8000), num_bytes, dest);
+    void CopyFromVRAM(const u16 start_addr, const std::size_t num_bytes, const int bank_num, DestIter dest) const {
+        std::copy_n(vram.cbegin() + (start_addr - 0x8000) + 0x2000 * bank_num, num_bytes, dest);
     }
 
     template<typename DestIter>

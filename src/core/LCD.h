@@ -31,11 +31,25 @@ namespace Core {
 class Memory;
 class GameBoy;
 
-struct SpriteAttrs {
-    SpriteAttrs(u8 y, u8 x, u8 index, u8 attributes) : y_pos(y), x_pos(x), tile_index(index), attrs(attributes) {};
+struct BGAttrs {
+    BGAttrs(u8 tile_index);
+    BGAttrs(u8 tile_index, u8 attrs);
 
-    u8 y_pos, x_pos, tile_index, attrs;
-    std::array<u8, 2*16> sprite_tiles;
+    const u8 index = 0, above_sprites = 0;
+    const bool y_flip = false, x_flip = false;
+    const int palette_num = 0, bank_num = 0;
+
+    std::array<u8, 16> tile;
+};
+
+struct SpriteAttrs {
+    SpriteAttrs(u8 y, u8 x, u8 index, u8 attrs, GameMode game_mode);
+
+    u8 y_pos, x_pos, tile_index;
+    bool behind_bg, y_flip, x_flip;
+    int palette_num, bank_num;
+
+    std::array<u8, 32> sprite_tiles;
 };
 
 class LCD {
@@ -121,16 +135,19 @@ private:
     u8 lcd_on = 0x80;
     void UpdatePowerOnState();
 
-    int scanline_cycles = 452; // This should be set in constructor to adapt for CGB double speed.
+    int scanline_cycles = 452;
+    u8 current_scanline = 0;
     void UpdateLY();
+    int Line153Cycles() const;
     int Mode3Cycles() const;
+    void StrangeLY();
 
     bool stat_interrupt_signal = false, prev_interrupt_signal = false;
     void CheckSTATInterruptSignal();
 
     // LY=LYC interrupt
-    u8 LY_last_cycle = 0xFF;
-    bool LY_compare_equal_forced_zero = false;
+    u8 ly_last_cycle = 0xFF;
+    bool ly_compare_equal_forced_zero = false;
     void UpdateLYCompareSignal();
 
     // Drawing
@@ -140,8 +157,8 @@ private:
     const std::array<u16, 4> shades{{0x7FFF, 0x56B5, 0x294A, 0x0000}};
 
     std::array<u8, num_tiles> row_tile_map;
-    std::array<s8, num_tiles> signed_row_tile_map;
-    std::array<u8, num_tiles*tile_bytes> tile_data;
+    std::array<u8, num_tiles> row_attr_map;
+    std::vector<BGAttrs> tile_data;
 
     // The Sprite Attribute Table (OAM) contains 40 sprite attributes each 4 bytes long.
     // Byte 0: the Y position of the sprite, minus 16.
@@ -157,11 +174,12 @@ private:
     //     Bit 4: Palette number (0=OBP0, 1=OBP1) (DMG mode only)
     //     Bit 3: Tile VRAM bank (0=bank 0, 1=bank 1) (CGB mode only)
     //     Bit 2-0: Palette number (selects OBP0-7) (CGB mode only)
-    std::array<u8, 40*4> oam_ram;
+    std::array<u8, 160> oam_ram;
     std::deque<SpriteAttrs> oam_sprites;
 
     std::array<u16, 8> pixel_colours;
     std::array<u16, 168> row_buffer;
+    std::array<u16, 168> row_bg_info;
     std::vector<u16> back_buffer;
 
     u8 window_y_frame_val = 0x00;
@@ -170,12 +188,15 @@ private:
     void RenderScanline();
     void RenderBackground(std::size_t num_bg_pixels);
     void RenderWindow(std::size_t num_bg_pixels);
-    std::size_t RenderFirstTile(std::size_t start_pixel, std::size_t tile_data_index, std::size_t throwaway);
+    std::size_t RenderFirstTile(std::size_t start_pixel, std::size_t start_tile, std::size_t tile_row,
+                                std::size_t throwaway);
     void RenderSprites();
-    template<typename T, std::size_t N>
-    void FetchTiles(const std::array<T, N>& tile_indicies);
-    void FetchSpriteTiles(std::deque<SpriteAttrs>& sprites);
-    void DecodePixelColoursFromPalette(u8 lsb, u8 msb, u8 palette, bool sprite);
+    void FetchTiles();
+    void FetchSpriteTiles();
+    template<std::size_t N>
+    void DecodePaletteIndexes(const std::array<u8, N>& tile, const std::size_t tile_row);
+    void GetPixelColoursFromPaletteDMG(u8 palette, bool sprite);
+    void GetPixelColoursFromPaletteCGB(int palette_num, bool sprite);
 
     // STAT functions
     void SetSTATMode(unsigned int mode) { stat = (stat & 0xFC) | mode; }

@@ -91,8 +91,6 @@ void Memory::IORegisterInit() {
         timer.divider = 0x1EA0;
         oam_dma_start = 0x00;
 
-        lcd.ly = 144;
-
         lcd.bg_palette_index = 0x88;
         lcd.obj_palette_index = 0x90;
     }

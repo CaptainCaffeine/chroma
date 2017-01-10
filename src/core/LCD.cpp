@@ -22,6 +22,33 @@
 
 namespace Core {
 
+BGAttrs::BGAttrs(u8 tile_index) : index(tile_index) {}
+
+BGAttrs::BGAttrs(u8 tile_index, u8 attrs)
+        : index(tile_index)
+        , above_sprites((attrs & 0x80) >> 7)
+        , y_flip(attrs & 0x40)
+        , x_flip(attrs & 0x20)
+        , palette_num(attrs & 0x07)
+        , bank_num((attrs & 0x08) >> 3) {}
+
+SpriteAttrs::SpriteAttrs(u8 y, u8 x, u8 index, u8 attrs, GameMode game_mode)
+        : y_pos(y)
+        , x_pos(x)
+        , tile_index(index)
+        , behind_bg(attrs & 0x80)
+        , y_flip(attrs & 0x40)
+        , x_flip(attrs & 0x20) {
+
+    if (game_mode == GameMode::DMG) {
+        palette_num = (attrs & 0x10) >> 4;
+        bank_num = 0;
+    } else {
+        palette_num = attrs & 0x07;
+        bank_num = (attrs & 0x08) >> 3;
+    }
+};
+
 LCD::LCD() : back_buffer(160*144) {}
 
 void LCD::UpdateLCD() {
@@ -32,8 +59,6 @@ void LCD::UpdateLCD() {
         return;
     }
 
-    // DMG ONLY FOR NOW -- cgb timings also include dmg mode, single speed, and double speed.
-
     scanline_cycles += 4;
 
     UpdateLY();
@@ -41,9 +66,9 @@ void LCD::UpdateLCD() {
 
     if (ly == 0) {
         if (STATMode() != 1) {
-            if (scanline_cycles == 4) {
+            if (scanline_cycles == ((mem->game_mode == GameMode::DMG) ? 4 : 0)) {
                 SetSTATMode(2);
-            } else if (scanline_cycles == 84) {
+            } else if (scanline_cycles == ((mem->game_mode == GameMode::DMG) ? 84 : (80 << mem->double_speed))) {
                 SetSTATMode(3);
                 RenderScanline();
             } else if (scanline_cycles == Mode3Cycles()) {
@@ -55,9 +80,9 @@ void LCD::UpdateLCD() {
     } else if (ly <= 143) {
         // AntonioND claims that except for scanline 0, the Mode 2 STAT interrupt happens the cycle before Mode 2
         // is entered. However, doing this causes most of Mooneye-GB's STAT timing tests to fail.
-        if (scanline_cycles == 4) {
+        if (scanline_cycles == ((mem->game_mode == GameMode::DMG) ? 4 : 0)) {
             SetSTATMode(2);
-        } else if (scanline_cycles == 84) {
+        } else if (scanline_cycles == ((mem->game_mode == GameMode::DMG) ? 84 : (80 << mem->double_speed))) {
             SetSTATMode(3);
             RenderScanline();
         } else if (scanline_cycles == Mode3Cycles()) {
@@ -66,11 +91,15 @@ void LCD::UpdateLCD() {
             SetSTATMode(0);
         }
     } else if (ly == 144) {
-        if (scanline_cycles == 4) {
+        if (scanline_cycles == 0 && mem->console == Console::CGB) {
+            stat_interrupt_signal |= Mode2CheckEnabled();
+        } else if (scanline_cycles == 4) {
             mem->RequestInterrupt(Interrupt::VBLANK);
             SetSTATMode(1);
-            // The OAM STAT interrupt is also triggered on entering Mode 1.
-            stat_interrupt_signal |= Mode2CheckEnabled();
+            if (mem->console == Console::DMG) {
+                // The OAM STAT interrupt is also triggered on entering Mode 1.
+                stat_interrupt_signal |= Mode2CheckEnabled();
+            }
 
             // Swap front and back buffers now that we've completed a frame.
             gameboy->SwapBuffers(back_buffer);
@@ -78,12 +107,6 @@ void LCD::UpdateLCD() {
     }
 
     CheckSTATInterruptSignal();
-
-//    // Mode timings debug
-//    if (scanline_cycles == 0) {
-//        std::cout << "\n LY=" << std::setw(3) << std::setfill(' ') << static_cast<unsigned int>(ly) << " ";
-//    }
-//    std::cout << STATMode() << " ";
 }
 
 void LCD::UpdatePowerOnState() {
@@ -93,7 +116,11 @@ void LCD::UpdatePowerOnState() {
 
         if (lcd_on) {
             // Initialize scanline cycle count (to 452 instead of 0, so it ticks over to 0 in UpdateLY()).
-            scanline_cycles = 452;
+            if (mem->double_speed) {
+                scanline_cycles = 908;
+            } else {
+                scanline_cycles = 452;
+            }
             SetSTATMode(1);
         } else {
             ly = 0;
@@ -109,12 +136,22 @@ void LCD::UpdatePowerOnState() {
 }
 
 void LCD::UpdateLY() {
-    if (ly == 153) {
-        // LY is 153 only for one machine cycle at the beginning of scanline 153, then wraps back to 0.
+    if (ly == 153 && scanline_cycles == Line153Cycles()) {
+        // LY is 153 only for a few machine cycle at the beginning of scanline 153, then wraps back to 0.
         ly = 0;
-    } else if (scanline_cycles == 456) {
+    }
+
+    if (mem->game_mode == GameMode::CGB && !mem->double_speed && scanline_cycles == 452) {
+        StrangeLY();
+    }
+
+    if (scanline_cycles == (456 << mem->double_speed)) {
         // Reset scanline cycle counter.
         scanline_cycles = 0;
+
+        if (mem->game_mode == GameMode::CGB && !mem->double_speed) {
+            ly = current_scanline;
+        }
 
         // LY does not increase at the end of scanline 153, it stays 0 until the end of scanline 0.
         // Otherwise, increment LY.
@@ -130,9 +167,22 @@ void LCD::UpdateLY() {
     }
 }
 
+int LCD::Line153Cycles() const {
+    // The number of cycles where LY=153 depending on device configuration.
+    if (mem->console == Console::DMG) {
+        return 4;
+    } else if (mem->game_mode == GameMode::DMG) {
+        return 8;
+    } else if (mem->double_speed) {
+        return 12;
+    } else {
+        return 4;
+    }
+}
+
 int LCD::Mode3Cycles() const {
     // The cycles taken by mode 3 increase by a number of factors.
-    int cycles = 256;
+    int cycles = 256 << mem->double_speed;
 
     // Mode 3 cycles increase depending on how much of the first tile is cut off by the current value of SCX.
     int scx_mod = scroll_x % 8;
@@ -151,23 +201,60 @@ int LCD::Mode3Cycles() const {
     return cycles;
 }
 
+void LCD::StrangeLY() {
+    // LY takes on strange values on the last m-cycle of a scanline in CGB single speed mode.
+    current_scanline = ly;
+
+    if (ly == 0 && STATMode() == 1) {
+        return;
+    }
+
+    std::array<unsigned int, 9> pattern{{0, 0, 2, 0, 4, 4, 6, 0, 8}};
+    if ((ly & 0x0F) == 0x0F) {
+        ly = pattern[(ly >> 4) & 0x0F] << 4;
+    } else {
+        ly = pattern[ly & 0x07] | (ly & 0xF8);
+    }
+}
+
 // Handles setting the LYC=LY compare bit and corresponding STAT interrupt on DMG. When LY changes, the LY=LYC bit is 
 // set to zero that machine cycle, then on the next machine cycle, LY=LYC is set using the new LY value and the STAT
 // interrupt can be fired. This will not be interrupted even if LY changes again on the second cycle (which happens 
 // on scanline 153). In that case, the two events caused by an LY change begin on the following cycle.
 void LCD::UpdateLYCompareSignal() {
-    if (LY_compare_equal_forced_zero) {
-        SetLYCompare(ly_compare == LY_last_cycle);
+    if (mem->console == Console::DMG) {
+        if (ly_compare_equal_forced_zero) {
+            SetLYCompare(ly_compare == ly_last_cycle);
 
-        // Don't update LY_last_cycle.
-        LY_compare_equal_forced_zero = false;
-    } else if (ly != LY_last_cycle) {
-        SetLYCompare(false);
-        LY_compare_equal_forced_zero = true;
-        LY_last_cycle = ly;
+            // Don't update LY_last_cycle.
+            ly_compare_equal_forced_zero = false;
+        } else if (ly != ly_last_cycle) {
+            SetLYCompare(false);
+            ly_compare_equal_forced_zero = true;
+            ly_last_cycle = ly;
+        } else {
+            SetLYCompare(ly_compare == ly);
+            ly_last_cycle = ly;
+        }
+    } else if (mem->double_speed) {
+        if (ly == 0 && scanline_cycles == 12) {
+            SetLYCompare(ly_compare == ly_last_cycle);
+            // Don't update LY_last_cycle.
+        } else {
+            SetLYCompare(ly_compare == ly_last_cycle);
+            ly_last_cycle = ly;
+        }
     } else {
-        SetLYCompare(ly_compare == ly);
-        LY_last_cycle = ly;
+        if (scanline_cycles == 452) {
+            SetLYCompare(ly_compare == ly_last_cycle);
+            // Don't update LY_last_cycle.
+        } else if (ly_last_cycle == 153) {
+            SetLYCompare(ly_compare == ly_last_cycle);
+            ly_last_cycle = ly;
+        } else {
+            SetLYCompare(ly_compare == ly);
+            ly_last_cycle = ly;
+        }
     }
 }
 
@@ -195,15 +282,26 @@ void LCD::RenderScanline() {
         num_bg_pixels = 160;
     }
 
-    if (BGEnabled()) {
-        RenderBackground(num_bg_pixels);
+    if (mem->game_mode == GameMode::DMG) {
+        if (BGEnabled()) {
+            RenderBackground(num_bg_pixels);
+        } else {
+            // If disabled, we need to blank what isn't covered by the window.
+            std::fill_n(row_buffer.begin(), num_bg_pixels, 0x7FFF);
+        }
     } else {
-        // If disabled, we need to blank what isn't covered by the window.
-        std::fill_n(row_buffer.begin(), num_bg_pixels, 0x7FFF);
+        RenderBackground(num_bg_pixels);
     }
 
-    if (WindowEnabled()) {
-        RenderWindow(num_bg_pixels);
+    // On CGB in DMG mode, disabling the background will also disable the window.
+    if (mem->console == Console::CGB && mem->game_mode == GameMode::DMG) {
+        if (BGEnabled() && WindowEnabled()) {
+            RenderWindow(num_bg_pixels);
+        }
+    } else {
+        if (WindowEnabled()) {
+            RenderWindow(num_bg_pixels);
+        }
     }
 
     if (SpritesEnabled()) {
@@ -216,6 +314,7 @@ void LCD::RenderScanline() {
 }
 
 void LCD::RenderBackground(std::size_t num_bg_pixels) {
+    tile_data.clear();
     // The background is composed of 32x32 tiles of 8x8 pixels. The scroll registers (SCY and SCX) allow the
     // top-left corner of the screen to be positioned anywhere on the background, and the background wraps around
     // when it hits the edge.
@@ -227,52 +326,76 @@ void LCD::RenderBackground(std::size_t num_bg_pixels) {
     u16 tile_map_addr = BGTileMapStartAddr() + row_num * tile_map_row_bytes;
 
     // Get the row of tile indicies from VRAM.
-    mem->CopyFromVRAM(tile_map_addr, tile_map_row_bytes, row_tile_map.begin());
+    mem->CopyFromVRAM(tile_map_addr, tile_map_row_bytes, 0, row_tile_map.begin());
 
-    // The background tiles are located at either 0x8000-0x8FFF or 0x8800-0x97FF. For the first region, the
-    // tile map indicies are unsigned offsets from 0x8000; for the second region, the indicies are signed
-    // offsets from 0x9000.
-
-    // Fetch the tile bitmaps pointed to by the indicies in the tile map row. Each tile is 16 bytes.
-    if (TileDataStartAddr() == 0x9000) {
-        std::copy(row_tile_map.cbegin(), row_tile_map.cend(), signed_row_tile_map.begin());
-        FetchTiles(signed_row_tile_map);
+    if (mem->game_mode == GameMode::DMG) {
+        for (std::size_t i = 0; i < row_tile_map.size(); ++i) {
+            tile_data.emplace_back(row_tile_map[i]);
+        }
     } else {
-        FetchTiles(row_tile_map);
+        // Get the row of background tile attributes from VRAM.
+        mem->CopyFromVRAM(tile_map_addr, tile_map_row_bytes, 1, row_attr_map.begin());
+
+        for (std::size_t i = 0; i < row_tile_map.size(); ++i) {
+            tile_data.emplace_back(row_tile_map[i], row_attr_map[i]);
+        }
     }
 
-    // Each row of 8 pixels in a tile is 2 bytes. The first byte contains the low bit of the palette index for
-    // each pixel, and the second byte contains the high bit of the palette index. The background palette in
-    // DMG mode is in the BGP register at 0xFF47.
+    // Fetch the tile bitmaps pointed to by the indicies in the tile map row. Each tile is 16 bytes.
+    FetchTiles();
 
     // Determine which row of pixels we're on, and in which tile we start reading data.
-    unsigned int tile_row = (scroll_y + ly) % 8;
-    unsigned int start_tile = scroll_x / 8;
-    // Two bytes per tile row, 16 bytes per tile.
-    std::size_t tile_data_index = tile_row * 2 + start_tile * 16;
+    std::size_t tile_row = ((scroll_y + ly) % 8) * 2;
+    std::size_t start_tile = scroll_x / 8;
+
+    auto tile_iter = tile_data.begin() + start_tile;
+
+    // If this tile has the Y flip flag set, get the mirrored row in the other half of the tile.
+    if (tile_iter->y_flip) {
+        tile_row = 14 - tile_row;
+    }
 
     // If necessary, throw away the first few pixels of the first tile, based on SCX.
-    std::size_t row_pixel = RenderFirstTile(0, tile_data_index, scroll_x % 8);
+    std::size_t row_pixel = RenderFirstTile(0, start_tile, tile_row, scroll_x % 8);
 
     // Increment the tile index to the next tile, and wrap around if we hit the end.
-    tile_data_index = (tile_data_index + 16) % tile_data.size();
+    if (++tile_iter == tile_data.end()) {
+        tile_iter = tile_data.begin();
+    }
 
     while (row_pixel < num_bg_pixels) {
-        // Get the two bytes describing the row of the current tile.
-        u8 lsb = tile_data[tile_data_index];
-        u8 msb = tile_data[tile_data_index + 1];
+        DecodePaletteIndexes(tile_iter->tile, tile_row);
 
-        DecodePixelColoursFromPalette(lsb, msb, bg_palette_data[0], false);
+        // Record the palette index for each pixel and the bg priority bit.
+        for (const auto& pixel_colour : pixel_colours) {
+            row_bg_info[row_pixel++] = (pixel_colour << 1) | tile_iter->above_sprites;
+        }
+        row_pixel -= 8;
 
+        if (mem->game_mode == GameMode::DMG) {
+            GetPixelColoursFromPaletteDMG(bg_palette_data[0], false);
+        } else {
+            GetPixelColoursFromPaletteCGB(tile_iter->palette_num, false);
+        }
+
+        // If this tile has the X flip flag set, reverse the pixels.
+        if (tile_iter->x_flip) {
+            std::reverse(pixel_colours.begin(), pixel_colours.end());
+        }
+
+        // Copy the pixels to the row buffer. If this tile has BG priority set, set the alpha bit.
         for (const auto& pixel_colour : pixel_colours) {
             row_buffer[row_pixel++] = pixel_colour;
         }
 
-        tile_data_index = (tile_data_index + 16) % tile_data.size();
+        if (++tile_iter == tile_data.end()) {
+            tile_iter = tile_data.begin();
+        }
     }
 }
 
 void LCD::RenderWindow(std::size_t num_bg_pixels) {
+    tile_data.clear();
     // The window is composed of 32x32 tiles of 8x8 pixels (of which only 21x18 tiles can be seen). Unlike the
     // background, the window cannot be scrolled; it is always displayed from its top-left corner and does not
     // wrap around. Instead, the position of its top-left corner can be set with the WY and WX registers.
@@ -290,59 +413,92 @@ void LCD::RenderWindow(std::size_t num_bg_pixels) {
     u16 tile_map_addr = WindowTileMapStartAddr() + (window_progress / 8) * tile_map_row_bytes;
 
     // Get the row of tile indicies from VRAM.
-    mem->CopyFromVRAM(tile_map_addr, tile_map_row_bytes, row_tile_map.begin());
+    mem->CopyFromVRAM(tile_map_addr, tile_map_row_bytes, 0, row_tile_map.begin());
 
-    // The window tiles are located at either 0x8000-0x8FFF or 0x8800-0x97FF. For the first region, the
-    // tile map indicies are unsigned offsets from 0x8000; for the second region, the indicies are signed
-    // offsets from 0x9000.
-
-    // Fetch the tile bitmaps pointed to by the indicies in the tile map row. Each tile is 16 bytes.
-    if (TileDataStartAddr() == 0x9000) {
-        std::copy(row_tile_map.cbegin(), row_tile_map.cend(), signed_row_tile_map.begin());
-        FetchTiles(signed_row_tile_map);
+    if (mem->game_mode == GameMode::DMG) {
+        for (std::size_t i = 0; i < row_tile_map.size(); ++i) {
+            tile_data.emplace_back(row_tile_map[i]);
+        }
     } else {
-        FetchTiles(row_tile_map);
+        // Get the row of background tile attributes from VRAM.
+        mem->CopyFromVRAM(tile_map_addr, tile_map_row_bytes, 1, row_attr_map.begin());
+
+        for (std::size_t i = 0; i < row_tile_map.size(); ++i) {
+            tile_data.emplace_back(row_tile_map[i], row_attr_map[i]);
+        }
     }
 
-    // Each row of 8 pixels in a tile is 2 bytes. The first byte contains the low bit of the palette index for
-    // each pixel, and the second byte contains the high bit of the palette index. The window palette in
-    // DMG mode is in the BGP register at 0xFF47.
+    FetchTiles();
 
+    // The window always starts rendering at the leftmost/first tile.
     // Determine which row of pixels we're on.
-    unsigned int tile_row = (window_progress) % 8;
-    // Two bytes per tile row. The window always starts rendering at the leftmost/first tile.
-    std::size_t tile_data_index = tile_row * 2;
+    std::size_t tile_row = ((window_progress) % 8) * 2;
+
+    auto tile_iter = tile_data.begin();
+
+    // If this tile has the Y flip flag set, get the mirrored row in the other half of the tile.
+    if (tile_iter->y_flip) {
+        tile_row = 14 - tile_row;
+    }
 
     // If necessary, throw away the first few pixels of the first tile, based on WX.
-    std::size_t row_pixel = RenderFirstTile(num_bg_pixels, tile_data_index, (window_x < 7) ? 7 - window_x : 0);
-
-    // Increment the tile index to the next tile.
-    tile_data_index += 16;
+    std::size_t row_pixel = RenderFirstTile(num_bg_pixels, 0, tile_row, (window_x < 7) ? 7 - window_x : 0);
+    ++tile_iter;
 
     while (row_pixel < 160) {
-        // Get the two bytes describing the row of the current tile.
-        u8 lsb = tile_data[tile_data_index];
-        u8 msb = tile_data[tile_data_index + 1];
+        DecodePaletteIndexes(tile_iter->tile, tile_row);
 
-        DecodePixelColoursFromPalette(lsb, msb, bg_palette_data[0], false);
+        // Record the palette index for each pixel and the bg priority bit.
+        for (const auto& pixel_colour : pixel_colours) {
+            row_bg_info[row_pixel++] = (pixel_colour << 1) | tile_iter->above_sprites;
+        }
+        row_pixel -= 8;
 
+        if (mem->game_mode == GameMode::DMG) {
+            GetPixelColoursFromPaletteDMG(bg_palette_data[0], false);
+        } else {
+            GetPixelColoursFromPaletteCGB(tile_iter->palette_num, false);
+        }
+
+        // If this tile has the X flip flag set, reverse the pixels.
+        if (tile_iter->x_flip) {
+            std::reverse(pixel_colours.begin(), pixel_colours.end());
+        }
+
+        // Copy the pixels to the row buffer. If this tile has BG priority set, set the alpha bit.
         for (const auto& pixel_colour : pixel_colours) {
             row_buffer[row_pixel++] = pixel_colour;
         }
 
-        tile_data_index += 16;
+        ++tile_iter;
     }
 
     // Increment internal window progression.
     ++window_progress;
 }
 
-std::size_t LCD::RenderFirstTile(std::size_t start_pixel, std::size_t tile_data_index, std::size_t throwaway) {
-    // Get the two bytes describing the row of the current tile.
-    u8 lsb = tile_data[tile_data_index];
-    u8 msb = tile_data[tile_data_index + 1];
+std::size_t LCD::RenderFirstTile(std::size_t start_pixel, std::size_t start_tile, std::size_t tile_row,
+                                 std::size_t throwaway) {
+    auto& bg_tile = tile_data[start_tile];
 
-    DecodePixelColoursFromPalette(lsb, msb, bg_palette_data[0], false);
+    DecodePaletteIndexes(bg_tile.tile, tile_row);
+
+    // Record the palette index for each pixel and the bg priority bit.
+    for (std::size_t pixel = throwaway; pixel < 8; ++pixel) {
+        row_bg_info[start_pixel++] = (pixel_colours[pixel] << 1) | bg_tile.above_sprites;
+    }
+    start_pixel -= 8 - throwaway;
+
+    if (mem->game_mode == GameMode::DMG) {
+        GetPixelColoursFromPaletteDMG(bg_palette_data[0], false);
+    } else {
+        GetPixelColoursFromPaletteCGB(bg_tile.palette_num, false);
+    }
+
+    // If this tile has the X flip flag set, reverse the pixels.
+    if (bg_tile.x_flip) {
+        std::reverse(pixel_colours.begin(), pixel_colours.end());
+    }
 
     // Throw away the first pixels of the tile.
     for (std::size_t pixel = throwaway; pixel < 8; ++pixel) {
@@ -368,7 +524,11 @@ void LCD::RenderSprites() {
         if (oam_ram[i] > sprite_gap && oam_ram[i] < 160) {
             // Check that the sprite is on the current scanline.
             if (ly < oam_ram[i] - sprite_gap && static_cast<int>(ly) >= static_cast<int>(oam_ram[i]) - 16) {
-                oam_sprites.emplace_front(oam_ram[i], oam_ram[i+1], oam_ram[i+2] & index_mask, oam_ram[i+3]);
+                oam_sprites.emplace_front(oam_ram[i],
+                                          oam_ram[i+1],
+                                          oam_ram[i+2] & index_mask,
+                                          oam_ram[i+3],
+                                          mem->game_mode);
             }
         }
 
@@ -383,43 +543,43 @@ void LCD::RenderSprites() {
                       }),
                       oam_sprites.end());
 
-    // Sprite drawing priority is based on its position in OAM and its X position. Sprite are drawn in descending X
-    // order. If two sprites overlap, the one that has a lower position in OAM is drawn on top. oam_sprites already
-    // contains the sprites for this line in decreasing OAM position, so we sort them by decreasing X position.
-    std::stable_sort(oam_sprites.begin(), oam_sprites.end(), [](SpriteAttrs sa1, SpriteAttrs sa2) {
-        return sa2.x_pos < sa1.x_pos;
-    });
+    if (mem->game_mode == GameMode::DMG) {
+        // Sprite drawing priority is based on its position in OAM and its X position. Sprite are drawn in descending X
+        // order. If two sprites overlap, the one that has a lower position in OAM is drawn on top. oam_sprites already
+        // contains the sprites for this line in decreasing OAM position, so we sort them by decreasing X position.
+        // In CGB mode, sprites are always drawn according to OAM position.
+        std::stable_sort(oam_sprites.begin(), oam_sprites.end(), [](SpriteAttrs sa1, SpriteAttrs sa2) {
+            return sa2.x_pos < sa1.x_pos;
+        });
+    }
 
-    FetchSpriteTiles(oam_sprites);
+    FetchSpriteTiles();
 
     // Each row of 8 pixels in a tile is 2 bytes. The first byte contains the low bit of the palette index for
-    // each pixel, and the second byte contains the high bit of the palette index. The object palettes in
-    // DMG mode are in the OBP0 and OBP1 registers at 0xFF48 and 0xFF49.
+    // each pixel, and the second byte contains the high bit of the palette index.
 
     for (const SpriteAttrs& sa : oam_sprites) {
         // Determine which row of the sprite tile is being drawn.
-        unsigned int tile_row = (ly - (sa.y_pos - 16));
+        std::size_t tile_row = (ly - (sa.y_pos - 16));
 
         // If this sprite has the Y flip flag set, get the mirrored row in the other half of the sprite.
-        if (sa.attrs & 0x40) {
+        if (sa.y_flip) {
             tile_row = (SpriteSize() - 1) - tile_row;
         }
 
         // Two bytes per tile row.
         tile_row *= 2;
 
-        // Get the two bytes containing the row of the tile.
-        u8 lsb = sa.sprite_tiles[tile_row];
-        u8 msb = sa.sprite_tiles[tile_row + 1];
+        DecodePaletteIndexes(sa.sprite_tiles, tile_row);
 
-        if (sa.attrs & 0x10) {
-            DecodePixelColoursFromPalette(lsb, msb, obj_palette_data[1], true);
+        if (mem->game_mode == GameMode::DMG) {
+            GetPixelColoursFromPaletteDMG(obj_palette_data[sa.palette_num], true);
         } else {
-            DecodePixelColoursFromPalette(lsb, msb, obj_palette_data[0], true);
+            GetPixelColoursFromPaletteCGB(sa.palette_num, true);
         }
 
         // If this sprite has the X flip flag set, reverse the pixels.
-        if (sa.attrs & 0x20) {
+        if (sa.x_flip) {
             std::reverse(pixel_colours.begin(), pixel_colours.end());
         }
 
@@ -427,10 +587,10 @@ void LCD::RenderSprites() {
         auto pixel_end_iter = pixel_colours.cend();
 
         // If the sprite's X pos is less than 8 or greater than 159, part of the sprite will be cut off.
-        unsigned int draw_start_pos = sa.x_pos - 8;
+        std::size_t row_pixel = sa.x_pos - 8;
         if (sa.x_pos < 8) {
             pixel_iter += 8 - sa.x_pos;
-            draw_start_pos = 0;
+            row_pixel = 0;
         } else if (sa.x_pos > 160) {
             pixel_end_iter -= (sa.x_pos - 160);
         }
@@ -438,65 +598,132 @@ void LCD::RenderSprites() {
         // Bit 7 in the sprite's OAM attribute byte decides whether or not the sprite will be drawn above or below
         // the background and window. If drawn below, then bg pixels of colour 0x00 are transparent. If drawn above,
         // the sprite pixels of colour 0x00 are transparent.
-        auto row_buffer_iter = row_buffer.begin() + draw_start_pos;
-        if (sa.attrs & 0x80) {
-            // Draw the sprite below the background.
-            while (pixel_iter != pixel_end_iter) {
-                if (!(*pixel_iter & 0x8000) && *row_buffer_iter == shades[bg_palette_data[0] & 0x03]) {
-                    *row_buffer_iter = *pixel_iter;
+        if (mem->game_mode == GameMode::CGB) {
+            if (!BGEnabled()) {
+                // Ignore both BG and OAM priority flags. Draw the sprite above the background.
+                while (pixel_iter != pixel_end_iter) {
+                    if (!(*pixel_iter & 0x8000)) {
+                        row_buffer[row_pixel] = *pixel_iter;
+                    }
+                    ++pixel_iter;
+                    ++row_pixel;
                 }
-                ++pixel_iter;
-                ++row_buffer_iter;
+            } else if (sa.behind_bg) {
+                // Draw the sprite below the background.
+                while (pixel_iter != pixel_end_iter) {
+                    if (!(*pixel_iter & 0x8000) && !(row_bg_info[row_pixel] & 0x06)) {
+                        row_buffer[row_pixel] = *pixel_iter;
+                    }
+                    ++pixel_iter;
+                    ++row_pixel;
+                }
+            } else {
+                // Draw the sprite above the background, unless the BG priority bit is set.
+                while (pixel_iter != pixel_end_iter) {
+                    if (!(*pixel_iter & 0x8000) && !(row_bg_info[row_pixel] & 0x01)) {
+                        row_buffer[row_pixel] = *pixel_iter;
+                    }
+                    ++pixel_iter;
+                    ++row_pixel;
+                }
             }
         } else {
-            // Draw the sprite above the background.
-            while (pixel_iter != pixel_end_iter) {
-                if (!(*pixel_iter & 0x8000)) {
-                    *row_buffer_iter = *pixel_iter;
+            if (sa.behind_bg) {
+                // Draw the sprite below the background.
+                while (pixel_iter != pixel_end_iter) {
+                    if (!(*pixel_iter & 0x8000) && !(row_bg_info[row_pixel] & 0x06)) {
+                        row_buffer[row_pixel] = *pixel_iter;
+                    }
+                    ++pixel_iter;
+                    ++row_pixel;
                 }
-                ++pixel_iter;
-                ++row_buffer_iter;
+            } else {
+                // Draw the sprite above the background.
+                while (pixel_iter != pixel_end_iter) {
+                    if (!(*pixel_iter & 0x8000)) {
+                        row_buffer[row_pixel] = *pixel_iter;
+                    }
+                    ++pixel_iter;
+                    ++row_pixel;
+                }
             }
         }
     }
 }
 
-template<typename T, std::size_t N>
-void LCD::FetchTiles(const std::array<T, N>& tile_indicies) {
+void LCD::FetchTiles() {
+    // The background tiles are located at either 0x8000-0x8FFF or 0x8800-0x97FF. For the first region, the
+    // tile map indicies are unsigned offsets from 0x8000; for the second region, the indicies are signed
+    // offsets from 0x9000.
+
     u16 region_start_addr = TileDataStartAddr();
-    auto tile_data_iter = tile_data.begin();
-    // T is either u8 or s8, depending on the current tile data region.
-    for (T index : tile_indicies) {
-        u16 tile_addr = region_start_addr + index * static_cast<T>(tile_bytes);
-        mem->CopyFromVRAM(tile_addr, tile_bytes, tile_data_iter);
-        tile_data_iter += tile_bytes;
+    if (region_start_addr == 0x9000) {
+        // Signed tile data region.
+        for (auto& bg_tile : tile_data) {
+            u16 tile_addr = region_start_addr + static_cast<s8>(bg_tile.index) * static_cast<s8>(tile_bytes);
+            mem->CopyFromVRAM(tile_addr, tile_bytes, bg_tile.bank_num, bg_tile.tile.begin());
+        }
+    } else {
+        // Unsigned tile data region.
+        for (auto& bg_tile : tile_data) {
+            u16 tile_addr = region_start_addr + bg_tile.index * tile_bytes;
+            mem->CopyFromVRAM(tile_addr, tile_bytes, bg_tile.bank_num, bg_tile.tile.begin());
+        }
     }
 }
 
-void LCD::FetchSpriteTiles(std::deque<SpriteAttrs>& sprites) {
+void LCD::FetchSpriteTiles() {
     std::size_t tile_size = tile_bytes;
     if (SpriteSize() == 16) {
         tile_size *= 2;
     }
 
-    for (SpriteAttrs& sa : sprites) {
+    for (SpriteAttrs& sa : oam_sprites) {
         u16 tile_addr = 0x8000 | (static_cast<u16>(sa.tile_index) << 4);
-        mem->CopyFromVRAM(tile_addr, tile_size, sa.sprite_tiles.begin());
+        mem->CopyFromVRAM(tile_addr, tile_size, sa.bank_num, sa.sprite_tiles.begin());
     }
 }
 
-void LCD::DecodePixelColoursFromPalette(u8 lsb, u8 msb, u8 palette, bool sprite) {
+template<std::size_t N>
+void LCD::DecodePaletteIndexes(const std::array<u8, N>& tile, const std::size_t tile_row) {
+    // Get the two bytes containing the row of the tile.
+    const u8 lsb = tile[tile_row], msb = tile[tile_row + 1];
+
+    // Each row of 8 pixels in a tile is 2 bytes. The first byte contains the low bit of the palette index for
+    // each pixel, and the second byte contains the high bit of the palette index.
     for (std::size_t j = 0; j < 7; ++j) {
         pixel_colours[j] = ((lsb >> (7-j)) & 0x01) | ((msb >> (6-j)) & 0x02);
     }
     pixel_colours[7] = (lsb & 0x01) | ((msb << 1) & 0x02); // Can't shift right by -1...
+}
 
-    for (auto& index : pixel_colours) {
-        if (sprite && index == 0) {
+void LCD::GetPixelColoursFromPaletteDMG(u8 palette, bool sprite) {
+    for (auto& colour : pixel_colours) {
+        if (sprite && colour == 0) {
             // Palette index 0 is transparent for sprites. Set the alpha bit.
-            index |= 0x8000;
+            colour |= 0x8000;
         } else {
-            index = shades[(palette >> (index * 2)) & 0x03];
+            colour = shades[(palette >> (colour * 2)) & 0x03];
+        }
+    }
+}
+
+void LCD::GetPixelColoursFromPaletteCGB(int palette_num, bool sprite) {
+    std::size_t index;
+    if (sprite) {
+        for (auto& colour : pixel_colours) {
+            if (colour == 0) {
+                // Palette index 0 is transparent for sprites. Set the alpha bit.
+                colour |= 0x8000;
+            } else {
+                index = palette_num * 8 + colour * 2;
+                colour = (static_cast<u16>((obj_palette_data[index + 1] & 0x7F)) << 8) | obj_palette_data[index];
+            }
+        }
+    } else {
+        for (auto& colour : pixel_colours) {
+            index = palette_num * 8 + colour * 2;
+            colour = (static_cast<u16>((bg_palette_data[index + 1] & 0x7F)) << 8) | bg_palette_data[index];
         }
     }
 }

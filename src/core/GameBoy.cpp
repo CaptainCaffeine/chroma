@@ -63,7 +63,7 @@ void GameBoy::EmulatorLoop() {
         }
 
         // This is the number of cycles between VBLANKs, when the LCD is on.
-        cpu->RunFor(70224);
+        cpu->RunFor(70224 << mem->double_speed);
 
         Emu::RenderFrame(front_buffer.data(), sdl_context);
     }
