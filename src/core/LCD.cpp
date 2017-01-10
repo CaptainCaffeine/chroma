@@ -64,20 +64,16 @@ void LCD::UpdateLCD() {
     UpdateLY();
     UpdateLYCompareSignal();
 
-    if (ly == 0) {
-        if (STATMode() != 1) {
-            if (scanline_cycles == ((mem->game_mode == GameMode::DMG) ? 4 : 0)) {
-                SetSTATMode(2);
-            } else if (scanline_cycles == ((mem->game_mode == GameMode::DMG) ? 84 : (80 << mem->double_speed))) {
-                SetSTATMode(3);
-                RenderScanline();
-            } else if (scanline_cycles == Mode3Cycles()) {
-                // Inaccurate. The duration of Mode 3 varies depending on the number of sprites drawn
-                // for the scanline, but I don't know by how much.
-                SetSTATMode(0);
-            }
+    if (current_scanline == 0) {
+        if (scanline_cycles == ((mem->game_mode == GameMode::DMG) ? 4 : 0)) {
+            SetSTATMode(2);
+        } else if (scanline_cycles == ((mem->game_mode == GameMode::DMG) ? 84 : (80 << mem->double_speed))) {
+            SetSTATMode(3);
+            RenderScanline();
+        } else if (scanline_cycles == Mode3Cycles()) {
+            SetSTATMode(0);
         }
-    } else if (ly <= 143) {
+    } else if (current_scanline <= 143) {
         // AntonioND claims that except for scanline 0, the Mode 2 STAT interrupt happens the cycle before Mode 2
         // is entered. However, doing this causes most of Mooneye-GB's STAT timing tests to fail.
         if (scanline_cycles == ((mem->game_mode == GameMode::DMG) ? 4 : 0)) {
@@ -86,11 +82,9 @@ void LCD::UpdateLCD() {
             SetSTATMode(3);
             RenderScanline();
         } else if (scanline_cycles == Mode3Cycles()) {
-            // Inaccurate. The duration of Mode 3 varies depending on the number of sprites drawn
-            // for the scanline, but I don't know by how much.
             SetSTATMode(0);
         }
-    } else if (ly == 144) {
+    } else if (current_scanline == 144) {
         if (scanline_cycles == 0 && mem->console == Console::CGB) {
             stat_interrupt_signal |= Mode2CheckEnabled();
         } else if (scanline_cycles == 4) {
@@ -121,7 +115,7 @@ void LCD::UpdatePowerOnState() {
             } else {
                 scanline_cycles = 452;
             }
-            SetSTATMode(1);
+            current_scanline = 153;
         } else {
             ly = 0;
             SetSTATMode(0);
@@ -136,7 +130,7 @@ void LCD::UpdatePowerOnState() {
 }
 
 void LCD::UpdateLY() {
-    if (ly == 153 && scanline_cycles == Line153Cycles()) {
+    if (current_scanline == 153 && scanline_cycles == Line153Cycles()) {
         // LY is 153 only for a few machine cycle at the beginning of scanline 153, then wraps back to 0.
         ly = 0;
     }
@@ -149,20 +143,24 @@ void LCD::UpdateLY() {
         // Reset scanline cycle counter.
         scanline_cycles = 0;
 
-        if (mem->game_mode == GameMode::CGB && !mem->double_speed) {
+        if (mem->game_mode == GameMode::CGB && !mem->double_speed && current_scanline != 153) {
             ly = current_scanline;
         }
 
         // LY does not increase at the end of scanline 153, it stays 0 until the end of scanline 0.
         // Otherwise, increment LY.
-        if (ly == 0 && STATMode() == 1) {
-            SetSTATMode(0); // Does this actually happen? Or do we spend the first cycle in mode 1?
+        if (current_scanline == 153) {
+            if (mem->console == Console::DMG) {
+                SetSTATMode(0); // Does this actually happen? Or does DMG spend the first cycle in mode 1?
+            }
+
+            current_scanline = 0;
 
             // Changes to the window Y position register are ignored until next VBLANK.
             window_y_frame_val = window_y;
             window_progress = 0x00;
         } else {
-            ++ly;
+            current_scanline = ++ly;
         }
     }
 }
@@ -203,9 +201,7 @@ int LCD::Mode3Cycles() const {
 
 void LCD::StrangeLY() {
     // LY takes on strange values on the last m-cycle of a scanline in CGB single speed mode.
-    current_scanline = ly;
-
-    if (ly == 0 && STATMode() == 1) {
+    if (current_scanline == 153) {
         return;
     }
 
@@ -237,7 +233,7 @@ void LCD::UpdateLYCompareSignal() {
             ly_last_cycle = ly;
         }
     } else if (mem->double_speed) {
-        if (ly == 0 && scanline_cycles == 12) {
+        if (current_scanline == 153 && scanline_cycles == 12) {
             SetLYCompare(ly_compare == ly_last_cycle);
             // Don't update LY_last_cycle.
         } else {
