@@ -191,6 +191,7 @@ private:
     std::size_t RenderFirstTile(std::size_t start_pixel, std::size_t start_tile, std::size_t tile_row,
                                 std::size_t throwaway);
     void RenderSprites();
+    void SearchOAM();
     void FetchTiles();
     void FetchSpriteTiles();
     template<std::size_t N>

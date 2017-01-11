@@ -504,45 +504,7 @@ void LCD::RenderSprites() {
     mem->CopyOAM(oam_ram.begin());
     oam_sprites.clear();
 
-    // The sprite_gap is the distance between the bottom of the sprite and its Y position (8 for 8x8, 0 for 8x16).
-    unsigned int sprite_gap = SpriteSize() % 16;
-    // The tile index mask is 0xFF for 8x8, 0xFE for 8x16.
-    u8 index_mask = (sprite_gap >> 3) | 0xFE;
-
-    // Store the first 10 sprites from OAM which are on this scanline.
-    for (std::size_t i = 0; i < oam_ram.size(); i += 4) {
-        // Check that the sprite is not off the screen.
-        if (oam_ram[i] > sprite_gap && oam_ram[i] < 160) {
-            // Check that the sprite is on the current scanline.
-            if (ly < oam_ram[i] - sprite_gap && static_cast<int>(ly) >= static_cast<int>(oam_ram[i]) - 16) {
-                oam_sprites.emplace_front(oam_ram[i],
-                                          oam_ram[i+1],
-                                          oam_ram[i+2] & index_mask,
-                                          oam_ram[i+3],
-                                          mem->game_mode);
-            }
-        }
-
-        if (oam_sprites.size() == 10) {
-            break;
-        }
-    }
-
-    // Remove all sprites with an off-screen X position.
-    oam_sprites.erase(std::remove_if(oam_sprites.begin(), oam_sprites.end(), [](SpriteAttrs sa) {
-                          return sa.x_pos >= 168 || sa.x_pos == 0;
-                      }),
-                      oam_sprites.end());
-
-    if (mem->game_mode == GameMode::DMG) {
-        // Sprite drawing priority is based on its position in OAM and its X position. Sprite are drawn in descending X
-        // order. If two sprites overlap, the one that has a lower position in OAM is drawn on top. oam_sprites already
-        // contains the sprites for this line in decreasing OAM position, so we sort them by decreasing X position.
-        // In CGB mode, sprites are always drawn according to OAM position.
-        std::stable_sort(oam_sprites.begin(), oam_sprites.end(), [](SpriteAttrs sa1, SpriteAttrs sa2) {
-            return sa2.x_pos < sa1.x_pos;
-        });
-    }
+    SearchOAM();
 
     FetchSpriteTiles();
 
@@ -586,29 +548,73 @@ void LCD::RenderSprites() {
 
         // If the sprite is drawn below the background, then it is only drawn on pixels of colour 0 for the palette
         // of that tile.
-        u16 bg_info_mask = 0x0000;
+        u16 bg_colour_mask = 0x0000, bg_priority_mask = 0x0000;
         if (mem->game_mode == GameMode::CGB) {
             // If the BG is "disabled" on CGB, both BG and OAM priority flags are ignored and the sprite is drawn
             // above the background.
             if (BGEnabled()) {
                 if (sa.behind_bg) {
-                    bg_info_mask = 0x0006;
+                    bg_colour_mask = 0x0006;
                 } else {
                     // Draw the sprite above the background, unless the BG priority bit is set.
-                    bg_info_mask = 0x0001;
+                    bg_priority_mask = 0x0001;
                 }
             }
         } else if (sa.behind_bg) {
-            bg_info_mask = 0x0006;
+            bg_colour_mask = 0x0006;
         }
 
         while (pixel_iter != pixel_end_iter) {
-            if (!(*pixel_iter & 0x8000) && !(row_bg_info[row_pixel] & bg_info_mask)) {
+            bool pixel_transparent = *pixel_iter & 0x8000;
+            u16 per_pixel_mask = bg_colour_mask | ((row_bg_info[row_pixel] & bg_priority_mask) ? 0x0006 : 0x0000);
+
+            if (!pixel_transparent && (row_bg_info[row_pixel] & per_pixel_mask) == 0) {
                 row_buffer[row_pixel] = *pixel_iter;
             }
             ++pixel_iter;
             ++row_pixel;
         }
+    }
+}
+
+void LCD::SearchOAM() {
+    // The sprite_gap is the distance between the bottom of the sprite and its Y position (8 for 8x8, 0 for 8x16).
+    unsigned int sprite_gap = SpriteSize() % 16;
+    // The tile index mask is 0xFF for 8x8, 0xFE for 8x16.
+    u8 index_mask = (sprite_gap >> 3) | 0xFE;
+
+    // Store the first 10 sprites from OAM which are on this scanline.
+    for (std::size_t i = 0; i < oam_ram.size(); i += 4) {
+        // Check that the sprite is not off the screen.
+        if (oam_ram[i] > sprite_gap && oam_ram[i] < 160) {
+            // Check that the sprite is on the current scanline.
+            if (ly < oam_ram[i] - sprite_gap && static_cast<int>(ly) >= static_cast<int>(oam_ram[i]) - 16) {
+                oam_sprites.emplace_front(oam_ram[i],
+                                          oam_ram[i+1],
+                                          oam_ram[i+2] & index_mask,
+                                          oam_ram[i+3],
+                                          mem->game_mode);
+            }
+        }
+
+        if (oam_sprites.size() == 10) {
+            break;
+        }
+    }
+
+    // Remove all sprites with an off-screen X position.
+    oam_sprites.erase(std::remove_if(oam_sprites.begin(), oam_sprites.end(), [](SpriteAttrs sa) {
+                          return sa.x_pos >= 168 || sa.x_pos == 0;
+                      }),
+                      oam_sprites.end());
+
+    if (mem->game_mode == GameMode::DMG) {
+        // Sprite are drawn in descending X order. If two sprites overlap, the one that has a lower position in OAM
+        // is drawn on top. oam_sprites already contains the sprites for this line in decreasing OAM position, so
+        // we sort them by decreasing X position. In CGB mode, sprites are always drawn according to OAM position.
+        std::stable_sort(oam_sprites.begin(), oam_sprites.end(), [](SpriteAttrs sa1, SpriteAttrs sa2) {
+            return sa2.x_pos < sa1.x_pos;
+        });
     }
 }
 
