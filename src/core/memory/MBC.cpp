@@ -20,7 +20,8 @@ namespace Core {
 
 u8 Memory::ReadExternalRAM(const u16 addr) const {
     if (ext_ram_enabled) {
-        u16 adjusted_addr = addr - 0xA000 + 0x2000*ram_bank_num;
+        u16 adjusted_addr = addr - 0xA000 + 0x2000 * (ram_bank_num & (num_ram_banks - 1));
+
         switch (mbc_mode) {
         case MBC::MBC1:
             // Out of bounds reads return 0xFF.
@@ -66,7 +67,7 @@ u8 Memory::ReadExternalRAM(const u16 addr) const {
         case MBC::MBC5:
             if (rumble_present) {
                 // Carts with rumble cannot use bit 4 of the RAM bank register for bank selection.
-                adjusted_addr = addr - 0xA000 + 0x2000 * (ram_bank_num & 0x07);
+                adjusted_addr = addr - 0xA000 + 0x2000 * ((ram_bank_num & 0x07) & (num_ram_banks - 1));
             }
 
             // Out of bounds reads return 0xFF.
@@ -88,7 +89,8 @@ u8 Memory::ReadExternalRAM(const u16 addr) const {
 void Memory::WriteExternalRAM(const u16 addr, const u8 data) {
     // Writes are ignored if external RAM is disabled or not present.
     if (ext_ram_enabled) {
-        u16 adjusted_addr = addr - 0xA000 + 0x2000*ram_bank_num;
+        u16 adjusted_addr = addr - 0xA000 + 0x2000 * (ram_bank_num & (num_ram_banks - 1));
+
         switch (mbc_mode) {
         case MBC::MBC1:
             // Ignore out-of-bounds writes.
@@ -136,7 +138,7 @@ void Memory::WriteExternalRAM(const u16 addr, const u8 data) {
         case MBC::MBC5:
             if (rumble_present) {
                 // Carts with rumble cannot use bit 4 of the RAM bank register for bank selection.
-                adjusted_addr = addr - 0xA000 + 0x2000 * (ram_bank_num & 0x07);
+                adjusted_addr = addr - 0xA000 + 0x2000 * ((ram_bank_num & 0x07) & (num_ram_banks - 1));
             }
 
             // Ignore out-of-bounds writes.
@@ -262,7 +264,10 @@ void Memory::WriteMBCControlRegisters(const u16 addr, const u8 data) {
             // This register selects the high 8 bits of the ROM bank to be used at 0x4000-0x7FFF.
             // There is only one official game known to use more than 256 ROM banks (Densha de Go! 2), and it only 
             // uses bit 0 of this register.
-            rom_bank_num = (rom_bank_num & 0x00FF) | (static_cast<unsigned int>(data) << 8);
+            // If a game does not use more than 256 ROM banks, writes here are ignored.
+            if (num_rom_banks > 256) {
+                rom_bank_num = (rom_bank_num & 0x00FF) | (static_cast<unsigned int>(data) << 8);
+            }
         } else if (addr < 0x6000) {
             // RAM bank selection.
             // Can have as many as 16 RAM banks. Carts with rumble activate it by writing 0x08 to this register, so

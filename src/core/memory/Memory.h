@@ -80,6 +80,7 @@ private:
     const bool ext_ram_present;
     const bool rumble_present;
     const int num_rom_banks;
+    const int num_ram_banks;
 
     const std::vector<u8> rom;
     std::vector<u8> vram;

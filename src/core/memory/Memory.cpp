@@ -35,6 +35,7 @@ Memory::Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima
         , ext_ram_present(header.ext_ram_present)
         , rumble_present(header.rumble_present)
         , num_rom_banks(header.num_rom_banks)
+        , num_ram_banks((header.ram_size) ? header.ram_size / 0x2000 : 0)
         , rom(std::move(rom_contents)) {
 
     if (game_mode == GameMode::DMG) {
@@ -135,6 +136,9 @@ u8 Memory::ReadMem8(const u16 addr) const {
             } else if (addr < 0xE000) {
                 // WRAM bank 1 (switchable from 1-7 in CGB mode)
                 return wram[addr - 0xC000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
+            } else if (addr < 0xF000) {
+                // Echo of C000-DDFF
+                return wram[addr - 0xE000];
             } else {
                 // Echo of C000-DDFF
                 return wram[addr - 0xE000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
@@ -200,6 +204,9 @@ void Memory::WriteMem8(const u16 addr, const u8 data) {
             } else if (addr < 0xE000) {
                 // WRAM bank 1 (switchable from 1-7 in CGB mode)
                 wram[addr - 0xC000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)] = data;
+            } else if (addr < 0xF000) {
+                // Echo of C000-DDFF
+                wram[addr - 0xE000] = data;
             } else {
                 // Echo of C000-DDFF
                 wram[addr - 0xE000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)] = data;
