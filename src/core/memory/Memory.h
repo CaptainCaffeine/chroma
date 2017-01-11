@@ -56,6 +56,9 @@ public:
 
     // DMA functions
     void UpdateOAM_DMA();
+    void UpdateHDMA();
+    bool HDMAInProgress() const { return hdma_state == DMAState::Active || hdma_state == DMAState::Starting; }
+    void SignalHDMA();
 
     // LCD functions
     template<typename DestIter>
@@ -91,15 +94,23 @@ private:
     void WriteIORegisters(const u16 addr, const u8 data);
 
     // DMA utilities
-    enum class DMAState {Inactive, RegWritten, Starting, Active};
+    enum class DMAState {Inactive, Starting, Active, Paused};
     enum class Bus {None, External, VRAM};
-    DMAState state_oam_dma = DMAState::Inactive;
+    DMAState oam_dma_state = DMAState::Inactive;
     Bus dma_bus_block = Bus::None;
 
     u16 oam_transfer_addr;
     u8 oam_transfer_byte;
-    unsigned int bytes_read = 0;
+    unsigned int bytes_read = 160;
 
+    enum class HDMAType {GDMA, HDMA};
+    DMAState hdma_state = DMAState::Inactive;
+    HDMAType hdma_type;
+    bool hdma_reg_written = false;
+    unsigned int bytes_to_copy = 0, hblank_bytes = 0, stall_cycles = 0;
+
+    void InitHDMA();
+    void ExecuteHDMA();
     u8 DMACopy(const u16 addr) const;
 
     // MBC functions
@@ -242,15 +253,15 @@ private:
     u8 speed_switch = 0x00;
 
     // HDMA1 register: 0xFF51
-    u8 hdma_source_hi = 0x00; // Not implemented. What is the initial value of this register, if it has one?
+    u8 hdma_source_hi = 0xFF;
     // HDMA2 register: 0xFF52
-    u8 hdma_source_lo = 0x00; // Not implemented. What is the initial value of this register, if it has one?
+    u8 hdma_source_lo = 0xFF;
     // HDMA3 register: 0xFF53
-    u8 hdma_dest_hi = 0x00; // Not implemented. What is the initial value of this register, if it has one?
+    u8 hdma_dest_hi = 0xFF;
     // HDMA4 register: 0xFF54
-    u8 hdma_dest_lo = 0x00; // Not implemented. What is the initial value of this register, if it has one?
+    u8 hdma_dest_lo = 0xFF;
     // HDMA5 register: 0xFF55
-    u8 hdma_control = 0x00; // Not implemented. What is the initial value of this register?
+    u8 hdma_control = 0xFF;
 
     // RP register: 0xFF56
     u8 infrared = 0x02; // Not implemented.

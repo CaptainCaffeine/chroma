@@ -20,40 +20,39 @@
 namespace Core {
 
 void Memory::UpdateOAM_DMA() {
-    if (state_oam_dma == DMAState::RegWritten) {
-        oam_transfer_addr = static_cast<u16>(oam_dma_start) << 8;
-        bytes_read = 0;
-
-        state_oam_dma = DMAState::Starting;
-    } else if (state_oam_dma == DMAState::Starting) {
-        // No write on the startup cycle.
-        oam_transfer_byte = DMACopy(oam_transfer_addr);
-        ++bytes_read;
-
-        state_oam_dma = DMAState::Active;
-
-        // The Game Boy has two major memory buses: the external bus (0x0000-0x7FFF, 0xA000-0xFDFF) and the VRAM
-        // bus (0x8000-0x9FFF). I/O registers, OAM, and HRAM are all internal to the CPU. OAM DMA will only block
-        // one of these buses at a time. Reads from a blocked bus will return whatever byte OAM DMA read on that
-        // cycle. Writes are (probably) ignored.
-
-        // The current OAM DMA state is not enough to determine if the external/VRAM bus is currently being blocked.
-        // The bus only becomes unblocked when the DMA state transitions from Active to Inactive. When starting
-        // a DMA while none are currently active, memory remains accessible for the two cycles when the DMA state is
-        // RegWritten and Starting. But, if a DMA is started while one is already active, the state goes from
-        // Active to RegWritten, without becoming Inactive, so memory remains inaccessible for those two cycles.
-        if (oam_transfer_addr >= 0x8000 && oam_transfer_addr < 0xA000) {
-            dma_bus_block = Bus::VRAM;
+    if (oam_dma_state == DMAState::Starting) {
+        if (bytes_read != 0) {
+            oam_transfer_addr = static_cast<u16>(oam_dma_start) << 8;
+            bytes_read = 0;
         } else {
-            dma_bus_block = Bus::External;
+            // No write on the startup cycle.
+            oam_transfer_byte = DMACopy(oam_transfer_addr);
+            ++bytes_read;
+
+            oam_dma_state = DMAState::Active;
+
+            // The Game Boy has two major memory buses (afaik): the external bus (0x0000-0x7FFF, 0xA000-0xFDFF) and
+            // the VRAM bus (0x8000-0x9FFF). I/O registers, OAM, and HRAM are all internal to the CPU. OAM DMA
+            // will only block one of these buses at a time. Reads from a blocked bus will return whatever byte
+            // OAM DMA read on that cycle. Writes are (probably) ignored.
+
+            // The bus only becomes unblocked when the DMA state transitions from Active to Inactive. When starting
+            // a DMA while none are currently active, memory remains accessible for the two cycles when the DMA is
+            // starting. But, if a DMA is started while one is already active, the state goes from Active to Starting,
+            // without becoming Inactive, so memory remains inaccessible for those two cycles.
+            if (oam_transfer_addr >= 0x8000 && oam_transfer_addr < 0xA000) {
+                dma_bus_block = Bus::VRAM;
+            } else {
+                dma_bus_block = Bus::External;
+            }
         }
-    } else if (state_oam_dma == DMAState::Active) {
+    } else if (oam_dma_state == DMAState::Active) {
         // Write the byte which was read last cycle to OAM.
         oam[bytes_read - 1] = oam_transfer_byte;
 
         if (bytes_read == 160) {
             // Don't read on the last cycle.
-            state_oam_dma = DMAState::Inactive;
+            oam_dma_state = DMAState::Inactive;
             dma_bus_block = Bus::None;
             return;
         }
@@ -61,6 +60,89 @@ void Memory::UpdateOAM_DMA() {
         // Read the next byte.
         oam_transfer_byte = DMACopy(oam_transfer_addr + bytes_read);
         ++bytes_read;
+    }
+}
+
+void Memory::UpdateHDMA() {
+    if (hdma_reg_written) {
+        if (hdma_state == DMAState::Inactive) {
+            InitHDMA();
+        } else {
+            // Can only occur when HDMA is paused.
+            if (hdma_control & 0x80) {
+                // Restart the copy.
+                InitHDMA();
+            } else {
+                // Stop the current copy and set bit 7 of HDMA5. Because of this, it is not possible to switch
+                // directly from an HDMA to a GDMA, the current transfer must be stopped first.
+                hdma_control |= 0x80;
+                bytes_to_copy = 0;
+                hdma_state = DMAState::Inactive;
+            }
+        }
+
+        hdma_reg_written = false;
+    } else if (hdma_state == DMAState::Starting) {
+        hdma_state = DMAState::Active;
+        stall_cycles = 1 | (double_speed << 1);
+    } else if (hdma_state == DMAState::Active) {
+        if (!stall_cycles--) {
+            ExecuteHDMA();
+
+            if (bytes_to_copy == 0) {
+                // End the copy.
+                hdma_control = 0xFF;
+                hdma_state = DMAState::Inactive;
+            } else if (hdma_type == HDMAType::HDMA && --hblank_bytes == 0) {
+                // Pause the copy until the next HBLANK.
+                hdma_state = DMAState::Paused;
+            }
+        }
+    }
+}
+
+void Memory::InitHDMA() {
+    hdma_type = (hdma_control & 0x80) ? HDMAType::HDMA : HDMAType::GDMA;
+    bytes_to_copy = ((hdma_control & 0x7F) + 1) * 16;
+    hblank_bytes = 16;
+
+    // If this copy was initiated without changing the source or destination addresses from the previous HDMA,
+    // the copy is performed from the last addresses of the previous copy.
+
+    hdma_control &= 0x7F;
+
+    if (hdma_type == HDMAType::HDMA && (lcd.stat & 0x03) != 0) {
+        hdma_state = DMAState::Paused;
+    } else {
+        hdma_state = DMAState::Starting;
+    }
+}
+
+void Memory::ExecuteHDMA() {
+    u16 hdma_source = (static_cast<u16>(hdma_source_hi) << 8) | hdma_source_lo;
+    u16 hdma_dest = (static_cast<u16>(hdma_dest_hi | 0x80) << 8) | hdma_dest_lo;
+
+    if ((lcd.stat & 0x03) != 3) {
+        vram[hdma_dest - 0x8000 + 0x2000*vram_bank_num] = DMACopy(hdma_source);
+    }
+
+    ++hdma_source;
+    ++hdma_dest;
+    --bytes_to_copy;
+
+    hdma_source_lo = hdma_source & 0x00FF;
+    hdma_source_hi = hdma_source >> 8;
+    hdma_dest_lo = hdma_dest & 0x00FF;
+    hdma_dest_hi = hdma_dest >> 8;
+
+    hdma_control = ((bytes_to_copy / 16) - 1) & 0x7F;
+    stall_cycles = 1 | (double_speed << 1);
+}
+
+void Memory::SignalHDMA() {
+    if (hdma_state == DMAState::Paused) {
+        hblank_bytes = 16;
+        hdma_state = DMAState::Starting;
     }
 }
 
@@ -73,8 +155,8 @@ u8 Memory::DMACopy(const u16 addr) const {
         return rom[addr + 0x4000*((rom_bank_num % num_rom_banks) - 1)];
     } else if (addr < 0xA000) {
         // VRAM -- switchable in CGB mode
-        // Not accessible during screen mode 3.
-        if ((lcd.stat & 0x03) != 3) {
+        // Not accessible during screen mode 3. HDMA/GDMA cannot read VRAM.
+        if ((lcd.stat & 0x03) != 3 && hdma_state != DMAState::Active) {
             return vram[addr - 0x8000 + 0x2000*vram_bank_num];
         } else {
             return 0xFF;
@@ -88,6 +170,11 @@ u8 Memory::DMACopy(const u16 addr) const {
     } else if (addr < 0xE000) {
         // WRAM bank 1 (switchable from 1-7 in CGB mode)
         return wram[addr - 0xC000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
+    }
+
+    if (hdma_state == DMAState::Active) {
+        // If HDMA/GDMA attempts to read from 0xE000-0xFFFF, it will read from 0xA000-0xBFFF instead.
+        return ReadExternalRAM(addr - 0x4000);
     } else if (addr < 0xF200) {
         // Echo of C000-DDFF
         return wram[addr - 0xE000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];

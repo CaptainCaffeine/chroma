@@ -604,7 +604,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     // DMA -- OAM DMA Transfer
     case 0xFF46:
         oam_dma_start = data;
-        state_oam_dma = DMAState::RegWritten;
+        oam_dma_state = DMAState::Starting;
         break;
     // BGP -- BG Palette Data
     case 0xFF47:
@@ -661,6 +661,9 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     // HDMA5 -- HDMA Length, Mode, and Start
     case 0xFF55:
         hdma_control = data;
+        if (game_mode == GameMode::CGB) {
+            hdma_reg_written = true;
+        }
         break;
     // RP -- Infrared Communications
     case 0xFF56:

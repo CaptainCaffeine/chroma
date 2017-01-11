@@ -187,18 +187,18 @@ void GameBoy::HardwareTick(unsigned int cycles) {
 
 void GameBoy::HaltedTick(unsigned int cycles) {
     for (; cycles != 0; cycles -= 4) {
-        // Update the rest of the system hardware.
-        timer->UpdateTimer();
-        lcd->UpdateLCD();
-        serial->UpdateSerial();
-        joypad->UpdateJoypad();
-
         // Log I/O registers if logging enabled.
         if (logging.log_level == LogLevel::Timer) {
             logging.LogTimerRegisterState(*timer);
         } else if (logging.log_level == LogLevel::LCD) {
             logging.LogLCDRegisterState(*lcd);
         }
+
+        // Update the rest of the system hardware.
+        timer->UpdateTimer();
+        lcd->UpdateLCD();
+        serial->UpdateSerial();
+        joypad->UpdateJoypad();
     }
 }
 

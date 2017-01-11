@@ -64,16 +64,7 @@ void LCD::UpdateLCD() {
     UpdateLY();
     UpdateLYCompareSignal();
 
-    if (current_scanline == 0) {
-        if (scanline_cycles == ((mem->game_mode == GameMode::DMG) ? 4 : 0)) {
-            SetSTATMode(2);
-        } else if (scanline_cycles == ((mem->game_mode == GameMode::DMG) ? 84 : (80 << mem->double_speed))) {
-            SetSTATMode(3);
-            RenderScanline();
-        } else if (scanline_cycles == Mode3Cycles()) {
-            SetSTATMode(0);
-        }
-    } else if (current_scanline <= 143) {
+    if (current_scanline <= 143) {
         // AntonioND claims that except for scanline 0, the Mode 2 STAT interrupt happens the cycle before Mode 2
         // is entered. However, doing this causes most of Mooneye-GB's STAT timing tests to fail.
         if (scanline_cycles == ((mem->game_mode == GameMode::DMG) ? 4 : 0)) {
@@ -83,6 +74,7 @@ void LCD::UpdateLCD() {
             RenderScanline();
         } else if (scanline_cycles == Mode3Cycles()) {
             SetSTATMode(0);
+            mem->SignalHDMA();
         }
     } else if (current_scanline == 144) {
         if (scanline_cycles == 0 && mem->console == Console::CGB) {
@@ -125,6 +117,9 @@ void LCD::UpdatePowerOnState() {
             // Clear the framebuffer.
             std::fill_n(back_buffer.begin(), 160*144, 0x7FFF);
             gameboy->SwapBuffers(back_buffer);
+
+            // An in-progress HDMA will transfer one block after the LCD switches off.
+            mem->SignalHDMA();
         }
     }
 }

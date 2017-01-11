@@ -190,6 +190,11 @@ void CPU::RunFor(int cycles) {
             StoppedTick();
             cycles -= 4;
             continue;
+        } else if (mem.HDMAInProgress() && cpu_mode != CPUMode::Halted) {
+            mem.UpdateHDMA();
+            gameboy->HaltedTick(4);
+            cycles -= 4;
+            continue;
         }
 
         cycles -= HandleInterrupts();
