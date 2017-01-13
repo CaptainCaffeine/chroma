@@ -357,6 +357,11 @@ void LCD::RenderBackground(std::size_t num_bg_pixels) {
     while (row_pixel < num_bg_pixels) {
         DecodePaletteIndexes(tile_iter->tile, tile_row);
 
+        // If this tile has the X flip flag set, reverse the pixels.
+        if (tile_iter->x_flip) {
+            std::reverse(pixel_colours.begin(), pixel_colours.end());
+        }
+
         // Record the palette index for each pixel and the bg priority bit.
         for (const auto& pixel_colour : pixel_colours) {
             row_bg_info[row_pixel++] = (pixel_colour << 1) | tile_iter->above_sprites;
@@ -367,11 +372,6 @@ void LCD::RenderBackground(std::size_t num_bg_pixels) {
             GetPixelColoursFromPaletteDMG(bg_palette_data[0], false);
         } else {
             GetPixelColoursFromPaletteCGB(tile_iter->palette_num, false);
-        }
-
-        // If this tile has the X flip flag set, reverse the pixels.
-        if (tile_iter->x_flip) {
-            std::reverse(pixel_colours.begin(), pixel_colours.end());
         }
 
         // Copy the pixels to the row buffer. If this tile has BG priority set, set the alpha bit.
@@ -439,6 +439,11 @@ void LCD::RenderWindow(std::size_t num_bg_pixels) {
     while (row_pixel < 160) {
         DecodePaletteIndexes(tile_iter->tile, tile_row);
 
+        // If this tile has the X flip flag set, reverse the pixels.
+        if (tile_iter->x_flip) {
+            std::reverse(pixel_colours.begin(), pixel_colours.end());
+        }
+
         // Record the palette index for each pixel and the bg priority bit.
         for (const auto& pixel_colour : pixel_colours) {
             row_bg_info[row_pixel++] = (pixel_colour << 1) | tile_iter->above_sprites;
@@ -449,11 +454,6 @@ void LCD::RenderWindow(std::size_t num_bg_pixels) {
             GetPixelColoursFromPaletteDMG(bg_palette_data[0], false);
         } else {
             GetPixelColoursFromPaletteCGB(tile_iter->palette_num, false);
-        }
-
-        // If this tile has the X flip flag set, reverse the pixels.
-        if (tile_iter->x_flip) {
-            std::reverse(pixel_colours.begin(), pixel_colours.end());
         }
 
         // Copy the pixels to the row buffer. If this tile has BG priority set, set the alpha bit.
@@ -474,6 +474,11 @@ std::size_t LCD::RenderFirstTile(std::size_t start_pixel, std::size_t start_tile
 
     DecodePaletteIndexes(bg_tile.tile, tile_row);
 
+    // If this tile has the X flip flag set, reverse the pixels.
+    if (bg_tile.x_flip) {
+        std::reverse(pixel_colours.begin(), pixel_colours.end());
+    }
+
     // Record the palette index for each pixel and the bg priority bit.
     for (std::size_t pixel = throwaway; pixel < 8; ++pixel) {
         row_bg_info[start_pixel++] = (pixel_colours[pixel] << 1) | bg_tile.above_sprites;
@@ -484,11 +489,6 @@ std::size_t LCD::RenderFirstTile(std::size_t start_pixel, std::size_t start_tile
         GetPixelColoursFromPaletteDMG(bg_palette_data[0], false);
     } else {
         GetPixelColoursFromPaletteCGB(bg_tile.palette_num, false);
-    }
-
-    // If this tile has the X flip flag set, reverse the pixels.
-    if (bg_tile.x_flip) {
-        std::reverse(pixel_colours.begin(), pixel_colours.end());
     }
 
     // Throw away the first pixels of the tile.
