@@ -176,6 +176,7 @@ void GameBoy::HardwareTick(unsigned int cycles) {
 
         // Update the rest of the system hardware.
         mem->UpdateOAM_DMA();
+        mem->UpdateHDMA();
         timer->UpdateTimer();
         lcd->UpdateLCD();
         serial->UpdateSerial();

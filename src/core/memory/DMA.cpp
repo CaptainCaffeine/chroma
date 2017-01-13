@@ -133,7 +133,7 @@ void Memory::ExecuteHDMA() {
     hdma_source_lo = hdma_source & 0x00FF;
     hdma_source_hi = hdma_source >> 8;
     hdma_dest_lo = hdma_dest & 0x00FF;
-    hdma_dest_hi = hdma_dest >> 8;
+    hdma_dest_hi = (hdma_dest >> 8) & 0x1F;
 
     hdma_control = ((bytes_to_copy / 16) - 1) & 0x7F;
     stall_cycles = 1 | (double_speed << 1);
@@ -175,11 +175,12 @@ u8 Memory::DMACopy(const u16 addr) const {
     if (hdma_state == DMAState::Active) {
         // If HDMA/GDMA attempts to read from 0xE000-0xFFFF, it will read from 0xA000-0xBFFF instead.
         return ReadExternalRAM(addr - 0x4000);
+    } else if (addr < 0xF000) {
+        // Echo of C000-DDFF
+        return wram[addr - 0xE000];
     } else if (addr < 0xF200) {
         // Echo of C000-DDFF
         return wram[addr - 0xE000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
-        // For some unlicensed games and flashcarts on pre-CGB devices, reads from this region read both WRAM and
-        // exernal RAM, and bitwise AND the two values together (source: AntonioND timing docs).
     } else {
         // Only 0x00-0xF1 are valid OAM DMA start addresses (several sources make that claim, at least. I've seen
         // differing ranges mentioned but this seems to work for now).
