@@ -53,6 +53,7 @@ GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logg
 GameBoy::~GameBoy() = default;
 
 void GameBoy::EmulatorLoop() {
+    int overspent_cycles = 0;
     bool quit = false, pause = false;
     while (!quit) {
         std::tie(quit, pause) = PollEvents(pause);
@@ -62,8 +63,9 @@ void GameBoy::EmulatorLoop() {
             continue;
         }
 
-        // This is the number of cycles between VBLANKs, when the LCD is on.
-        cpu->RunFor(70224 << mem->double_speed);
+        // 70224 is the number of cycles between VBLANKs, when the LCD is on.
+        // Overspent cycles is always zero or negative.
+        overspent_cycles = cpu->RunFor((70224 << mem->double_speed) + overspent_cycles);
 
         Emu::RenderFrame(front_buffer.data(), sdl_context);
     }

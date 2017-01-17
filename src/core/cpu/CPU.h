@@ -33,7 +33,7 @@ class CPU {
 public:
     CPU(Memory& memory);
 
-    void RunFor(int cycles);
+    int RunFor(int cycles);
 
     // GameBoy core functions
     void LinkToGameBoy(GameBoy* gb) { gameboy = gb; }

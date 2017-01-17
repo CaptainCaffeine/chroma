@@ -184,7 +184,7 @@ u16 CPU::GetImmediateWord() {
 }
 
 // Execute instructions until the specified number of cycles has passed.
-void CPU::RunFor(int cycles) {
+int CPU::RunFor(int cycles) {
     while (cycles > 0) {
         if (cpu_mode == CPUMode::Stopped) {
             StoppedTick();
@@ -213,6 +213,9 @@ void CPU::RunFor(int cycles) {
             cycles -= 4;
         }
     }
+
+    // Return the number of overspent cycles.
+    return cycles;
 }
 
 int CPU::HandleInterrupts() {
