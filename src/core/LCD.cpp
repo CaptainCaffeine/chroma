@@ -369,7 +369,7 @@ void LCD::RenderBackground(std::size_t num_bg_pixels) {
         row_pixel -= 8;
 
         if (mem->game_mode == GameMode::DMG) {
-            GetPixelColoursFromPaletteDMG(bg_palette_data[0], false);
+            GetPixelColoursFromPaletteDMG(bg_palette_dmg, false);
         } else {
             GetPixelColoursFromPaletteCGB(tile_iter->palette_num, false);
         }
@@ -451,7 +451,7 @@ void LCD::RenderWindow(std::size_t num_bg_pixels) {
         row_pixel -= 8;
 
         if (mem->game_mode == GameMode::DMG) {
-            GetPixelColoursFromPaletteDMG(bg_palette_data[0], false);
+            GetPixelColoursFromPaletteDMG(bg_palette_dmg, false);
         } else {
             GetPixelColoursFromPaletteCGB(tile_iter->palette_num, false);
         }
@@ -486,7 +486,7 @@ std::size_t LCD::RenderFirstTile(std::size_t start_pixel, std::size_t start_tile
     start_pixel -= 8 - throwaway;
 
     if (mem->game_mode == GameMode::DMG) {
-        GetPixelColoursFromPaletteDMG(bg_palette_data[0], false);
+        GetPixelColoursFromPaletteDMG(bg_palette_dmg, false);
     } else {
         GetPixelColoursFromPaletteCGB(bg_tile.palette_num, false);
     }
@@ -525,7 +525,7 @@ void LCD::RenderSprites() {
         DecodePaletteIndexes(sa.sprite_tiles, tile_row);
 
         if (mem->game_mode == GameMode::DMG) {
-            GetPixelColoursFromPaletteDMG(obj_palette_data[sa.palette_num], true);
+            GetPixelColoursFromPaletteDMG((sa.palette_num) ? obj_palette_dmg1 : obj_palette_dmg0, true);
         } else {
             GetPixelColoursFromPaletteCGB(sa.palette_num, true);
         }

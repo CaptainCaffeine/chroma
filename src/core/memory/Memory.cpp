@@ -68,9 +68,6 @@ void Memory::IORegisterInit() {
 
             oam_dma_start = 0xFF;
 
-            lcd.obj_palette_data[0] = 0xFF;
-            lcd.obj_palette_data[1] = 0xFF;
-
             lcd.bg_palette_index = 0xFF;
             lcd.obj_palette_index = 0xFF;
         } else {
@@ -79,14 +76,9 @@ void Memory::IORegisterInit() {
 
             oam_dma_start = 0x00;
 
-            lcd.obj_palette_data[0] = 0x00;
-            lcd.obj_palette_data[1] = 0x00;
-
             lcd.bg_palette_index = 0x88;
             lcd.obj_palette_index = 0x90;
         }
-
-        lcd.bg_palette_data[0] = 0xFC;
     } else {
         joypad.p1 = 0xFF; // Probably?
         timer.divider = 0x1EA0;
@@ -356,25 +348,13 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         return oam_dma_start;
     // BGP -- BG Palette Data
     case 0xFF47:
-        if (game_mode == GameMode::DMG) {
-            return lcd.bg_palette_data[0];
-        } else {
-            return 0xFF;
-        }
+        return lcd.bg_palette_dmg;
     // OBP0 -- Sprite Palette 0 Data
     case 0xFF48:
-        if (game_mode == GameMode::DMG) {
-            return lcd.obj_palette_data[0];
-        } else {
-            return 0x00;
-        }
+        return lcd.obj_palette_dmg0;
     // OBP1 -- Sprite Palette 1 Data
     case 0xFF49:
-        if (game_mode == GameMode::DMG) {
-            return lcd.obj_palette_data[1];
-        } else {
-            return 0x00;
-        }
+        return lcd.obj_palette_dmg1;
     // WY -- Window Y Position
     case 0xFF4A:
         return lcd.window_y;
@@ -615,21 +595,15 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // BGP -- BG Palette Data
     case 0xFF47:
-        if (game_mode == GameMode::DMG) {
-            lcd.bg_palette_data[0] = data;
-        }
+        lcd.bg_palette_dmg = data;
         break;
     // OBP0 -- Sprite Palette 0 Data
     case 0xFF48:
-        if (game_mode == GameMode::DMG) {
-            lcd.obj_palette_data[0] = data;
-        }
+        lcd.obj_palette_dmg0 = data;
         break;
     // OBP1 -- Sprite Palette 1 Data
     case 0xFF49:
-        if (game_mode == GameMode::DMG) {
-            lcd.obj_palette_data[1] = data;
-        }
+        lcd.obj_palette_dmg1 = data;
         break;
     // WY -- Window Y Position
     case 0xFF4A:

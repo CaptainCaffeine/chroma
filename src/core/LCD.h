@@ -99,8 +99,11 @@ public:
     //     bits 5-4: Background Colour 2
     //     bits 3-2: Background Colour 1
     //     bits 1-0: Background Colour 0
+    u8 bg_palette_dmg = 0xFC;
     // OBP0 register: 0xFF48
+    u8 obj_palette_dmg0 = 0xFF;
     // OBP1 register: 0xFF49
+    u8 obj_palette_dmg1 = 0xFF;
 
     // WY register: 0xFF4A
     u8 window_y = 0x00;
