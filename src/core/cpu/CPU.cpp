@@ -293,11 +293,11 @@ void CPU::StoppedTick() {
         }
     }
 
+    // speed_switch_cycles is 0 if we're just in regular stop mode.
     if (speed_switch_cycles > 0) {
         if (speed_switch_cycles == 4) {
-            // Speed switch finished. Toggle the CPU speed and set the prepare bit in KEY1 to zero.
-            mem.WriteMem8(0xFF4D, ~mem.ReadMem8(0xFF4D));
-            mem.double_speed = mem.double_speed ^ 1;
+            // Speed switch finished.
+            mem.ToggleCPUSpeed();
 
             // Exit STOP mode.
             cpu_mode = CPUMode::Running;
