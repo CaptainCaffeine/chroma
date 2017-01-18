@@ -338,13 +338,7 @@ void LCD::RenderBackground(std::size_t num_bg_pixels) {
     // Determine which row of pixels we're on, and in which tile we start reading data.
     std::size_t tile_row = ((scroll_y + ly) % 8) * 2;
     std::size_t start_tile = scroll_x / 8;
-
     auto tile_iter = tile_data.begin() + start_tile;
-
-    // If this tile has the Y flip flag set, get the mirrored row in the other half of the tile.
-    if (tile_iter->y_flip) {
-        tile_row = 14 - tile_row;
-    }
 
     // If necessary, throw away the first few pixels of the first tile, based on SCX.
     std::size_t row_pixel = RenderFirstTile(0, start_tile, tile_row, scroll_x % 8);
@@ -355,7 +349,8 @@ void LCD::RenderBackground(std::size_t num_bg_pixels) {
     }
 
     while (row_pixel < num_bg_pixels) {
-        DecodePaletteIndexes(tile_iter->tile, tile_row);
+        // If this tile has the Y flip flag set, decode the mirrored row in the other half of the tile.
+        DecodePaletteIndexes(tile_iter->tile, (tile_iter->y_flip) ? (14 - tile_row) : tile_row);
 
         // If this tile has the X flip flag set, reverse the pixels.
         if (tile_iter->x_flip) {
@@ -424,20 +419,15 @@ void LCD::RenderWindow(std::size_t num_bg_pixels) {
     // The window always starts rendering at the leftmost/first tile.
     // Determine which row of pixels we're on.
     std::size_t tile_row = ((window_progress) % 8) * 2;
-
     auto tile_iter = tile_data.begin();
-
-    // If this tile has the Y flip flag set, get the mirrored row in the other half of the tile.
-    if (tile_iter->y_flip) {
-        tile_row = 14 - tile_row;
-    }
 
     // If necessary, throw away the first few pixels of the first tile, based on WX.
     std::size_t row_pixel = RenderFirstTile(num_bg_pixels, 0, tile_row, (window_x < 7) ? 7 - window_x : 0);
     ++tile_iter;
 
     while (row_pixel < 160) {
-        DecodePaletteIndexes(tile_iter->tile, tile_row);
+        // If this tile has the Y flip flag set, decode the mirrored row in the other half of the tile.
+        DecodePaletteIndexes(tile_iter->tile, (tile_iter->y_flip) ? (14 - tile_row) : tile_row);
 
         // If this tile has the X flip flag set, reverse the pixels.
         if (tile_iter->x_flip) {
@@ -472,7 +462,8 @@ std::size_t LCD::RenderFirstTile(std::size_t start_pixel, std::size_t start_tile
                                  std::size_t throwaway) {
     auto& bg_tile = tile_data[start_tile];
 
-    DecodePaletteIndexes(bg_tile.tile, tile_row);
+    // If this tile has the Y flip flag set, decode the mirrored row in the other half of the tile.
+    DecodePaletteIndexes(bg_tile.tile, (bg_tile.y_flip) ? (14 - tile_row) : tile_row);
 
     // If this tile has the X flip flag set, reverse the pixels.
     if (bg_tile.x_flip) {
