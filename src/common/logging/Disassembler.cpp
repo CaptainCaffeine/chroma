@@ -314,7 +314,7 @@ std::string Logging::Disassemble(const Core::Memory& mem, const u16 pc) const {
         LoadString(instr_stream, "D", "L");
         break;
     case 0x56:
-        LoadString(instr_stream, "C", "(HL)");
+        LoadString(instr_stream, "D", "(HL)");
         break;
     case 0x57:
         LoadString(instr_stream, "D", "A");
