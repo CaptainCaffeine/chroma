@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <algorithm>
+
 #include "core/memory/Memory.h"
 #include "core/LCD.h"
 
@@ -77,6 +79,7 @@ void Memory::UpdateHDMA() {
                 // directly from an HDMA to a GDMA, the current transfer must be stopped first.
                 hdma_control |= 0x80;
                 bytes_to_copy = 0;
+                hblank_bytes = 0;
                 hdma_state = DMAState::Inactive;
             }
         }
@@ -84,19 +87,16 @@ void Memory::UpdateHDMA() {
         hdma_reg_written = false;
     } else if (hdma_state == DMAState::Starting) {
         hdma_state = DMAState::Active;
-        stall_cycles = 1 | (double_speed << 1);
     } else if (hdma_state == DMAState::Active) {
-        if (!stall_cycles--) {
-            ExecuteHDMA();
+        ExecuteHDMA();
 
-            if (bytes_to_copy == 0) {
-                // End the copy.
-                hdma_control = 0xFF;
-                hdma_state = DMAState::Inactive;
-            } else if (hdma_type == HDMAType::HDMA && --hblank_bytes == 0) {
-                // Pause the copy until the next HBLANK.
-                hdma_state = DMAState::Paused;
-            }
+        if (bytes_to_copy == 0) {
+            // End the copy.
+            hdma_control = 0xFF;
+            hdma_state = DMAState::Inactive;
+        } else if (hdma_type == HDMAType::HDMA && hblank_bytes == 0) {
+            // Pause the copy until the next HBLANK.
+            hdma_state = DMAState::Paused;
         }
     }
 }
@@ -122,13 +122,27 @@ void Memory::ExecuteHDMA() {
     u16 hdma_source = (static_cast<u16>(hdma_source_hi) << 8) | hdma_source_lo;
     u16 hdma_dest = (static_cast<u16>(hdma_dest_hi | 0x80) << 8) | hdma_dest_lo;
 
-    if ((lcd.stat & 0x03) != 3) {
-        vram[hdma_dest - 0x8000 + 0x2000*vram_bank_num] = DMACopy(hdma_source);
+    // The HDMA circuit always functions at a fixed speed. Every m-cycle it transfers two bytes in single speed
+    // mode and one byte in double speed mode. However, if there is only one byte left to transfer (or one hblank byte
+    // left for HDMA) then only one byte will be transferred in single speed mode.
+    int num_bytes = std::min(2 >> double_speed, bytes_to_copy);
+
+    if (hdma_type == HDMAType::HDMA) {
+        num_bytes = std::min(num_bytes, hblank_bytes);
+        hblank_bytes -= num_bytes;
     }
 
-    ++hdma_source;
-    ++hdma_dest;
-    --bytes_to_copy;
+    bytes_to_copy -= num_bytes;
+
+    for (int i = 0; i < num_bytes; ++i) {
+        if ((lcd.stat & 0x03) != 3) {
+            vram[hdma_dest - 0x8000 + 0x2000 * vram_bank_num] = DMACopy(hdma_source);
+        }
+
+        // Mask hdma_dest so it wraps around to the beginning of VRAM in case it increments past 0x9FFF.
+        hdma_dest = (hdma_dest + 1) & 0x9FFF;
+        ++hdma_source;
+    }
 
     hdma_source_lo = hdma_source & 0x00FF;
     hdma_source_hi = hdma_source >> 8;
@@ -136,7 +150,6 @@ void Memory::ExecuteHDMA() {
     hdma_dest_hi = (hdma_dest >> 8) & 0x1F;
 
     hdma_control = ((bytes_to_copy / 16) - 1) & 0x7F;
-    stall_cycles = 1 | (double_speed << 1);
 }
 
 void Memory::SignalHDMA() {

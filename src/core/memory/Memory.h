@@ -108,7 +108,7 @@ private:
     DMAState hdma_state = DMAState::Inactive;
     HDMAType hdma_type;
     bool hdma_reg_written = false;
-    unsigned int bytes_to_copy = 0, hblank_bytes = 0, stall_cycles = 0;
+    int bytes_to_copy = 0, hblank_bytes = 0;
 
     void InitHDMA();
     void ExecuteHDMA();
