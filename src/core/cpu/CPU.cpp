@@ -297,7 +297,7 @@ void CPU::StoppedTick() {
     if (speed_switch_cycles > 0) {
         if (speed_switch_cycles == 4) {
             // Speed switch finished.
-            mem.ToggleCPUSpeed();
+            gameboy->SpeedSwitch();
 
             // Exit STOP mode.
             cpu_mode = CPUMode::Running;

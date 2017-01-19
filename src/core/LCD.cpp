@@ -265,6 +265,16 @@ void LCD::CheckSTATInterruptSignal() {
     stat_interrupt_signal = false;
 }
 
+void LCD::AdjustCyclesForSpeedSwitch() {
+    // If we've switched from double to single speed, we need to remember to divide the scanline cycle counter by 2,
+    // or else it could be greater than 456 already and never draw the next frame.
+    if (mem->double_speed) {
+        scanline_cycles <<= 1;
+    } else {
+        scanline_cycles >>= 1;
+    }
+}
+
 void LCD::RenderScanline() {
     std::size_t num_bg_pixels;
     if (WindowEnabled()) {

@@ -49,6 +49,7 @@ public:
     void HardwareTick(unsigned int cycles);
     void HaltedTick(unsigned int cycles);
     bool JoypadPress() const;
+    void SpeedSwitch();
 private:
     Emu::SDLContext& sdl_context;
     std::vector<u16> front_buffer;

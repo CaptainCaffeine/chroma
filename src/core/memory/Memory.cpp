@@ -615,7 +615,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // KEY1 -- Speed Switch
     case 0xFF4D:
-        speed_switch = data & 0x01;
+        speed_switch = (speed_switch & 0x80) | (data & 0x01);
         break;
     // VBK -- VRAM bank number
     case 0xFF4F:

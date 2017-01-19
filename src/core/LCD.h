@@ -64,6 +64,8 @@ public:
 
     void SetSTATSignal() { stat_interrupt_signal = true; }
 
+    void AdjustCyclesForSpeedSwitch();
+
     // ******** LCD I/O registers ********
     // LCDC register: 0xFF40
     //     bit 7: LCD On

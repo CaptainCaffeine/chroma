@@ -209,4 +209,9 @@ bool GameBoy::JoypadPress() const {
     return joypad->signal_went_low;
 }
 
+void GameBoy::SpeedSwitch() {
+    mem->ToggleCPUSpeed();
+    lcd->AdjustCyclesForSpeedSwitch();
+}
+
 } // End namespace Core
