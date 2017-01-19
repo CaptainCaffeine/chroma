@@ -552,7 +552,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // NR52 -- Sound On/Off
     case 0xFF26:
-        sound_on = data & 0x8F;
+        sound_on = (sound_on & 0x0F) | (data & 0x80);
         break;
     // Wave Pattern RAM
     case 0xFF30: case 0xFF31: case 0xFF32: case 0xFF33: case 0xFF34: case 0xFF35: case 0xFF36: case 0xFF37:
@@ -649,7 +649,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     // RP -- Infrared Communications
     case 0xFF56:
         if (game_mode == GameMode::CGB) {
-            infrared = data & 0xC1;
+            infrared = (infrared & 0x02) | (data & 0xC1);
         }
         break;
     // BGPI -- BG Palette Index (CGB mode only)
