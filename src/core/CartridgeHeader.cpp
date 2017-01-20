@@ -21,24 +21,7 @@
 
 namespace Core {
 
-CartridgeHeader GetCartridgeHeaderInfo(const Console console, const std::vector<u8>& rom) {
-    CartridgeHeader cart_header;
-
-    // Determine if this game enables CGB functions. A value of 0xC0 implies the game is CGB-only, and 
-    // 0x80 implies it can also run on pre-CGB devices. This both have the same effect, as it's up to 
-    // the game to test if it is running on a pre-CGB device.
-    if (console == Console::CGB && (rom[0x0143] == 0xC0 || rom[0x0143] == 0x80)) {
-        cart_header.game_mode = GameMode::CGB;
-    } else {
-        cart_header.game_mode = GameMode::DMG;
-    }
-
-    // The ROM size is at 0x0148 in cartridge header. Each ROM bank is 16KB.
-    cart_header.num_rom_banks = (0x8000 << rom[0x0148]) / 0x4000;
-    if (rom.size() != cart_header.num_rom_banks*0x4000) {
-        std::cerr << "WARNING: Size of provided ROM does not match size given in cartridge header." << std::endl;
-    }
-
+void GetRAMSize(CartridgeHeader& cart_header, const std::vector<u8>& rom) {
     // The RAM size identifier is at 0x0149 in cartridge header.
     switch (rom[0x0149]) {
     case 0x00:
@@ -70,7 +53,9 @@ CartridgeHeader GetCartridgeHeaderInfo(const Console console, const std::vector<
         assert(false && "Unrecognized external RAM quantity given in cartridge header.");
         break;
     }
+}
 
+void GetMBCType(CartridgeHeader& cart_header, const std::vector<u8>& rom) {
     // The MBC type is at 0x0147. The MBC identifier also tells us if this cartridge contains external RAM.
     switch (rom[0x0147]) {
     case 0x00:
@@ -183,6 +168,42 @@ CartridgeHeader GetCartridgeHeaderInfo(const Console console, const std::vector<
     default:
         assert(false && "Unrecognized MBC");
     }
+}
+
+void HeaderChecksum(const std::vector<u8>& rom) {
+    u8 checksum = 0;
+    for (std::size_t i = 0x0134; i < 0x014D; ++i) {
+        checksum -= rom[i] + 1;
+    }
+
+    // The header checksum at 0x014D must match the value calculated above. This is checked in the boot ROM, and if
+    // it does not match the Game Boy locks up.
+    if (checksum != rom[0x014D]) {
+        std::cerr << "WARNING: Header checksum does not match. This ROM would not run on a Game Boy!" << std::endl;
+    }
+}
+
+CartridgeHeader GetCartridgeHeaderInfo(const Console console, const std::vector<u8>& rom) {
+    CartridgeHeader cart_header;
+
+    // Determine if this game enables CGB functions. A value of 0xC0 implies the game is CGB-only, and
+    // 0x80 implies it can also run on pre-CGB devices. This both have the same effect, as it's up to
+    // the game to test if it is running on a pre-CGB device.
+    if (console == Console::CGB && (rom[0x0143] == 0xC0 || rom[0x0143] == 0x80)) {
+        cart_header.game_mode = GameMode::CGB;
+    } else {
+        cart_header.game_mode = GameMode::DMG;
+    }
+
+    // The ROM size is at 0x0148 in cartridge header. Each ROM bank is 16KB.
+    cart_header.num_rom_banks = (0x8000 << rom[0x0148]) / 0x4000;
+    if (rom.size() != cart_header.num_rom_banks*0x4000) {
+        std::cerr << "WARNING: Size of provided ROM does not match size given in cartridge header." << std::endl;
+    }
+
+    GetRAMSize(cart_header, rom);
+    GetMBCType(cart_header, rom);
+    HeaderChecksum(rom);
 
     return cart_header;
 }
