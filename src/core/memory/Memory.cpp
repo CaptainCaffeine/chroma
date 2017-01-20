@@ -52,8 +52,6 @@ Memory::Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima
         ext_ram = std::vector<u8>(header.ram_size);
     }
 
-    // 160 bytes object attribute memory.
-    oam = std::vector<u8>(0xA0);
     // 127 bytes high RAM.
     hram = std::vector<u8>(0x7F);
 
@@ -143,7 +141,7 @@ u8 Memory::ReadMem8(const u16 addr) const {
         if (addr < 0xFEA0) {
             // OAM (Sprite Attribute Table)
             if (dma_bus_block == Bus::None && !(lcd.stat & 0x02)) {
-                return oam[addr - 0xFE00];
+                return lcd.oam[addr - 0xFE00];
             } else {
                 // Inaccessible during OAM DMA, and during screen modes 2 and 3.
                 return 0xFF;
@@ -210,7 +208,7 @@ void Memory::WriteMem8(const u16 addr, const u8 data) {
         if (dma_bus_block == Bus::None && addr < 0xFEA0) {
             // Inaccessible during screen modes 2 and 3.
             if (!(lcd.stat & 0x02)) {
-                oam[addr - 0xFE00] = data;
+                lcd.oam[addr - 0xFE00] = data;
             }
         }
         // 0xFEA0-0xFEFF: Unusable region

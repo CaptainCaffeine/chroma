@@ -502,7 +502,6 @@ std::size_t LCD::RenderFirstTile(std::size_t start_pixel, std::size_t start_tile
 }
 
 void LCD::RenderSprites() {
-    mem->CopyOAM(oam_ram.begin());
     oam_sprites.clear();
 
     SearchOAM();
@@ -585,16 +584,12 @@ void LCD::SearchOAM() {
     u8 index_mask = (sprite_gap >> 3) | 0xFE;
 
     // Store the first 10 sprites from OAM which are on this scanline.
-    for (std::size_t i = 0; i < oam_ram.size(); i += 4) {
+    for (std::size_t i = 0; i < oam.size(); i += 4) {
         // Check that the sprite is not off the screen.
-        if (oam_ram[i] > sprite_gap && oam_ram[i] < 160) {
+        if (oam[i] > sprite_gap && oam[i] < 160) {
             // Check that the sprite is on the current scanline.
-            if (ly < oam_ram[i] - sprite_gap && static_cast<int>(ly) >= static_cast<int>(oam_ram[i]) - 16) {
-                oam_sprites.emplace_front(oam_ram[i],
-                                          oam_ram[i+1],
-                                          oam_ram[i+2] & index_mask,
-                                          oam_ram[i+3],
-                                          mem->game_mode);
+            if (ly < oam[i] - sprite_gap && static_cast<int>(ly) >= static_cast<int>(oam[i]) - 16) {
+                oam_sprites.emplace_front(oam[i], oam[i+1], oam[i+2] & index_mask, oam[i+3], mem->game_mode);
             }
         }
 

@@ -70,11 +70,6 @@ public:
     void CopyFromVRAM(const u16 start_addr, const std::size_t num_bytes, const int bank_num, DestIter dest) const {
         std::copy_n(vram.cbegin() + (start_addr - 0x8000) + 0x2000 * bank_num, num_bytes, dest);
     }
-
-    template<typename DestIter>
-    void CopyOAM(DestIter dest) const {
-        std::copy(oam.cbegin(), oam.cend(), dest);
-    }
 private:
     Timer& timer;
     Serial& serial;
@@ -90,7 +85,6 @@ private:
     const std::vector<u8> rom;
     std::vector<u8> vram;
     std::vector<u8> wram;
-    std::vector<u8> oam;
     std::vector<u8> hram;
     std::vector<u8> ext_ram;
 

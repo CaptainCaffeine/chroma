@@ -66,6 +66,23 @@ public:
 
     void AdjustCyclesForSpeedSwitch();
 
+    // ******** OAM ********
+    // The Sprite Attribute Table (OAM) contains 40 sprite attributes each 4 bytes long.
+    // Byte 0: the Y position of the sprite, minus 16.
+    // Byte 1: the X position of the sprite, minus 8.
+    // Byte 2: the tile number, an unsigned offset which indicates a tile at 0x8NN0. Sprite tiles have the same
+    //         format as background tiles. If the current sprite size is 8x16, bit 0 of this value is ignored, as
+    //         the sprites take up 2 tiles of space.
+    // Byte 3: the sprite attributes:
+    //     Bit 7: Sprite-background priority (0=sprite above BG, 1=sprite behind BG colours 1-3. Sprites are
+    //            always on top of colour 0.)
+    //     Bit 6: Y flip
+    //     Bit 5: X flip
+    //     Bit 4: Palette number (0=OBP0, 1=OBP1) (DMG mode only)
+    //     Bit 3: Tile VRAM bank (0=bank 0, 1=bank 1) (CGB mode only)
+    //     Bit 2-0: Palette number (selects OBP0-7) (CGB mode only)
+    std::array<u8, 0xA0> oam{};
+
     // ******** LCD I/O registers ********
     // LCDC register: 0xFF40
     //     bit 7: LCD On
@@ -164,22 +181,6 @@ private:
     std::array<u8, num_tiles> row_tile_map;
     std::array<u8, num_tiles> row_attr_map;
     std::vector<BGAttrs> tile_data;
-
-    // The Sprite Attribute Table (OAM) contains 40 sprite attributes each 4 bytes long.
-    // Byte 0: the Y position of the sprite, minus 16.
-    // Byte 1: the X position of the sprite, minus 8.
-    // Byte 2: the tile number, an unsigned offset which indicates a tile at 0x8NN0. Sprite tiles have the same
-    //         format as background tiles. If the current sprite size is 8x16, bit 0 of this value is ignored, as
-    //         the sprites take up 2 tiles of space.
-    // Byte 3: the sprite attributes:
-    //     Bit 7: Sprite-background priority (0=sprite above BG, 1=sprite behind BG colours 1-3. Sprites are
-    //            always on top of colour 0.)
-    //     Bit 6: Y flip
-    //     Bit 5: X flip
-    //     Bit 4: Palette number (0=OBP0, 1=OBP1) (DMG mode only)
-    //     Bit 3: Tile VRAM bank (0=bank 0, 1=bank 1) (CGB mode only)
-    //     Bit 2-0: Palette number (selects OBP0-7) (CGB mode only)
-    std::array<u8, 160> oam_ram;
     std::deque<SpriteAttrs> oam_sprites;
 
     std::array<u16, 8> pixel_colours;
