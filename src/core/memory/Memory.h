@@ -88,8 +88,11 @@ private:
     std::vector<u8> hram;
     std::vector<u8> ext_ram;
 
-    // I/O register functions
+    // Init functions
     void IORegisterInit();
+    void VRAMInit();
+
+    // I/O register functions
     u8 ReadIORegisters(const u16 addr) const;
     void WriteIORegisters(const u16 addr, const u8 data);
 
