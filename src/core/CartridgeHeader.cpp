@@ -202,13 +202,24 @@ void CheckNintendoLogo(const Console console, const std::vector<u8>& rom) {
     }
 }
 
-CartridgeHeader GetCartridgeHeaderInfo(const Console console, const std::vector<u8>& rom) {
+CartridgeHeader GetCartridgeHeaderInfo(Console& console, const std::vector<u8>& rom) {
     CartridgeHeader cart_header;
 
     // Determine if this game enables CGB functions. A value of 0xC0 implies the game is CGB-only, and
     // 0x80 implies it can also run on pre-CGB devices. This both have the same effect, as it's up to
     // the game to test if it is running on a pre-CGB device.
-    if (console == Console::CGB && (rom[0x0143] == 0xC0 || rom[0x0143] == 0x80)) {
+    bool cgb_flag = rom[0x0143] == 0xC0 || rom[0x0143] == 0x80;
+
+    // If no console was specified, we emulate a CGB if the game has CGB features, and a DMG otherwise.
+    if (console == Console::Default) {
+        if (cgb_flag) {
+            console = Console::CGB;
+        } else {
+            console = Console::DMG;
+        }
+    }
+
+    if (console == Console::CGB && cgb_flag) {
         cart_header.game_mode = GameMode::CGB;
     } else {
         cart_header.game_mode = GameMode::DMG;

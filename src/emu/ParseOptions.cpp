@@ -64,8 +64,8 @@ Console GetGameBoyType(const std::vector<std::string>& tokens) {
             throw std::invalid_argument("Invalid console specified: " + gb_string);
         }
     } else {
-        // If no console specified, default is DMG.
-        return Console::DMG;
+        // If no console specified, the console type will default to the cart type.
+        return Console::Default;
     }
 }
 

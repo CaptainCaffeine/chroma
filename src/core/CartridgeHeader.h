@@ -32,6 +32,6 @@ struct CartridgeHeader {
     bool rumble_present = false;
 };
 
-CartridgeHeader GetCartridgeHeaderInfo(const Console console, const std::vector<u8>& rom);
+CartridgeHeader GetCartridgeHeaderInfo(Console& console, const std::vector<u8>& rom);
 
 } // End namespace Core

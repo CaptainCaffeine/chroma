@@ -16,7 +16,7 @@
 
 #pragma once
 
-enum class Console {DMG, CGB};
+enum class Console {DMG, CGB, Default};
 enum class GameMode {DMG, CGB};
 enum class MBC {None, MBC1, MBC2, MBC3, MBC5};
 
