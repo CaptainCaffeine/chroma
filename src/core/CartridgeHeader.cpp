@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <array>
 #include <cassert>
 #include <iostream>
 
@@ -183,6 +184,24 @@ void HeaderChecksum(const std::vector<u8>& rom) {
     }
 }
 
+void CheckNintendoLogo(const Console console, const std::vector<u8>& rom) {
+    const std::array<u8, 48> logo{{
+        0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D,
+        0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99,
+        0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E
+    }};
+
+    // DMG boot ROM checks all 48 bytes, but the CGB boot ROM only checks the first 24 bytes.
+    std::size_t end_addr = 0x0104 + ((console == Console::DMG) ? 48 : 24);
+    auto logo_iter = logo.begin();
+    for (std::size_t addr = 0x0104; addr < end_addr; ++addr) {
+        if (rom[addr] != *logo_iter++) {
+            std::cerr << "WARNING: Nintendo logo does not match. This ROM would not run on a Game Boy!" << std::endl;
+            break;
+        }
+    }
+}
+
 CartridgeHeader GetCartridgeHeaderInfo(const Console console, const std::vector<u8>& rom) {
     CartridgeHeader cart_header;
 
@@ -203,6 +222,7 @@ CartridgeHeader GetCartridgeHeaderInfo(const Console console, const std::vector<
 
     GetRAMSize(cart_header, rom);
     GetMBCType(cart_header, rom);
+    CheckNintendoLogo(console, rom);
     HeaderChecksum(rom);
 
     return cart_header;
