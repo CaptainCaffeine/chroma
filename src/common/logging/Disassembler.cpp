@@ -34,9 +34,9 @@ std::string NextSignedByteAsStr(const Core::Memory& mem, const u16 pc) {
     hex_str << std::hex << std::uppercase;
     s8 sbyte = mem.ReadMem8(pc+1);
     if (sbyte < 0) {
-        hex_str << "- 0x" << std::setfill('0') << std::setw(2) << (~sbyte)+1;
+        hex_str << "-0x" << std::setfill('0') << std::setw(2) << (~sbyte)+1;
     } else {
-        hex_str << "+ 0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(sbyte);
+        hex_str << "+0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(sbyte);
     }
     return hex_str.str();
 }
@@ -465,11 +465,13 @@ std::string Logging::Disassemble(const Core::Memory& mem, const u16 pc) const {
         break;
     // LDH (n), A -- Load value from A into memory at (0xFF00+n), with n as immediate byte value
     case 0xE0:
-        LoadHighString(instr_stream, "(0xFF00 + " + NextByteAsStr(mem, pc) + ")", "A");
+        // Take substring to remove the 0x prefix.
+        LoadHighString(instr_stream, "(0xFF" + NextByteAsStr(mem, pc).substr(2, 2) + ")", "A");
         break;
     // LDH A, (n) -- Load value from memory at (0xFF00+n) into A, with n as immediate byte value 
     case 0xF0:
-        LoadHighString(instr_stream, "A", "(0xFF00 + " + NextByteAsStr(mem, pc) + ")");
+        // Take substring to remove the 0x prefix.
+        LoadHighString(instr_stream, "A", "(0xFF" + NextByteAsStr(mem, pc).substr(2, 2) + ")");
         break;
 
     // ******** 16-bit loads ********
