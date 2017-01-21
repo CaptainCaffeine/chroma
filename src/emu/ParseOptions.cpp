@@ -121,17 +121,4 @@ std::vector<u8> LoadROM(const std::string& filename) {
     return rom_contents;
 }
 
-std::ofstream OpenLogFile(const std::string& rom_path) {
-    // Get path of directory containing the ROM, then add log file name.
-    auto last_slash = rom_path.find_last_of("/\\");
-    const std::string log_file_path = rom_path.substr(0, last_slash + 1) + "log.txt";
-
-    std::ofstream log_file(log_file_path);
-    if (!log_file) {
-        throw std::invalid_argument("Error when attempting to open " + log_file_path + " for writing.");
-    }
-
-    return log_file;
-}
-
 } // End namespace Emu

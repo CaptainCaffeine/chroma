@@ -68,10 +68,9 @@ int main(int argc, char** argv) {
     std::ofstream log_stream;
     // Leave log_stream unopened if logging disabled.
     if (log_level != LogLevel::None) {
-        try {
-            log_stream = Emu::OpenLogFile(rom_path);
-        } catch (const std::invalid_argument& e) {
-            std::cerr << e.what() << "\n";
+        log_stream = std::ofstream("log.txt");
+        if (!log_stream) {
+            std::cerr << "Error when attempting to open ./log.txt for writing.\n";
             return 1;
         }
     }

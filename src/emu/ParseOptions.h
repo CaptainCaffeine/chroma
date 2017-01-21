@@ -33,6 +33,5 @@ Console GetGameBoyType(const std::vector<std::string>& tokens);
 LogLevel GetLogLevel(const std::vector<std::string>& tokens);
 
 std::vector<u8> LoadROM(const std::string& filename);
-std::ofstream OpenLogFile(const std::string& rom_path);
 
 } // End namespace Emu
