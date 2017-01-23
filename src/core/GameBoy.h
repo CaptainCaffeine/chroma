@@ -46,9 +46,13 @@ public:
 
     void EmulatorLoop();
     void SwapBuffers(std::vector<u16>& back_buffer);
+
     void HardwareTick(unsigned int cycles);
     void HaltedTick(unsigned int cycles);
+
+    // Speed Switch and STOP mode functions.
     bool JoypadPress() const;
+    void StopLCD();
     void SpeedSwitch();
 private:
     Emu::SDLContext& sdl_context;
@@ -63,6 +67,8 @@ private:
     std::unique_ptr<CPU> cpu;
 
     std::tuple<bool, bool> PollEvents(bool pause);
+
+    u8 lcd_on_when_stopped = 0x00;
 };
 
 } // End namespace Core

@@ -1206,14 +1206,12 @@ void CPU::Halt() {
 }
 
 void CPU::Stop() {
-    // STOP is a two-byte long opcode but only takes 4 cycles. If the opcode following STOP is not 0x00, the LCD
-    // supposedly turns on.
+    // STOP is a two-byte long opcode. If the opcode following STOP is not 0x00, the LCD supposedly turns on?
     ++pc;
+    gameboy->HaltedTick(4);
 
-    // If the LCD is off, on pre-CGB devices it stays off, and on post-CGB devices it displays a black screen.
-    // If the LCD is on, it stays on and the framebuffer is set to all white. Not really sure how this works, I guess
-    // the LCD runs but BG, Window, and Sprites are all disabled and all LCD interrupts are ignored. I won't bother
-    // emulating LCD behaviour during STOP until I understand how it works.
+    // Turn off the LCD.
+    gameboy->StopLCD();
 
     // During STOP mode, the clock increases as usual, but normal interrupts are not serviced or checked. Regardless
     // if the joypad interrupt is enabled in the IE register, a stopped Game Boy will intercept any joypad presses
@@ -1221,9 +1219,6 @@ void CPU::Stop() {
 
     // Check if we should begin a speed switch.
     if (mem.game_mode == GameMode::CGB && mem.ReadMem8(0xFF4D) & 0x01) {
-        // If the Game Boy receives an enabled joypad input during a speed switch, it will hang. Otherwise, it
-        // returns to normal operation once the speed switch is complete.
-
         // A speed switch takes 128*1024-80=130992 cycles to complete, plus 4 cycles to decode the STOP instruction.
         speed_switch_cycles = 130992;
     } else if ((mem.ReadMem8(0xFF00) & 0x30) == 0x30) {

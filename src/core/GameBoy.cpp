@@ -209,9 +209,19 @@ bool GameBoy::JoypadPress() const {
     return joypad->signal_went_low;
 }
 
+void GameBoy::StopLCD() {
+    // Record the current LCD power state for when we exit stop mode.
+    lcd_on_when_stopped = lcd->lcdc & 0x80;
+
+    // Turn off the LCD.
+    lcd->lcdc &= 0x7F;
+}
+
 void GameBoy::SpeedSwitch() {
     mem->ToggleCPUSpeed();
-    lcd->AdjustCyclesForSpeedSwitch();
+
+    // If the LCD was on when we entered STOP mode, turn it back on.
+    lcd->lcdc |= lcd_on_when_stopped;
 }
 
 } // End namespace Core

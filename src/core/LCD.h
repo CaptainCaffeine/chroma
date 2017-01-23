@@ -64,8 +64,6 @@ public:
 
     void SetSTATSignal() { stat_interrupt_signal = true; }
 
-    void AdjustCyclesForSpeedSwitch();
-
     // ******** OAM ********
     // The Sprite Attribute Table (OAM) contains 40 sprite attributes each 4 bytes long.
     // Byte 0: the Y position of the sprite, minus 16.

@@ -101,7 +101,7 @@ void LCD::UpdatePowerOnState() {
         lcd_on = lcdc_power_on;
 
         if (lcd_on) {
-            // Initialize scanline cycle count (to 452 instead of 0, so it ticks over to 0 in UpdateLY()).
+            // Initialize scanline cycle count (to 452/908 instead of 0, so it ticks over to 0 in UpdateLY()).
             if (mem->double_speed) {
                 scanline_cycles = 908;
             } else {
@@ -263,16 +263,6 @@ void LCD::CheckSTATInterruptSignal() {
     }
     prev_interrupt_signal = stat_interrupt_signal;
     stat_interrupt_signal = false;
-}
-
-void LCD::AdjustCyclesForSpeedSwitch() {
-    // If we've switched from double to single speed, we need to remember to divide the scanline cycle counter by 2,
-    // or else it could be greater than 456 already and never draw the next frame.
-    if (mem->double_speed) {
-        scanline_cycles <<= 1;
-    } else {
-        scanline_cycles >>= 1;
-    }
 }
 
 void LCD::RenderScanline() {
