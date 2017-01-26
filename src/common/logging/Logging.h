@@ -43,6 +43,8 @@ public:
     void LogInterrupt(const Core::Memory& mem);
     void LogTimerRegisterState(const Core::Timer& timer);
     void LogLCDRegisterState(const Core::LCD& lcd);
+    void DumpBothTileMaps(const Core::LCD& lcd, const Core::Memory& mem, int bank_num);
+    void DumpTileMap(const Core::LCD& lcd, const Core::Memory& mem, u16 start, int bank_num);
 
     std::string Disassemble(const Core::Memory& mem, const u16 pc) const;
 

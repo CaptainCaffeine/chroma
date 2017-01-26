@@ -1071,16 +1071,16 @@ std::string Logging::Disassemble(const Core::Memory& mem, const u16 pc) const {
     //     NC: Carry flag reset
     //     Z:  Carry flag set
     case 0xC4:
-        CallString(instr_stream, "NZ", NextWordAsStr(mem, pc+1));
+        CallString(instr_stream, "NZ", NextWordAsStr(mem, pc));
         break;
     case 0xCC:
-        CallString(instr_stream, "Z", NextWordAsStr(mem, pc+1));
+        CallString(instr_stream, "Z", NextWordAsStr(mem, pc));
         break;
     case 0xD4:
-        CallString(instr_stream, "NC", NextWordAsStr(mem, pc+1));
+        CallString(instr_stream, "NC", NextWordAsStr(mem, pc));
         break;
     case 0xDC:
-        CallString(instr_stream, "C", NextWordAsStr(mem, pc+1));
+        CallString(instr_stream, "C", NextWordAsStr(mem, pc));
         break;
 
     // ******** Returns ********

@@ -87,6 +87,24 @@ void Logging::LogLCDRegisterState(const Core::LCD& lcd) {
     log_file << " stat_sig=" << std::setw(1) << lcd.stat_interrupt_signal << "\n";
 }
 
+void Logging::DumpBothTileMaps(const Core::LCD& lcd, const Core::Memory& mem, int bank_num) {
+    DumpTileMap(lcd, mem, 0x9800, bank_num);
+    DumpTileMap(lcd, mem, 0x9C00, bank_num);
+}
+
+void Logging::DumpTileMap(const Core::LCD& lcd, const Core::Memory& mem, u16 start, int bank_num) {
+    std::cout << "Tile Map " << "0x" << std::uppercase << std::hex << start << " ";
+    std::cout << ((lcd.BGTileMapStartAddr() == start) ? "BG " : "");
+    std::cout << ((lcd.WindowTileMapStartAddr() == start) ? "Win" : "") << "\n";
+    for (int i = 0; i < 32*32; i += 32) {
+        for (int j = 0; j < 32; ++j) {
+            std::cout << std::uppercase << std::hex << std::setw(2) << std::setfill('0')
+                      << static_cast<int>(mem.vram[i + j + start - 0x8000 + 0x2000 * bank_num]) << " ";
+        }
+        std::cout << "\n";
+    }
+}
+
 void Logging::SwitchLogLevel() {
     // Don't spam if logging not enabled.
     if (log_level == alt_level) {

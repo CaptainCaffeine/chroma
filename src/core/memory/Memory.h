@@ -23,6 +23,9 @@
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
 
+// Forward declaration for cross-namespace friend declaration.
+namespace Log { class Logging; }
+
 namespace Core {
 
 struct CartridgeHeader;
@@ -32,6 +35,7 @@ class LCD;
 class Joypad;
 
 class Memory {
+    friend class Log::Logging;
 public:
     Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima, Serial& sio, LCD& display,
            Joypad& pad, std::vector<u8> rom_contents);
