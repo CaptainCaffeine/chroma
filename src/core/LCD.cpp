@@ -151,8 +151,6 @@ void LCD::UpdateLY() {
 
             current_scanline = 0;
 
-            // Changes to the window Y position register are ignored until next VBLANK.
-            window_y_frame_val = window_y;
             window_progress = 0x00;
         } else {
             current_scanline = ++ly;
