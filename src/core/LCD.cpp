@@ -67,7 +67,7 @@ void LCD::UpdateLCD() {
     if (current_scanline <= 143) {
         // AntonioND claims that except for scanline 0, the Mode 2 STAT interrupt happens the cycle before Mode 2
         // is entered. However, doing this causes most of Mooneye-GB's STAT timing tests to fail.
-        if (scanline_cycles == ((mem->game_mode == GameMode::DMG) ? 4 : 0)) {
+        if (scanline_cycles == ((mem->game_mode == GameMode::DMG || mem->double_speed) ? 4 : 0)) {
             SetSTATMode(2);
         } else if (scanline_cycles == ((mem->game_mode == GameMode::DMG) ? 84 : (80 << mem->double_speed))) {
             SetSTATMode(3);
@@ -79,7 +79,7 @@ void LCD::UpdateLCD() {
     } else if (current_scanline == 144) {
         if (scanline_cycles == 0 && mem->console == Console::CGB) {
             stat_interrupt_signal |= Mode2CheckEnabled();
-        } else if (scanline_cycles == 4) {
+        } else if (scanline_cycles == 4 << mem->double_speed) {
             mem->RequestInterrupt(Interrupt::VBLANK);
             SetSTATMode(1);
             if (mem->console == Console::DMG) {
