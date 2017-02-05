@@ -50,7 +50,7 @@ public:
     //     bit 0: P10 Input Right or A (0=Pressed)
     u8 p1 = 0x00;
 private:
-    Memory* mem;
+    Memory* mem = nullptr;
 
     static constexpr u8 start = 0x80, select = 0x40, b = 0x20, a = 0x10;
     static constexpr u8 down = 0x08, up = 0x04, left = 0x02, right = 0x01;

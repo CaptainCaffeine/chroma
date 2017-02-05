@@ -36,7 +36,7 @@ public:
 
     // ******** Timer I/O registers ********
     // DIV register: 0xFF04
-    u16 divider;
+    u16 divider = 0x0000;
     // TIMA register: 0xFF05
     u8 tima = 0x00;
     // TMA register: 0xFF06
@@ -46,7 +46,7 @@ public:
     //     bits 1&0: Main Frequency Divider (0=every 1024 cycles, 1=16 cycles, 2=64 cycles, 3=256 cycles)
     u8 tac = 0x00;
 private:
-    Memory* mem;
+    Memory* mem = nullptr;
 
     bool prev_tima_inc = false;
     bool tima_overflow = false;

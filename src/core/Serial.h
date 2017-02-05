@@ -39,9 +39,9 @@ public:
     //     bit 0: Shift Clock (0=External Clock, 1=Internal Clock 8192Hz)
     u8 serial_control = 0x00;
 private:
-    Memory* mem;
+    Memory* mem = nullptr;
 
-    u8 serial_clock;
+    u8 serial_clock = 0x00;
     int bits_to_shift = 0;
     bool prev_inc = false;
 
