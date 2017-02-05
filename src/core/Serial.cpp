@@ -19,19 +19,6 @@
 
 namespace Core {
 
-Serial::Serial(const Console console, const GameMode game_mode) {
-    // I'm assuming the initial value of the internal serial clock is equal to that of the lower byte of DIV.
-    if (game_mode == GameMode::DMG) {
-        if (console == Console::DMG) {
-            serial_clock = 0xCC;
-        } else {
-            serial_clock = 0x7C;
-        }
-    } else {
-        serial_clock = 0xA0;
-    }
-}
-
 void Serial::UpdateSerial() {
     // Serial clock advances with the system clock.
     serial_clock += 4;

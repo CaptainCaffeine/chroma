@@ -33,7 +33,7 @@ GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logg
         , sdl_context(context)
         , front_buffer(160*144)
         , timer(new Timer())
-        , serial(new Serial(gb_type, header.game_mode))
+        , serial(new Serial())
         , lcd(new LCD())
         , joypad(new Joypad())
         , mem(new Memory(gb_type, header, *timer, *serial, *lcd, *joypad, std::move(rom)))

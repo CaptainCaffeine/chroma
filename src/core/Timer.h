@@ -32,7 +32,7 @@ class Timer {
 public:
     void UpdateTimer();
 
-    void LinkToMemory(Memory* memory) { mem = memory; }
+    constexpr void LinkToMemory(Memory* memory) { mem = memory; }
 
     // ******** Timer I/O registers ********
     // DIV register: 0xFF04
@@ -55,8 +55,8 @@ private:
 
     const std::array<unsigned int, 4> select_div_bit{{0x0200, 0x0008, 0x0020, 0x0080}};
 
-    bool DivFrequencyBitSet() const { return select_div_bit[tac & 0x03] & divider; }
-    bool TimerEnabled() const { return tac & 0x04; }
+    constexpr bool DivFrequencyBitSet() const { return select_div_bit[tac & 0x03] & divider; }
+    constexpr bool TimerEnabled() const { return tac & 0x04; }
 };
 
 } // End namespace Core

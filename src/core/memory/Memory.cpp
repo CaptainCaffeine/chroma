@@ -81,11 +81,15 @@ void Memory::IORegisterInit() {
     } else {
         joypad.p1 = 0xFF; // Probably?
         timer.divider = 0x1EA0;
+
         oam_dma_start = 0x00;
 
         lcd.bg_palette_index = 0x88;
         lcd.obj_palette_index = 0x90;
     }
+
+    // I'm assuming the initial value of the internal serial clock is equal to the lower byte of DIV.
+    serial.InitSerialClock(static_cast<u8>(timer.divider));
 }
 
 void Memory::VRAMInit() {

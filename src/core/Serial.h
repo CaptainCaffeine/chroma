@@ -25,11 +25,10 @@ class Memory;
 
 class Serial {
 public:
-    Serial(const Console console, const GameMode game_mode);
-
     void UpdateSerial();
 
-    void LinkToMemory(Memory* memory) { mem = memory; }
+    constexpr void InitSerialClock(u8 init_val) { serial_clock = init_val; }
+    constexpr void LinkToMemory(Memory* memory) { mem = memory; }
 
     // ******** Serial I/O registers ********
     // SB register: 0xFF01
@@ -50,8 +49,8 @@ private:
     bool prev_transfer_signal = false;
 
     void ShiftSerialBit();
-    bool UsingInternalClock() const { return serial_control & 0x01; }
     u8 SelectClockBit() const;
+    constexpr bool UsingInternalClock() const { return serial_control & 0x01; }
 };
 
 } // End namespace Core

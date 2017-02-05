@@ -21,26 +21,23 @@
 namespace Core {
 
 class Flags {
-private:
-    const u8 zero  = 0x80;
-    const u8 sub   = 0x40;
-    const u8 half  = 0x20;
-    const u8 carry = 0x10;
 public:
     // bits is public so the flags can be easily popped on/pushed off the stack.
     u8 bits;
 
     // Setters
-    void SetZero(bool val)  { (val) ? (bits |= zero)  : (bits &= ~zero);  }
-    void SetSub(bool val)   { (val) ? (bits |= sub)   : (bits &= ~sub);   }
-    void SetHalf(bool val)  { (val) ? (bits |= half)  : (bits &= ~half);  }
-    void SetCarry(bool val) { (val) ? (bits |= carry) : (bits &= ~carry); }
+    constexpr void SetZero(bool val)  { (val) ? (bits |= zero)  : (bits &= ~zero);  }
+    constexpr void SetSub(bool val)   { (val) ? (bits |= sub)   : (bits &= ~sub);   }
+    constexpr void SetHalf(bool val)  { (val) ? (bits |= half)  : (bits &= ~half);  }
+    constexpr void SetCarry(bool val) { (val) ? (bits |= carry) : (bits &= ~carry); }
 
     // Getters
-    u8 Zero()  const { return (bits & zero)  >> 7; }
-    u8 Sub()   const { return (bits & sub)   >> 6; }
-    u8 Half()  const { return (bits & half)  >> 5; }
-    u8 Carry() const { return (bits & carry) >> 4; }
+    constexpr u8 Zero()  const { return (bits & zero)  >> 7; }
+    constexpr u8 Sub()   const { return (bits & sub)   >> 6; }
+    constexpr u8 Half()  const { return (bits & half)  >> 5; }
+    constexpr u8 Carry() const { return (bits & carry) >> 4; }
+private:
+    static constexpr u8 zero = 0x80, sub = 0x40, half = 0x20, carry = 0x10;
 };
 
 } // End namespace Core

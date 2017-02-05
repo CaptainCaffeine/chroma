@@ -25,27 +25,26 @@ class Memory;
 
 class Joypad {
 public:
-    const u8 start = 0x80, select = 0x40, b = 0x20, a = 0x10;
-    const u8 down = 0x08, up = 0x04, left = 0x02, right = 0x01;
+    static constexpr u8 start = 0x80, select = 0x40, b = 0x20, a = 0x10;
+    static constexpr u8 down = 0x08, up = 0x04, left = 0x02, right = 0x01;
 
     // Start, Select, B, A, Down, Up, Left, Right.
     u8 button_states = 0xFF;
-
     bool signal_went_low = false;
-
-    void StartPressed(bool val) { (val) ? (button_states &= ~start) : (button_states |= start); }
-    void SelectPressed(bool val) { (val) ? (button_states &= ~select) : (button_states |= select); }
-    void BPressed(bool val) { (val) ? (button_states &= ~b) : (button_states |= b); }
-    void APressed(bool val) { (val) ? (button_states &= ~a) : (button_states |= a); }
-
-    void DownPressed(bool val) { (val) ? (button_states &= ~down) : (button_states |= down); }
-    void UpPressed(bool val) { (val) ? (button_states &= ~up) : (button_states |= up); }
-    void LeftPressed(bool val) { (val) ? (button_states &= ~left) : (button_states |= left); }
-    void RightPressed(bool val) { (val) ? (button_states &= ~right) : (button_states |= right); }
 
     void UpdateJoypad();
 
-    void LinkToMemory(Memory* memory) { mem = memory; }
+    constexpr void LinkToMemory(Memory* memory) { mem = memory; }
+
+    constexpr void StartPressed(bool val) { (val) ? (button_states &= ~start) : (button_states |= start); }
+    constexpr void SelectPressed(bool val) { (val) ? (button_states &= ~select) : (button_states |= select); }
+    constexpr void BPressed(bool val) { (val) ? (button_states &= ~b) : (button_states |= b); }
+    constexpr void APressed(bool val) { (val) ? (button_states &= ~a) : (button_states |= a); }
+
+    constexpr void DownPressed(bool val) { (val) ? (button_states &= ~down) : (button_states |= down); }
+    constexpr void UpPressed(bool val) { (val) ? (button_states &= ~up) : (button_states |= up); }
+    constexpr void LeftPressed(bool val) { (val) ? (button_states &= ~left) : (button_states |= left); }
+    constexpr void RightPressed(bool val) { (val) ? (button_states &= ~right) : (button_states |= right); }
 
     // ******** Joypad I/O register ********
     // P1 register: 0xFF00
@@ -61,8 +60,8 @@ private:
 
     bool prev_interrupt_signal = false;
 
-    bool ButtonKeysSelected() { return !(p1 & 0x20); }
-    bool DirectionKeysSelected() { return !(p1 & 0x10); }
+    constexpr bool ButtonKeysSelected() { return !(p1 & 0x20); }
+    constexpr bool DirectionKeysSelected() { return !(p1 & 0x10); }
 };
 
 } // End namespace Core
