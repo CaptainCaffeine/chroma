@@ -25,16 +25,10 @@ class Memory;
 
 class Joypad {
 public:
-    static constexpr u8 start = 0x80, select = 0x40, b = 0x20, a = 0x10;
-    static constexpr u8 down = 0x08, up = 0x04, left = 0x02, right = 0x01;
-
-    // Start, Select, B, A, Down, Up, Left, Right.
-    u8 button_states = 0xFF;
-    bool signal_went_low = false;
-
     void UpdateJoypad();
 
     constexpr void LinkToMemory(Memory* memory) { mem = memory; }
+    constexpr bool JoypadPress() const { return signal_went_low; }
 
     constexpr void StartPressed(bool val) { (val) ? (button_states &= ~start) : (button_states |= start); }
     constexpr void SelectPressed(bool val) { (val) ? (button_states &= ~select) : (button_states |= select); }
@@ -58,10 +52,17 @@ public:
 private:
     Memory* mem;
 
+    static constexpr u8 start = 0x80, select = 0x40, b = 0x20, a = 0x10;
+    static constexpr u8 down = 0x08, up = 0x04, left = 0x02, right = 0x01;
+
+    // Start, Select, B, A, Down, Up, Left, Right.
+    u8 button_states = 0xFF;
+
+    bool signal_went_low = false;
     bool prev_interrupt_signal = false;
 
-    constexpr bool ButtonKeysSelected() { return !(p1 & 0x20); }
-    constexpr bool DirectionKeysSelected() { return !(p1 & 0x10); }
+    constexpr bool ButtonKeysSelected() const { return !(p1 & 0x20); }
+    constexpr bool DirectionKeysSelected() const { return !(p1 & 0x10); }
 };
 
 } // End namespace Core

@@ -206,7 +206,7 @@ void GameBoy::HaltedTick(unsigned int cycles) {
 }
 
 bool GameBoy::JoypadPress() const {
-    return joypad->signal_went_low;
+    return joypad->JoypadPress();
 }
 
 void GameBoy::StopLCD() {
