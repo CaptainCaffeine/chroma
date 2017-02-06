@@ -69,8 +69,6 @@ void GameBoy::EmulatorLoop() {
 
         Emu::RenderFrame(front_buffer.data(), sdl_context);
     }
-
-    Emu::CleanupSDL(sdl_context);
 }
 
 std::tuple<bool, bool> GameBoy::PollEvents(bool pause) {
@@ -86,10 +84,19 @@ std::tuple<bool, bool> GameBoy::PollEvents(bool pause) {
                 quit = true;
                 break;
             case SDLK_p:
-                pause = !pause;
+                if (e.key.repeat == 0) {
+                    pause = !pause;
+                }
                 break;
             case SDLK_b:
-                logging.SwitchLogLevel();
+                if (e.key.repeat == 0) {
+                    logging.SwitchLogLevel();
+                }
+                break;
+            case SDLK_v:
+                if (e.key.repeat == 0) {
+                    Emu::ToggleFullscreen(sdl_context);
+                }
                 break;
 
             case SDLK_w:

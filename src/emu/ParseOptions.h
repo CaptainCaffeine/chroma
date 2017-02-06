@@ -31,6 +31,7 @@ std::string GetOptionParam(const std::vector<std::string>& tokens, const std::st
 void DisplayHelp();
 Console GetGameBoyType(const std::vector<std::string>& tokens);
 LogLevel GetLogLevel(const std::vector<std::string>& tokens);
+unsigned int GetPixelScale(const std::vector<std::string>& tokens);
 
 std::vector<u8> LoadROM(const std::string& filename);
 

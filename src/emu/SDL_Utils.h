@@ -16,8 +16,6 @@
 
 #pragma once
 
-#include <string>
-
 #include <SDL.h>
 
 #include "common/CommonTypes.h"
@@ -33,8 +31,9 @@ struct SDLContext {
     void* texture_pixels;
 };
 
-void InitSDL(SDLContext& context);
+void InitSDL(SDLContext& context, unsigned int scale, bool fullscreen);
 void RenderFrame(const u16* fb_ptr, SDLContext& context);
+void ToggleFullscreen(SDLContext& context);
 void CleanupSDL(SDLContext& context);
 
 } // End namespace Emu

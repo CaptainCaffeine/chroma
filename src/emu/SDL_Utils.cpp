@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <string>
 #include <stdexcept>
 
 #include "emu/SDL_Utils.h"
@@ -24,7 +25,7 @@ const std::string GetSDLErrorString(const std::string& error_function) {
     return {"SDL_" + error_function + " Error: " + SDL_GetError()};
 }
 
-void InitSDL(SDLContext& context) {
+void InitSDL(SDLContext& context, unsigned int scale, bool fullscreen) {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         throw std::runtime_error(GetSDLErrorString("Init"));
     }
@@ -32,8 +33,8 @@ void InitSDL(SDLContext& context) {
     context.window = SDL_CreateWindow("Chroma",
                                        SDL_WINDOWPOS_UNDEFINED,
                                        SDL_WINDOWPOS_UNDEFINED,
-                                       160,
-                                       144,
+                                       160*scale,
+                                       144*scale,
                                        SDL_WINDOW_SHOWN);
     if (context.window == nullptr) {
         SDL_Quit();
@@ -46,6 +47,9 @@ void InitSDL(SDLContext& context) {
         SDL_Quit();
         throw std::runtime_error(GetSDLErrorString("CreateRenderer"));
     }
+
+    SDL_RenderSetLogicalSize(context.renderer, 160, 144);
+    SDL_RenderSetIntegerScale(context.renderer, SDL_TRUE);
 
     context.texture = SDL_CreateTexture(context.renderer,
                                         SDL_PIXELFORMAT_ABGR1555,
@@ -60,6 +64,10 @@ void InitSDL(SDLContext& context) {
     }
 
     SDL_SetTextureBlendMode(context.texture, SDL_BLENDMODE_NONE);
+
+    if (fullscreen) {
+        SDL_SetWindowFullscreen(context.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    }
 }
 
 void RenderFrame(const u16* fb_ptr, SDLContext& context) {
@@ -70,6 +78,11 @@ void RenderFrame(const u16* fb_ptr, SDLContext& context) {
     SDL_RenderClear(context.renderer);
     SDL_RenderCopy(context.renderer, context.texture, nullptr, nullptr);
     SDL_RenderPresent(context.renderer);
+}
+
+void ToggleFullscreen(SDLContext& context) {
+    u32 fullscreen = SDL_GetWindowFlags(context.window) & SDL_WINDOW_FULLSCREEN_DESKTOP;
+    SDL_SetWindowFullscreen(context.window, fullscreen ^ SDL_WINDOW_FULLSCREEN_DESKTOP);
 }
 
 void CleanupSDL(SDLContext& context) {

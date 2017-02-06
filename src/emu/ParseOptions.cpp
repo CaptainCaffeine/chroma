@@ -49,8 +49,10 @@ void DisplayHelp() {
     std::cout << "Usage: chroma [options] <path/to/rom>\n\n";
     std::cout << "Options:\n";
     std::cout << "  -h\t\t\t\tdisplay help\n";
-    std::cout << "  -m [dmg, cgb]\t\t\tspecify device to emulate (default: dmg)\n";
-    std::cout << "  -l [regular, timer, lcd]\tspecify log level (default: none)" << std::endl;
+    std::cout << "  -m [dmg, cgb]\t\t\tspecify device to emulate\n";
+    std::cout << "  -l [regular, timer, lcd]\tspecify log level (default: none)\n";
+    std::cout << "  -s [1-15]\t\t\tspecify resolution scale (default: 1)\n";
+    std::cout << "  -f \t\t\t\tactivate fullscreen mode" << std::endl;
 }
 
 Console GetGameBoyType(const std::vector<std::string>& tokens) {
@@ -84,6 +86,20 @@ LogLevel GetLogLevel(const std::vector<std::string>& tokens) {
     } else {
         // If no log level specified, then no logging by default.
         return LogLevel::None;
+    }
+}
+
+unsigned int GetPixelScale(const std::vector<std::string>& tokens) {
+    const std::string scale_string = Emu::GetOptionParam(tokens, "-s");
+    if (!scale_string.empty()) {
+        unsigned int scale = std::stoi(scale_string);
+        if (scale > 15) {
+            throw std::invalid_argument("Invalid scale value specified: " + scale_string);
+        }
+        return scale;
+    } else {
+        // If no resolution scale specified, default to native resolution.
+        return 1;
     }
 }
 

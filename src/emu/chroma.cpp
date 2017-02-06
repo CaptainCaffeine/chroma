@@ -38,9 +38,13 @@ int main(int argc, char** argv) {
 
     Console gameboy_type;
     LogLevel log_level;
+    unsigned int pixel_scale;
+    bool fullscreen;
     try {
         gameboy_type = Emu::GetGameBoyType(tokens);
         log_level = Emu::GetLogLevel(tokens);
+        pixel_scale = Emu::GetPixelScale(tokens);
+        fullscreen = Emu::ContainsOption(tokens, "-f");
     } catch (const std::invalid_argument& e) {
         std::cerr << e.what() << "\n\n";
         Emu::DisplayHelp();
@@ -59,7 +63,7 @@ int main(int argc, char** argv) {
 
     Emu::SDLContext sdl_context;
     try {
-        Emu::InitSDL(sdl_context);
+        Emu::InitSDL(sdl_context, pixel_scale, fullscreen);
     } catch (const std::runtime_error& e) {
         std::cerr << e.what() << "\n";
         return 1;
@@ -84,6 +88,8 @@ int main(int argc, char** argv) {
     } catch (const std::runtime_error& e) {
         std::cerr << e.what() << "\n";
     }
+
+    Emu::CleanupSDL(sdl_context);
 
     std::cout << "End emulation." << std::endl;
     return 0;
