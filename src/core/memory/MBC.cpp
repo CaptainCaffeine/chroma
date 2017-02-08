@@ -24,6 +24,7 @@ u8 Memory::ReadExternalRAM(const u16 addr) const {
 
         switch (mbc_mode) {
         case MBC::MBC1:
+        case MBC::MBC1M:
             // Out of bounds reads return 0xFF.
             if (adjusted_addr < ext_ram.size()) {
                 return ext_ram[adjusted_addr];
@@ -93,6 +94,7 @@ void Memory::WriteExternalRAM(const u16 addr, const u8 data) {
 
         switch (mbc_mode) {
         case MBC::MBC1:
+        case MBC::MBC1M:
             // Ignore out-of-bounds writes.
             if (adjusted_addr < ext_ram.size()) {
                 ext_ram[adjusted_addr] = data;
@@ -156,6 +158,7 @@ void Memory::WriteExternalRAM(const u16 addr, const u8 data) {
 void Memory::WriteMBCControlRegisters(const u16 addr, const u8 data) {
     switch (mbc_mode) {
     case MBC::MBC1:
+    case MBC::MBC1M:
         if (addr < 0x2000) {
             // RAM enable register -- RAM banking is enabled if a byte with lower nibble 0xA is written
             if (ext_ram_present && (data & 0x0F) == 0x0A) {
@@ -165,8 +168,13 @@ void Memory::WriteMBCControlRegisters(const u16 addr, const u8 data) {
             }
         } else if (addr < 0x4000) {
             // ROM bank register
-            // Only the lower 5 bits of the written value are considered -- preserve the upper bits.
-            rom_bank_num = (rom_bank_num & 0x60) | (data & 0x1F);
+            // In MBC1, only the lower 5 bits of the written value are considered. In MBC1M, it's only the lower 4.
+            // Preserve the upper bits.
+            if (mbc_mode == MBC::MBC1) {
+                rom_bank_num = (rom_bank_num & 0x60) | (data & 0x1F);
+            } else {
+                rom_bank_num = (rom_bank_num & 0x30) | (data & 0x0F);
+            }
 
             // 0x00, 0x20, 0x40, 0x60 all map to 0x01, 0x21, 0x41, 0x61 respectively.
             if (rom_bank_num == 0x00 || rom_bank_num == 0x20 || rom_bank_num == 0x40 || rom_bank_num == 0x60) {
@@ -175,23 +183,41 @@ void Memory::WriteMBCControlRegisters(const u16 addr, const u8 data) {
         } else if (addr < 0x6000) {
             // RAM bank register (or upper bits ROM bank)
             // Only the lower 2 bits of the written value are considered.
+            upper_bits = data & 0x03;
             if (ram_bank_mode) {
-                ram_bank_num = data & 0x03;
+                ram_bank_num = upper_bits;
             } else {
-                rom_bank_num = (rom_bank_num & 0x1F) | (data & 0x03) << 5;
+                // In a regular MBC1, the upper bits are only used on the ROM1 bank number if RAM banking is disabled.
+                rom_bank_num = (rom_bank_num & 0x1F) | upper_bits << 5;
+            }
+
+            // In a MBC1M, the upper bits always affect the ROM1 bank number.
+            if (mbc_mode == MBC::MBC1M) {
+                rom_bank_num = (rom_bank_num & 0x0F) | upper_bits << 4;
             }
         } else if (addr < 0x8000) {
-            // Memory mode -- selects whether the two bits in the above register act as the RAM bank number or 
-            // the upper bits of the ROM bank number.
-            ram_bank_mode = data & 0x01;
-            if (ram_bank_mode) {
-                // The 5th and 6th bits of the ROM bank number become the RAM bank number.
-                ram_bank_num = (rom_bank_num & 0x60) >> 5;
-                rom_bank_num &= 0x1F;
-            } else {
-                // The RAM bank number becomes the 5th and 6th bits of the ROM bank number.
-                rom_bank_num |= ram_bank_num << 5;
-                ram_bank_num = 0x00;
+            // RAM banking mode -- selects whether the two bits in the above register are used as the RAM bank number
+            // or the upper bits of the ROM1 bank number.
+            // In MBC1M, enabling RAM banking also causes the upper bits to be used as the ROM0 bank offset. In
+            // addition, the upper bits are always used as the upper bits of the ROM1 bank number, even when this
+            // mode is enabled.
+            if (ram_bank_mode != (data & 0x01)) {
+                ram_bank_mode = data & 0x01;
+                if (ram_bank_mode) {
+                    // The upper bits are now used for the RAM bank number. In MBC1, they are no longer used for the
+                    // upper bits of the ROM1 bank number.
+                    ram_bank_num = upper_bits;
+                    if (mbc_mode == MBC::MBC1) {
+                        rom_bank_num &= 0x1F;
+                    }
+                } else {
+                    // The upper bits are no longer used for the RAM bank number. In MBC1, they are now used for the
+                    // upper bits of the ROM1 bank number.
+                    ram_bank_num = 0x00;
+                    if (mbc_mode == MBC::MBC1) {
+                        rom_bank_num |= upper_bits << 5;
+                    }
+                }
             }
         }
         break;

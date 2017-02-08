@@ -295,6 +295,7 @@ private:
     bool ext_ram_enabled = false;
 
     // MBC1
+    int upper_bits = 0x00;
     bool ram_bank_mode = false;
 
     // MBC3

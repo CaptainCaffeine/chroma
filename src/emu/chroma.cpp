@@ -40,11 +40,13 @@ int main(int argc, char** argv) {
     LogLevel log_level;
     unsigned int pixel_scale;
     bool fullscreen;
+    bool multicart;
     try {
         gameboy_type = Emu::GetGameBoyType(tokens);
         log_level = Emu::GetLogLevel(tokens);
         pixel_scale = Emu::GetPixelScale(tokens);
         fullscreen = Emu::ContainsOption(tokens, "-f");
+        multicart = Emu::ContainsOption(tokens, "--multicart");
     } catch (const std::invalid_argument& e) {
         std::cerr << e.what() << "\n\n";
         Emu::DisplayHelp();
@@ -79,7 +81,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    Core::CartridgeHeader cart_header = Core::GetCartridgeHeaderInfo(gameboy_type, rom);
+    Core::CartridgeHeader cart_header = Core::GetCartridgeHeaderInfo(gameboy_type, rom, multicart);
     Log::Logging logger(log_level, std::move(log_stream));
     Core::GameBoy gameboy_core(gameboy_type, cart_header, logger, sdl_context, std::move(rom));
 

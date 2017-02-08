@@ -52,7 +52,8 @@ void DisplayHelp() {
     std::cout << "  -m [dmg, cgb]\t\t\tspecify device to emulate\n";
     std::cout << "  -l [regular, timer, lcd]\tspecify log level (default: none)\n";
     std::cout << "  -s [1-15]\t\t\tspecify resolution scale (default: 1)\n";
-    std::cout << "  -f \t\t\t\tactivate fullscreen mode" << std::endl;
+    std::cout << "  -f \t\t\t\tactivate fullscreen mode\n";
+    std::cout << "  --multicart \t\t\temulate this game using an MBC1M" << std::endl;
 }
 
 Console GetGameBoyType(const std::vector<std::string>& tokens) {

@@ -202,7 +202,7 @@ void CheckNintendoLogo(const Console console, const std::vector<u8>& rom) {
     }
 }
 
-CartridgeHeader GetCartridgeHeaderInfo(Console& console, const std::vector<u8>& rom) {
+CartridgeHeader GetCartridgeHeaderInfo(Console& console, const std::vector<u8>& rom, bool multicart_requested) {
     CartridgeHeader cart_header;
 
     // Determine if this game enables CGB functions. A value of 0xC0 implies the game is CGB-only, and
@@ -235,6 +235,11 @@ CartridgeHeader GetCartridgeHeaderInfo(Console& console, const std::vector<u8>& 
     GetMBCType(cart_header, rom);
     CheckNintendoLogo(console, rom);
     HeaderChecksum(rom);
+
+    // If the user gave the multicart option and this game reports itself as using an MBC1, emulate an MBC1M instead.
+    if (cart_header.mbc_mode == MBC::MBC1 && multicart_requested) {
+        cart_header.mbc_mode = MBC::MBC1M;
+    }
 
     return cart_header;
 }

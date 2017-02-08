@@ -147,10 +147,14 @@ u8 Memory::ReadMem8(const u16 addr) const {
         // ROM
         if (dma_bus_block != Bus::External) {
             if (addr < 0x4000) {
-                // Fixed ROM bank
-                return rom[addr];
+                // ROM0 bank (switchable using MBC1M, fixed otherwise).
+                if (mbc_mode == MBC::MBC1M) {
+                    return rom[addr + 0x4000*((ram_bank_num << 4) % num_rom_banks)];
+                } else {
+                    return rom[addr];
+                }
             } else {
-                // Switchable ROM bank.
+                // ROM1 bank (switchable).
                 return rom[addr + 0x4000*((rom_bank_num % num_rom_banks) - 1)];
             }
         } else {
