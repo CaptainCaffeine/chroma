@@ -19,6 +19,7 @@
 #include <vector>
 #include <array>
 #include <algorithm>
+#include <memory>
 
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
@@ -33,12 +34,14 @@ class Timer;
 class Serial;
 class LCD;
 class Joypad;
+class RTC;
 
 class Memory {
     friend class Log::Logging;
 public:
     Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima, Serial& sio, LCD& display,
            Joypad& pad, std::vector<u8> rom_contents);
+    ~Memory();
 
     const Console console;
     const GameMode game_mode;
@@ -85,6 +88,7 @@ private:
     const bool rumble_present;
     const int num_rom_banks;
     const int num_ram_banks;
+    std::unique_ptr<RTC> rtc;
 
     const std::vector<u8> rom;
     std::vector<u8> vram;
@@ -297,17 +301,6 @@ private:
     // MBC1
     int upper_bits = 0x00;
     bool ram_bank_mode = false;
-
-    // MBC3
-    unsigned int rtc_seconds = 0x00;
-    unsigned int rtc_minutes = 0x00;
-    unsigned int rtc_hours = 0x00;
-    u8 rtc_day = 0x00;
-
-    // bit 0: MSB(it) of Day Counter
-    // bit 6: Halt (0=Active, 1=Stop Timer)
-    // bit 7: Day Counter Carry Bit
-    u8 rtc_flags = 0x00;
 };
 
 } // End namespace Core

@@ -20,6 +20,7 @@
 #include "core/Serial.h"
 #include "core/LCD.h"
 #include "core/Joypad.h"
+#include "core/RTC.h"
 
 namespace Core {
 
@@ -36,6 +37,7 @@ Memory::Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima
         , rumble_present(header.rumble_present)
         , num_rom_banks(header.num_rom_banks)
         , num_ram_banks((header.ram_size) ? header.ram_size / 0x2000 : 0)
+        , rtc((mbc_mode == MBC::MBC3) ? new RTC() : nullptr)
         , rom(std::move(rom_contents)) {
 
     if (game_mode == GameMode::DMG) {
@@ -58,6 +60,9 @@ Memory::Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima
     IORegisterInit();
     VRAMInit();
 }
+
+// Needed to use forward declarations as template parameters in Memory.h.
+Memory::~Memory() = default;
 
 void Memory::IORegisterInit() {
     if (game_mode == GameMode::DMG) {

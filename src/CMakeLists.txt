@@ -32,6 +32,7 @@ set(CORE_HEADERS
     core/Timer.h
     core/LCD.h
     core/memory/Memory.h
+    core/RTC.h
     core/CartridgeHeader.h)
 
 set(EMU_SOURCES

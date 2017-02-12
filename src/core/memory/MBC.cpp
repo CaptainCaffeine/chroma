@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "core/memory/Memory.h"
+#include "core/RTC.h"
 
 namespace Core {
 
@@ -39,20 +40,20 @@ u8 Memory::ReadExternalRAM(const u16 addr) const {
                 return 0xFF;
             }
         case MBC::MBC3:
-            // RAM bank or RTC register?
+            // Bit 4 of the RAM bank number is set for RTC registers, and unset for RAM banks.
             if (ram_bank_num & 0x08) {
                 // Any address in the range will work to write the RTC registers.
                 switch (ram_bank_num) {
                 case 0x08:
-                    return rtc_seconds;
+                    return rtc->GetLatchedTime<RTC::Seconds>();
                 case 0x09:
-                    return rtc_minutes;
+                    return rtc->GetLatchedTime<RTC::Minutes>();
                 case 0x0A:
-                    return rtc_hours;
+                    return rtc->GetLatchedTime<RTC::Hours>();
                 case 0x0B:
-                    return rtc_day;
+                    return rtc->GetLatchedTime<RTC::Days>();
                 case 0x0C:
-                    return rtc_flags | 0x3E;
+                    return rtc->GetFlags() | 0x3E;
                 default:
                     // I'm assuming an invalid register value (0x0D-0x0F) returns 0xFF, needs confirmation though.
                     return 0xFF;
@@ -107,24 +108,24 @@ void Memory::WriteExternalRAM(const u16 addr, const u8 data) {
             }
             break;
         case MBC::MBC3:
-            // RAM bank or RTC register?
+            // Bit 4 of the RAM bank number is set for RTC registers, and unset for RAM banks.
             if (ram_bank_num & 0x08) {
                 // Any address in the range will work to write the RTC registers.
                 switch (ram_bank_num) {
                 case 0x08:
-                    rtc_seconds = data % 60;
+                    rtc->SetTime<RTC::Seconds>(data);
                     break;
                 case 0x09:
-                    rtc_minutes = data % 60;
+                    rtc->SetTime<RTC::Minutes>(data);
                     break;
                 case 0x0A:
-                    rtc_hours = data % 24;
+                    rtc->SetTime<RTC::Hours>(data);
                     break;
                 case 0x0B:
-                    rtc_day = data;
+                    rtc->SetTime<RTC::Days>(data);
                     break;
                 case 0x0C:
-                    rtc_flags = data & 0xC1;
+                    rtc->SetFlags(data);
                     break;
                 default:
                     // I'm assuming an invalid register value (0x0D-0x0F) is just ignored.
@@ -267,9 +268,12 @@ void Memory::WriteMBCControlRegisters(const u16 addr, const u8 data) {
             ram_bank_num = data & 0x0F;
         } else if (addr < 0x8000) {
             // Latch RTC data.
-            // Writing a 0x00 then a 0x01 latches the current time into the RTC registers. Some games don't always
-            // write 0x00 before writing 0x01, and other games write 0x00 before and after writing a 0x01.
-            // TODO: RTC unimplemented.
+            // Writing a 0x00 then a 0x01 latches the current time into the RTC registers.
+            if (rtc->latch_last_value_written == 0x00 && data == 0x01) {
+                rtc->LatchCurrentTime();
+            }
+
+            rtc->latch_last_value_written = data;
         }
         break;
     case MBC::MBC5:
