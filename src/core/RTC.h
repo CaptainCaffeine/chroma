@@ -29,7 +29,7 @@ public:
     RTC(std::chrono::time_point<std::chrono::steady_clock> initial_time) : reference_time(initial_time) {}
     RTC() = default;
 
-    constexpr void LatchCurrentTime() {
+    void LatchCurrentTime() {
         latched_time = CurrentInternalTime();
 
         auto days_msb = (std::chrono::duration_cast<Days::Duration>(latched_time).count() % 512) >> 8;
@@ -60,7 +60,7 @@ public:
         reference_time = reference_time - diff;
     }
 
-    constexpr void SetFlags(u8 value) {
+    void SetFlags(u8 value) {
         // Clear unused bits.
         value &= 0xC1;
 
@@ -88,7 +88,7 @@ public:
     template<typename T, int N>
     struct RTCDuration {
         using Duration = T;
-        constexpr static int mod{N};
+        enum : int {mod = N};
     };
 
     using Seconds = RTCDuration<std::chrono::seconds, 60>;
@@ -106,7 +106,7 @@ private:
     // bit 7: Day Counter Carry Bit
     u8 flags = 0x00;
 
-    constexpr std::chrono::seconds CurrentInternalTime() const {
+    std::chrono::seconds CurrentInternalTime() const {
         if (flags & 0x40) {
             return std::chrono::duration_cast<std::chrono::seconds>(halted_time - reference_time);
         } else {
@@ -114,8 +114,5 @@ private:
         }
     }
 };
-
-// Namespace-level definition of mod needed to avoid ODR-usage linker errors.
-template<typename T, int N> constexpr int RTC::RTCDuration<T, N>::mod;
 
 } // End namespace Core
