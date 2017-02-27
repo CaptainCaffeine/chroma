@@ -161,16 +161,22 @@ void Memory::SignalHDMA() {
 
 u8 Memory::DMACopy(const u16 addr) const {
     if (addr < 0x4000) {
-        // Fixed ROM bank
-        return rom[addr];
+        // ROM0 bank
+        if (mbc_mode == MBC::MBC1) {
+            return rom[addr + 0x4000 * ((ram_bank_num << 5) & (num_rom_banks - 1))];
+        } else if (mbc_mode == MBC::MBC1M) {
+            return rom[addr + 0x4000 * ((ram_bank_num << 4) & (num_rom_banks - 1))];
+        } else {
+            return rom[addr];
+        }
     } else if (addr < 0x8000) {
-        // Switchable ROM bank.
-        return rom[addr + 0x4000*((rom_bank_num % num_rom_banks) - 1)];
+        // ROM1 bank
+        return rom[addr + 0x4000 * ((rom_bank_num & (num_rom_banks - 1)) - 1)];
     } else if (addr < 0xA000) {
         // VRAM -- switchable in CGB mode
         // Not accessible during screen mode 3. HDMA/GDMA cannot read VRAM.
         if ((lcd.stat & 0x03) != 3 && hdma_state != DMAState::Active) {
-            return vram[addr - 0x8000 + 0x2000*vram_bank_num];
+            return vram[addr - 0x8000 + 0x2000 * vram_bank_num];
         } else {
             return 0xFF;
         }
@@ -182,7 +188,7 @@ u8 Memory::DMACopy(const u16 addr) const {
         return wram[addr - 0xC000];
     } else if (addr < 0xE000) {
         // WRAM bank 1 (switchable from 1-7 in CGB mode)
-        return wram[addr - 0xC000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
+        return wram[addr - 0xC000 + 0x1000 * ((wram_bank_num == 0) ? 0 : wram_bank_num - 1)];
     }
 
     if (hdma_state == DMAState::Active) {
@@ -193,7 +199,7 @@ u8 Memory::DMACopy(const u16 addr) const {
         return wram[addr - 0xE000];
     } else if (addr < 0xF200) {
         // Echo of C000-DDFF
-        return wram[addr - 0xE000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
+        return wram[addr - 0xE000 + 0x1000 * ((wram_bank_num == 0) ? 0 : wram_bank_num - 1)];
     } else {
         // Only 0x00-0xF1 are valid OAM DMA start addresses (several sources make that claim, at least. I've seen
         // differing ranges mentioned but this seems to work for now).

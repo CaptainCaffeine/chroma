@@ -152,15 +152,17 @@ u8 Memory::ReadMem8(const u16 addr) const {
         // ROM
         if (dma_bus_block != Bus::External) {
             if (addr < 0x4000) {
-                // ROM0 bank (switchable using MBC1M, fixed otherwise).
-                if (mbc_mode == MBC::MBC1M) {
-                    return rom[addr + 0x4000*((ram_bank_num << 4) % num_rom_banks)];
+                // ROM0 bank
+                if (mbc_mode == MBC::MBC1) {
+                    return rom[addr + 0x4000 * ((ram_bank_num << 5) & (num_rom_banks - 1))];
+                } else if (mbc_mode == MBC::MBC1M) {
+                    return rom[addr + 0x4000 * ((ram_bank_num << 4) & (num_rom_banks - 1))];
                 } else {
                     return rom[addr];
                 }
             } else {
-                // ROM1 bank (switchable).
-                return rom[addr + 0x4000*((rom_bank_num % num_rom_banks) - 1)];
+                // ROM1 bank
+                return rom[addr + 0x4000 * ((rom_bank_num & (num_rom_banks - 1)) - 1)];
             }
         } else {
             // If OAM DMA is currently transferring from the external bus, return the last byte read by the DMA.
@@ -171,7 +173,7 @@ u8 Memory::ReadMem8(const u16 addr) const {
         if (dma_bus_block != Bus::VRAM) {
             // Not accessible during screen mode 3.
             if ((lcd.stat & 0x03) != 3) {
-                return vram[addr - 0x8000 + 0x2000*vram_bank_num];
+                return vram[addr - 0x8000 + 0x2000 * vram_bank_num];
             } else {
                 return 0xFF;
             }
@@ -189,13 +191,13 @@ u8 Memory::ReadMem8(const u16 addr) const {
                 return wram[addr - 0xC000];
             } else if (addr < 0xE000) {
                 // WRAM bank 1 (switchable from 1-7 in CGB mode)
-                return wram[addr - 0xC000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
+                return wram[addr - 0xC000 + 0x1000 * ((wram_bank_num == 0) ? 0 : wram_bank_num - 1)];
             } else if (addr < 0xF000) {
                 // Echo of C000-DDFF
                 return wram[addr - 0xE000];
             } else {
                 // Echo of C000-DDFF
-                return wram[addr - 0xE000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)];
+                return wram[addr - 0xE000 + 0x1000 * ((wram_bank_num == 0) ? 0 : wram_bank_num - 1)];
             }
         } else {
             // If OAM DMA is currently transferring from the external bus, return the last byte read by the DMA.
@@ -244,7 +246,7 @@ void Memory::WriteMem8(const u16 addr, const u8 data) {
         // If OAM DMA is currently transferring from the VRAM bus, the write is ignored.
         if (dma_bus_block != Bus::VRAM && (lcd.stat & 0x03) != 3) {
             // Not accessible during screen mode 3.
-            vram[addr - 0x8000 + 0x2000*vram_bank_num] = data;
+            vram[addr - 0x8000 + 0x2000 * vram_bank_num] = data;
         }
     } else if (addr < 0xFE00) {
         // If OAM DMA is currently transferring from the external bus, the write is ignored.
@@ -257,13 +259,13 @@ void Memory::WriteMem8(const u16 addr, const u8 data) {
                 wram[addr - 0xC000] = data;
             } else if (addr < 0xE000) {
                 // WRAM bank 1 (switchable from 1-7 in CGB mode)
-                wram[addr - 0xC000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)] = data;
+                wram[addr - 0xC000 + 0x1000 * ((wram_bank_num == 0) ? 0 : wram_bank_num - 1)] = data;
             } else if (addr < 0xF000) {
                 // Echo of C000-DDFF
                 wram[addr - 0xE000] = data;
             } else {
                 // Echo of C000-DDFF
-                wram[addr - 0xE000 + 0x1000*((wram_bank_num == 0) ? 0 : wram_bank_num-1)] = data;
+                wram[addr - 0xE000 + 0x1000 * ((wram_bank_num == 0) ? 0 : wram_bank_num - 1)] = data;
             }
         }
     } else if (addr < 0xFF00) {

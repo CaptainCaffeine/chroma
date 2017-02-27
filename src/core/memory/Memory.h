@@ -62,7 +62,9 @@ public:
     void ClearInterrupt(Interrupt intr) {
         if (!IF_written_this_cycle) { interrupt_flags &= ~static_cast<unsigned int>(intr); }
     }
-    bool IsPending(Interrupt intr) const { return interrupt_flags & interrupt_enable & static_cast<unsigned int>(intr); }
+    bool IsPending(Interrupt intr) const {
+        return interrupt_flags & interrupt_enable & static_cast<unsigned int>(intr);
+    }
     bool RequestedEnabledInterrupts() const { return interrupt_flags & interrupt_enable; }
     bool IF_written_this_cycle = false;
 

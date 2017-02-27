@@ -161,64 +161,55 @@ void Memory::WriteMBCControlRegisters(const u16 addr, const u8 data) {
     case MBC::MBC1:
     case MBC::MBC1M:
         if (addr < 0x2000) {
-            // RAM enable register -- RAM banking is enabled if a byte with lower nibble 0xA is written
+            // RAM enable register -- RAM read/write is enabled if a byte with lower nibble 0xA is written.
             if (ext_ram_present && (data & 0x0F) == 0x0A) {
                 ext_ram_enabled = true;
             } else {
                 ext_ram_enabled = false;
             }
         } else if (addr < 0x4000) {
-            // ROM bank register
-            // In MBC1, only the lower 5 bits of the written value are considered. In MBC1M, it's only the lower 4.
-            // Preserve the upper bits.
+            // Low ROM bank register
+
+            // In MBC1, the lower 5 bits of the written value give the lower 5 bits of the ROM1 bank number.
+            // In MBC1M, the 4th bit is ignored.
             if (mbc_mode == MBC::MBC1) {
                 rom_bank_num = (rom_bank_num & 0x60) | (data & 0x1F);
             } else {
                 rom_bank_num = (rom_bank_num & 0x30) | (data & 0x0F);
             }
 
-            // 0x00, 0x20, 0x40, 0x60 all map to 0x01, 0x21, 0x41, 0x61 respectively.
-            if (rom_bank_num == 0x00 || rom_bank_num == 0x20 || rom_bank_num == 0x40 || rom_bank_num == 0x60) {
+            // The 5-bit value in this register is zero-adjusted: a value of 0x00 will be incremented to 0x01.
+            // Thus, banks 0x00, 0x20, 0x40, and 0x60 are all mapped to 0x01, 0x21, 0x41, and 0x61 respectively.
+            // This register is 5 bits wide for both MBC1 and MBC1M. MBC1M just ignores the 4th bit.
+            if ((data & 0x1F) == 0) {
                 ++rom_bank_num;
             }
         } else if (addr < 0x6000) {
-            // RAM bank register (or upper bits ROM bank)
+            // High bank register -- RAM, ROM0, and upper bits ROM1 bank
+
             // Only the lower 2 bits of the written value are considered.
             upper_bits = data & 0x03;
             if (ram_bank_mode) {
                 ram_bank_num = upper_bits;
-            } else {
-                // In a regular MBC1, the upper bits are only used on the ROM1 bank number if RAM banking is disabled.
-                rom_bank_num = (rom_bank_num & 0x1F) | upper_bits << 5;
             }
 
-            // In a MBC1M, the upper bits always affect the ROM1 bank number.
-            if (mbc_mode == MBC::MBC1M) {
+            if (mbc_mode == MBC::MBC1) {
+                rom_bank_num = (rom_bank_num & 0x1F) | upper_bits << 5;
+            } else if (mbc_mode == MBC::MBC1M) {
                 rom_bank_num = (rom_bank_num & 0x0F) | upper_bits << 4;
             }
         } else if (addr < 0x8000) {
-            // RAM banking mode -- selects whether the two bits in the above register are used as the RAM bank number
-            // or the upper bits of the ROM1 bank number.
-            // In MBC1M, enabling RAM banking also causes the upper bits to be used as the ROM0 bank offset. In
-            // addition, the upper bits are always used as the upper bits of the ROM1 bank number, even when this
-            // mode is enabled.
-            if (ram_bank_mode != (data & 0x01)) {
-                ram_bank_mode = data & 0x01;
-                if (ram_bank_mode) {
-                    // The upper bits are now used for the RAM bank number. In MBC1, they are no longer used for the
-                    // upper bits of the ROM1 bank number.
-                    ram_bank_num = upper_bits;
-                    if (mbc_mode == MBC::MBC1) {
-                        rom_bank_num &= 0x1F;
-                    }
-                } else {
-                    // The upper bits are no longer used for the RAM bank number. In MBC1, they are now used for the
-                    // upper bits of the ROM1 bank number.
-                    ram_bank_num = 0x00;
-                    if (mbc_mode == MBC::MBC1) {
-                        rom_bank_num |= upper_bits << 5;
-                    }
-                }
+            // RAM bank mode -- this register determines whether the two bits in the above register are AND gated
+            // with address bit 14 (addr & 0x40). A 0 enables the gating, and a 1 disables it. When gated, this causes
+            // 0x0000-0x3FFF to always read from ROM bank 0, and 0xA000-0xBFFF to always read from RAM bank 0, but
+            // allows 0x4000-0x7FFF to use the high bits for banking. When not gated, the high bits can be used to
+            // switch other banks into 0x0000-0x3FFF and 0xA000-0xBFFF.
+
+            ram_bank_mode = data & 0x01;
+            if (ram_bank_mode) {
+                ram_bank_num = upper_bits;
+            } else {
+                ram_bank_num = 0x00;
             }
         }
         break;
