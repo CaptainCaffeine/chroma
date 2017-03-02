@@ -28,7 +28,7 @@
 namespace Core {
 
 GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logging& logger, Emu::SDLContext& context,
-                 std::vector<u8> rom)
+                 std::vector<u8> rom, std::vector<u8> save_game)
         : logging(logger)
         , sdl_context(context)
         , front_buffer(160*144)
@@ -36,7 +36,7 @@ GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logg
         , serial(new Serial())
         , lcd(new LCD())
         , joypad(new Joypad())
-        , mem(new Memory(gb_type, header, *timer, *serial, *lcd, *joypad, std::move(rom)))
+        , mem(new Memory(gb_type, header, *timer, *serial, *lcd, *joypad, std::move(rom), std::move(save_game)))
         , cpu(new CPU(*mem)) {
 
     // Link together circular dependencies after all components are constructed. For the CPU and LCD, these are
@@ -169,6 +169,10 @@ std::tuple<bool, bool> GameBoy::PollEvents(bool pause) {
 
 void GameBoy::SwapBuffers(std::vector<u16>& back_buffer) {
     front_buffer.swap(back_buffer);
+}
+
+void GameBoy::WriteSaveFile(std::ofstream& save_file) const {
+    mem->SaveExternalRAM(save_file);
 }
 
 void GameBoy::HardwareTick(unsigned int cycles) {

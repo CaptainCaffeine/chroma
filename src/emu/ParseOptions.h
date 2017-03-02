@@ -33,6 +33,9 @@ Console GetGameBoyType(const std::vector<std::string>& tokens);
 LogLevel GetLogLevel(const std::vector<std::string>& tokens);
 unsigned int GetPixelScale(const std::vector<std::string>& tokens);
 
+std::string SaveGamePath(const std::string& rom_path);
 std::vector<u8> LoadROM(const std::string& filename);
+std::vector<u8> LoadSaveGame(const std::string& filename);
+void CheckPathIsRegularFile(const std::string& filename);
 
 } // End namespace Emu

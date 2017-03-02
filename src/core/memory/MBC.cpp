@@ -14,10 +14,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <fstream>
+
 #include "core/memory/Memory.h"
 #include "core/RTC.h"
 
 namespace Core {
+
+void Memory::SaveExternalRAM(std::ofstream& save_file) const {
+    save_file.write(reinterpret_cast<const char*>(ext_ram.data()), ext_ram.size());
+    if (rtc_present) {
+        // Store RTC data.
+        rtc->WriteRTCData(save_file);
+    }
+}
 
 u8 Memory::ReadExternalRAM(const u16 addr) const {
     if (ext_ram_enabled) {
@@ -42,6 +52,9 @@ u8 Memory::ReadExternalRAM(const u16 addr) const {
         case MBC::MBC3:
             // Bit 4 of the RAM bank number is set for RTC registers, and unset for RAM banks.
             if (ram_bank_num & 0x08) {
+                if (!rtc_present) {
+                    return 0xFF;
+                }
                 // Any address in the range will work to write the RTC registers.
                 switch (ram_bank_num) {
                 case 0x08:
@@ -110,26 +123,28 @@ void Memory::WriteExternalRAM(const u16 addr, const u8 data) {
         case MBC::MBC3:
             // Bit 4 of the RAM bank number is set for RTC registers, and unset for RAM banks.
             if (ram_bank_num & 0x08) {
-                // Any address in the range will work to write the RTC registers.
-                switch (ram_bank_num) {
-                case 0x08:
-                    rtc->SetTime<RTC::Seconds>(data);
-                    break;
-                case 0x09:
-                    rtc->SetTime<RTC::Minutes>(data);
-                    break;
-                case 0x0A:
-                    rtc->SetTime<RTC::Hours>(data);
-                    break;
-                case 0x0B:
-                    rtc->SetTime<RTC::Days>(data);
-                    break;
-                case 0x0C:
-                    rtc->SetFlags(data);
-                    break;
-                default:
-                    // I'm assuming an invalid register value (0x0D-0x0F) is just ignored.
-                    break;
+                if (rtc_present) {
+                    // Any address in the range will work to write the RTC registers.
+                    switch (ram_bank_num) {
+                    case 0x08:
+                        rtc->SetTime<RTC::Seconds>(data);
+                        break;
+                    case 0x09:
+                        rtc->SetTime<RTC::Minutes>(data);
+                        break;
+                    case 0x0A:
+                        rtc->SetTime<RTC::Hours>(data);
+                        break;
+                    case 0x0B:
+                        rtc->SetTime<RTC::Days>(data);
+                        break;
+                    case 0x0C:
+                        rtc->SetFlags(data);
+                        break;
+                    default:
+                        // I'm assuming an invalid register value (0x0D-0x0F) is just ignored.
+                        break;
+                    }
                 }
             } else {
                 // Ignore out-of-bounds writes.
@@ -258,13 +273,15 @@ void Memory::WriteMBCControlRegisters(const u16 addr, const u8 data) {
             // Values 0x00-0x07 select one of the RAM banks, and values 0x08-0x0C select one of the RTC registers.
             ram_bank_num = data & 0x0F;
         } else if (addr < 0x8000) {
-            // Latch RTC data.
-            // Writing a 0x00 then a 0x01 latches the current time into the RTC registers.
-            if (rtc->latch_last_value_written == 0x00 && data == 0x01) {
-                rtc->LatchCurrentTime();
-            }
+            if (rtc_present) {
+                // Latch RTC data.
+                // Writing a 0x00 then a 0x01 latches the current time into the RTC registers.
+                if (rtc->latch_last_value_written == 0x00 && data == 0x01) {
+                    rtc->LatchCurrentTime();
+                }
 
-            rtc->latch_last_value_written = data;
+                rtc->latch_last_value_written = data;
+            }
         }
         break;
     case MBC::MBC5:

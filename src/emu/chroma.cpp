@@ -54,19 +54,10 @@ int main(int argc, char** argv) {
     }
 
     const std::string rom_path{tokens.back()};
-
     std::vector<u8> rom;
     try {
         rom = Emu::LoadROM(rom_path);
     } catch (const std::invalid_argument& e) {
-        std::cerr << e.what() << "\n";
-        return 1;
-    }
-
-    Emu::SDLContext sdl_context;
-    try {
-        Emu::InitSDL(sdl_context, pixel_scale, fullscreen);
-    } catch (const std::runtime_error& e) {
         std::cerr << e.what() << "\n";
         return 1;
     }
@@ -82,13 +73,57 @@ int main(int argc, char** argv) {
     }
 
     Core::CartridgeHeader cart_header = Core::GetCartridgeHeaderInfo(gameboy_type, rom, multicart);
+
+    std::string save_path;
+    std::vector<u8> save_game;
+    if (cart_header.ext_ram_present) {
+        try {
+            save_path = Emu::SaveGamePath(rom_path);
+            save_game = Emu::LoadSaveGame(save_path);
+        } catch (const std::invalid_argument& e) {
+            std::cerr << e.what() << "\n";
+            return 1;
+        }
+
+        if (save_game.size() != 0) {
+            unsigned int cart_ram_size = cart_header.ram_size;
+            if (cart_header.rtc_present) {
+                // Account for RTC save data at end of save file.
+                cart_ram_size += 48;
+            }
+
+            if (cart_ram_size != save_game.size()) {
+                std::cerr << "Save game size does not match external RAM size given in cartridge header.\n";
+                return 1;
+            }
+        }
+    }
+
+    Emu::SDLContext sdl_context;
+    try {
+        Emu::InitSDL(sdl_context, pixel_scale, fullscreen);
+    } catch (const std::runtime_error& e) {
+        std::cerr << e.what() << "\n";
+        return 1;
+    }
+
     Log::Logging logger(log_level, std::move(log_stream));
-    Core::GameBoy gameboy_core(gameboy_type, cart_header, logger, sdl_context, std::move(rom));
+    Core::GameBoy gameboy_core(gameboy_type, cart_header, logger, sdl_context, std::move(rom), std::move(save_game));
 
     try {
         gameboy_core.EmulatorLoop();
     } catch (const std::runtime_error& e) {
         std::cerr << e.what() << "\n";
+    }
+
+    if (cart_header.ext_ram_present) {
+        std::ofstream save_ostream(save_path);
+        if (!save_ostream) {
+            std::cerr << "Error: could not open " << save_path << " to write save file to disk.\n";
+        } else {
+            gameboy_core.WriteSaveFile(save_ostream);
+            save_ostream.flush();
+        }
     }
 
     Emu::CleanupSDL(sdl_context);

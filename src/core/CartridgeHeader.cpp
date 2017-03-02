@@ -105,15 +105,25 @@ void GetMBCType(CartridgeHeader& cart_header, const std::vector<u8>& rom) {
         assert(false && "MMM01 unimplemented");
         break;
     case 0x0F:
+        // MBC3 with timer and battery, no RAM.
+        cart_header.mbc_mode = MBC::MBC3;
+        cart_header.ext_ram_present = false;
+        cart_header.rtc_present = true;
+        break;
+    case 0x10:
+        // MBC3 with RAM, timer, and battery.
+        cart_header.mbc_mode = MBC::MBC3;
+        cart_header.ext_ram_present = true;
+        cart_header.rtc_present = true;
+        break;
     case 0x11:
-        // MBC3, no RAM. 0x0F implies timer and battery.
+        // MBC3, no RAM.
         cart_header.mbc_mode = MBC::MBC3;
         cart_header.ext_ram_present = false;
         break;
-    case 0x10:
     case 0x12:
     case 0x13:
-        // MBC3 with external RAM. 0x10 implies timer and battery, 0x13 implies battery.
+        // MBC3 with external RAM. 0x13 implies battery.
         cart_header.mbc_mode = MBC::MBC3;
         cart_header.ext_ram_present = true;
         break;
@@ -239,6 +249,11 @@ CartridgeHeader GetCartridgeHeaderInfo(Console& console, const std::vector<u8>& 
     // If the user gave the multicart option and this game reports itself as using an MBC1, emulate an MBC1M instead.
     if (cart_header.mbc_mode == MBC::MBC1 && multicart_requested) {
         cart_header.mbc_mode = MBC::MBC1M;
+    }
+
+    // MBC2 carts always have 0x00 in the RAM size field.
+    if (cart_header.mbc_mode == MBC::MBC2 && cart_header.ext_ram_present) {
+        cart_header.ram_size = 0x200;
     }
 
     return cart_header;

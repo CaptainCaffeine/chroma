@@ -2,7 +2,7 @@
 
 Chroma is a WIP Game Boy [Color] emulator written in C++. It has currently only been tested on Linux, however support for other operating systems is planned.
 
-Chroma is currently capable of playing a number of commercial games quite well, but the emulator is still at a very experimental stage and many things will not work correctly. In particular, Chroma does not yet have support for audio or save games.
+Chroma is currently capable of playing a number of commercial games quite well, but the emulator is still at a very experimental stage and many things will not work correctly. In particular, Chroma does not yet have support for audio.
 
 Chroma is licensed under the GPLv3.
 

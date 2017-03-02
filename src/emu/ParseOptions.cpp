@@ -110,15 +110,7 @@ std::vector<u8> LoadROM(const std::string& filename) {
         throw std::invalid_argument("Error when attempting to open " + filename);
     }
 
-    // Check that the path points to a regular file.
-    struct stat stat_info;
-    if (stat(filename.c_str(), &stat_info) == 0) {
-        if (stat_info.st_mode & S_IFDIR) {
-            throw std::invalid_argument("Provided path is a directory: " + filename);
-        } else if (!(stat_info.st_mode & S_IFREG)) {
-            throw std::invalid_argument("Provided path is not a regular file: " + filename);
-        }
-    }
+    CheckPathIsRegularFile(filename);
 
     rom_file.seekg(0, std::ios_base::end);
     const auto rom_size = rom_file.tellg();
@@ -136,6 +128,53 @@ std::vector<u8> LoadROM(const std::string& filename) {
     rom_file.read(reinterpret_cast<char*>(rom_contents.data()), rom_size);
 
     return rom_contents;
+}
+
+std::string SaveGamePath(const std::string& rom_path) {
+    std::size_t last_dot = rom_path.rfind('.');
+    if (last_dot == std::string::npos) {
+        throw std::invalid_argument("No file extension found.");
+    }
+    if (rom_path.substr(last_dot, rom_path.size()) == ".sav") {
+        throw std::invalid_argument("You tried to run a save file instead of a ROM.");
+    }
+    return rom_path.substr(0, last_dot) + ".sav";
+}
+
+std::vector<u8> LoadSaveGame(const std::string& filename) {
+    std::ifstream save_file(filename);
+    if (!save_file) {
+        // Save file doesn't exist.
+        return std::vector<u8>();
+    }
+
+    CheckPathIsRegularFile(filename);
+
+    save_file.seekg(0, std::ios_base::end);
+    const auto save_size = save_file.tellg();
+    save_file.seekg(0, std::ios_base::beg);
+
+    if (save_size > 0x20030) {
+        throw std::invalid_argument("Save game size of " + std::to_string(save_size)
+                                    + " bytes is too large to be a Game Boy save.");
+    }
+
+    std::vector<u8> save_contents(save_size);
+    save_file.read(reinterpret_cast<char*>(save_contents.data()), save_size);
+
+    return save_contents;
+}
+
+void CheckPathIsRegularFile(const std::string& filename) {
+    // Check that the path points to a regular file.
+    struct stat stat_info;
+    if (stat(filename.c_str(), &stat_info) == 0) {
+        if (stat_info.st_mode & S_IFDIR) {
+            throw std::invalid_argument("Provided path is a directory: " + filename);
+        } else if (!(stat_info.st_mode & S_IFREG)) {
+            throw std::invalid_argument("Provided path is not a regular file: " + filename);
+        }
+    }
 }
 
 } // End namespace Emu

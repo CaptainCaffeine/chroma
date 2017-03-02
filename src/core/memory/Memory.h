@@ -40,7 +40,7 @@ class Memory {
     friend class Log::Logging;
 public:
     Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima, Serial& sio, LCD& display,
-           Joypad& pad, std::vector<u8> rom_contents);
+           Joypad& pad, std::vector<u8> rom_contents, std::vector<u8> save_game);
     ~Memory();
 
     const Console console;
@@ -79,6 +79,9 @@ public:
     void CopyFromVRAM(const u16 start_addr, const std::size_t num_bytes, const int bank_num, DestIter dest) const {
         std::copy_n(vram.cbegin() + (start_addr - 0x8000) + 0x2000 * bank_num, num_bytes, dest);
     }
+
+    // MBC/Saving funtions
+    void SaveExternalRAM(std::ofstream& save_file) const;
 private:
     Timer& timer;
     Serial& serial;
@@ -87,6 +90,7 @@ private:
 
     const MBC mbc_mode;
     const bool ext_ram_present;
+    const bool rtc_present;
     const bool rumble_present;
     const int num_rom_banks;
     const int num_ram_banks;
@@ -99,6 +103,7 @@ private:
     std::vector<u8> ext_ram;
 
     // Init functions
+    void ExtRAMInit(std::vector<u8> save_game, unsigned int ram_size);
     void IORegisterInit();
     void VRAMInit();
 
