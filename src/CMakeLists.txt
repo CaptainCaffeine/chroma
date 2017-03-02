@@ -21,6 +21,7 @@ set(CORE_SOURCES
     core/memory/Memory.cpp
     core/memory/DMA.cpp
     core/memory/MBC.cpp
+    core/memory/RTC.cpp
     core/CartridgeHeader.cpp)
 
 set(CORE_HEADERS
@@ -32,7 +33,7 @@ set(CORE_HEADERS
     core/Timer.h
     core/LCD.h
     core/memory/Memory.h
-    core/RTC.h
+    core/memory/RTC.h
     core/CartridgeHeader.h)
 
 set(EMU_SOURCES

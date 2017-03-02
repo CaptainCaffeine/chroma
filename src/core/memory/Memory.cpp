@@ -23,7 +23,7 @@
 #include "core/Serial.h"
 #include "core/LCD.h"
 #include "core/Joypad.h"
-#include "core/RTC.h"
+#include "core/memory/RTC.h"
 
 namespace Core {
 

@@ -17,7 +17,7 @@
 #include <fstream>
 
 #include "core/memory/Memory.h"
-#include "core/RTC.h"
+#include "core/memory/RTC.h"
 
 namespace Core {
 
