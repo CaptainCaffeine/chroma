@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <array>
-#include <cassert>
+#include <stdexcept>
 #include <iostream>
 
 #include "core/CartridgeHeader.h"
@@ -51,7 +51,7 @@ void GetRAMSize(CartridgeHeader& cart_header, const std::vector<u8>& rom) {
         break;
     default:
         // I don't know if this happens in official games, but it could happen in homebrew.
-        assert(false && "Unrecognized external RAM quantity given in cartridge header.");
+        throw std::runtime_error("Unrecognized external RAM quantity given in cartridge header.");
         break;
     }
 }
@@ -96,13 +96,13 @@ void GetMBCType(CartridgeHeader& cart_header, const std::vector<u8>& rom) {
     case 0x0B:
         // MMM01, no RAM.
         // I can't find any information on this MBC, but it's supposedly present in "Momotarou Collection 2".
-        assert(false && "MMM01 unimplemented");
+        throw std::runtime_error("MMM01 unimplemented.");
         break;
     case 0x0C:
     case 0x0D:
         // MMM01 with external RAM, 0x0D implies battery as well.
         // I can't find any information on this MBC, but it's supposedly present in "Momotarou Collection 2".
-        assert(false && "MMM01 unimplemented");
+        throw std::runtime_error("MMM01 unimplemented.");
         break;
     case 0x0F:
         // MBC3 with timer and battery, no RAM.
@@ -153,31 +153,31 @@ void GetMBCType(CartridgeHeader& cart_header, const std::vector<u8>& rom) {
         break;
     case 0x20:
         // MBC6 with external RAM and battery.
-        assert(false && "MBC6 unimplemented");
+        throw std::runtime_error("MBC6 unimplemented.");
         break;
     case 0x22:
         // MBC7 with external RAM, battery, and accelerometer. Only used by Kirby Tilt n Tumble.
-        assert(false && "MBC7 unimplemented");
+        throw std::runtime_error("MBC7 unimplemented.");
         break;
     case 0xFC:
         // Pocket Camera
-        assert(false && "Pocket Camera unimplemented");
+        throw std::runtime_error("Pocket Camera unimplemented.");
         break;
     case 0xFD:
         // Bandai TAMA5, used in Tamagotchi games.
-        assert(false && "TAMA5 unimplemented");
+        throw std::runtime_error("TAMA5 unimplemented.");
         break;
     case 0xFE:
         // HuC3 with infrared port
-        assert(false && "HuC3 unimplemented");
+        throw std::runtime_error("HuC3 unimplemented.");
         break;
     case 0xFF:
         // HuC1 with external RAM, battery, and infrared port
-        assert(false && "HuC1 unimplemented");
+        throw std::runtime_error("HuC1 unimplemented.");
         break;
 
     default:
-        assert(false && "Unrecognized MBC");
+        throw std::runtime_error("Unrecognized MBC.");
     }
 }
 

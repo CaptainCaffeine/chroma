@@ -72,7 +72,13 @@ int main(int argc, char** argv) {
         }
     }
 
-    Core::CartridgeHeader cart_header = Core::GetCartridgeHeaderInfo(gameboy_type, rom, multicart);
+    Core::CartridgeHeader cart_header;
+    try {
+        cart_header = Core::GetCartridgeHeaderInfo(gameboy_type, rom, multicart);
+    } catch (const std::runtime_error& e) {
+        std::cerr << e.what() << "\n";
+        return 1;
+    }
 
     std::string save_path;
     std::vector<u8> save_game;
