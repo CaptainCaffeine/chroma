@@ -311,11 +311,11 @@ void LCD::RenderBackground(std::size_t num_bg_pixels) {
     // The background tile map is located at either 0x9800-0x9BFF or 0x9C00-0x9FFF, and consists of 32 rows
     // of 32 bytes each to index the background tiles. We first determine which row we need to fetch from the
     // current values of SCY and LY.
-    unsigned int row_num = ((scroll_y + ly) / 8) % num_tiles;
-    u16 tile_map_addr = BGTileMapStartAddr() + row_num * tile_map_row_bytes;
+    unsigned int row_num = ((scroll_y + ly) / 8) % tile_map_row_len;
+    u16 tile_map_addr = BGTileMapStartAddr() + row_num * tile_map_row_len;
 
     // Get the row of tile indicies from VRAM.
-    mem->CopyFromVRAM(tile_map_addr, tile_map_row_bytes, 0, row_tile_map.begin());
+    mem->CopyFromVRAM(tile_map_addr, tile_map_row_len, 0, row_tile_map.begin());
 
     if (mem->game_mode == GameMode::DMG) {
         for (std::size_t i = 0; i < row_tile_map.size(); ++i) {
@@ -323,7 +323,7 @@ void LCD::RenderBackground(std::size_t num_bg_pixels) {
         }
     } else {
         // Get the row of background tile attributes from VRAM.
-        mem->CopyFromVRAM(tile_map_addr, tile_map_row_bytes, 1, row_attr_map.begin());
+        mem->CopyFromVRAM(tile_map_addr, tile_map_row_len, 1, row_attr_map.begin());
 
         for (std::size_t i = 0; i < row_tile_map.size(); ++i) {
             tile_data.emplace_back(row_tile_map[i], row_attr_map[i]);
@@ -394,10 +394,10 @@ void LCD::RenderWindow(std::size_t num_bg_pixels) {
     // The window tile map is located at either 0x9800-0x9BFF or 0x9C00-0x9FFF, and consists of 32 rows
     // of 32 bytes each to index the window tiles. We first determine which row we need to fetch from the
     // current internal value of the window progression.
-    u16 tile_map_addr = WindowTileMapStartAddr() + (window_progress / 8) * tile_map_row_bytes;
+    u16 tile_map_addr = WindowTileMapStartAddr() + (window_progress / 8) * tile_map_row_len;
 
     // Get the row of tile indicies from VRAM.
-    mem->CopyFromVRAM(tile_map_addr, tile_map_row_bytes, 0, row_tile_map.begin());
+    mem->CopyFromVRAM(tile_map_addr, tile_map_row_len, 0, row_tile_map.begin());
 
     if (mem->game_mode == GameMode::DMG) {
         for (std::size_t i = 0; i < row_tile_map.size(); ++i) {
@@ -405,7 +405,7 @@ void LCD::RenderWindow(std::size_t num_bg_pixels) {
         }
     } else {
         // Get the row of background tile attributes from VRAM.
-        mem->CopyFromVRAM(tile_map_addr, tile_map_row_bytes, 1, row_attr_map.begin());
+        mem->CopyFromVRAM(tile_map_addr, tile_map_row_len, 1, row_attr_map.begin());
 
         for (std::size_t i = 0; i < row_tile_map.size(); ++i) {
             tile_data.emplace_back(row_tile_map[i], row_attr_map[i]);

@@ -173,13 +173,12 @@ private:
     void UpdateLYCompareSignal();
 
     // Drawing
-    static constexpr std::size_t num_tiles = 32;
-    static constexpr std::size_t tile_map_row_bytes = 32;
+    static constexpr std::size_t tile_map_row_len = 32;
     static constexpr std::size_t tile_bytes = 16;
     const std::array<u16, 4> shades{{0x7FFF, 0x56B5, 0x294A, 0x0000}};
 
-    std::array<u8, num_tiles> row_tile_map;
-    std::array<u8, num_tiles> row_attr_map;
+    std::array<u8, tile_map_row_len> row_tile_map;
+    std::array<u8, tile_map_row_len> row_attr_map;
     std::vector<BGAttrs> tile_data;
     std::deque<SpriteAttrs> oam_sprites;
 

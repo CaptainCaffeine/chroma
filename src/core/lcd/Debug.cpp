@@ -28,7 +28,7 @@ void LCD::DumpBGWin(u16 start_addr, const std::string& filename) {
     tile_data.clear();
     // Get BG/Window tile map.
     std::vector<u8> tile_map(32*32);
-    mem->CopyFromVRAM(start_addr, tile_map_row_bytes * tile_map_row_bytes, 0, tile_map.begin());
+    mem->CopyFromVRAM(start_addr, tile_map_row_len * tile_map_row_len, 0, tile_map.begin());
 
     if (mem->game_mode == GameMode::DMG) {
         for (std::size_t i = 0; i < tile_map.size(); ++i) {
@@ -37,7 +37,7 @@ void LCD::DumpBGWin(u16 start_addr, const std::string& filename) {
     } else {
         // Get BG tile attributes.
         std::vector<u8> tile_attrs(32*32);
-        mem->CopyFromVRAM(start_addr, tile_map_row_bytes * tile_map_row_bytes, 1, tile_attrs.begin());
+        mem->CopyFromVRAM(start_addr, tile_map_row_len * tile_map_row_len, 1, tile_attrs.begin());
 
         for (std::size_t i = 0; i < tile_map.size(); ++i) {
             tile_data.emplace_back(tile_map[i], tile_attrs[i]);
