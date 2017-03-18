@@ -15,12 +15,13 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "common/logging/Logging.h"
+#include "common/Util.h"
 #include "core/CartridgeHeader.h"
 #include "core/GameBoy.h"
 #include "core/memory/Memory.h"
 #include "core/Timer.h"
 #include "core/Serial.h"
-#include "core/LCD.h"
+#include "core/lcd/LCD.h"
 #include "core/Joypad.h"
 #include "core/cpu/CPU.h"
 #include "emu/SDL_Utils.h"
@@ -98,6 +99,16 @@ std::tuple<bool, bool> GameBoy::PollEvents(bool pause) {
                     Emu::ToggleFullscreen(sdl_context);
                 }
                 break;
+            case SDLK_t:
+                if (e.key.repeat == 0) {
+                    Screenshot();
+                }
+                break;
+            case SDLK_y:
+                if (e.key.repeat == 0) {
+                    lcd->DumpEverything();
+                }
+                break;
 
             case SDLK_w:
                 joypad->UpPressed(true);
@@ -173,6 +184,10 @@ void GameBoy::SwapBuffers(std::vector<u16>& back_buffer) {
 
 void GameBoy::WriteSaveFile(std::ofstream& save_file) const {
     mem->SaveExternalRAM(save_file);
+}
+
+void GameBoy::Screenshot() const {
+    Common::WritePPMFile(Common::BGR5ToRGB8(front_buffer), "screenshot.ppm", 160, 144);
 }
 
 void GameBoy::HardwareTick(unsigned int cycles) {

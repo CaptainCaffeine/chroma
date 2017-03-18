@@ -16,7 +16,7 @@
 
 #include <algorithm>
 
-#include "core/LCD.h"
+#include "core/lcd/LCD.h"
 #include "core/memory/Memory.h"
 #include "core/GameBoy.h"
 
@@ -367,7 +367,7 @@ void LCD::RenderBackground(std::size_t num_bg_pixels) {
             GetPixelColoursFromPaletteCGB(tile_iter->palette_num, false);
         }
 
-        // Copy the pixels to the row buffer. If this tile has BG priority set, set the alpha bit.
+        // Copy the pixels to the row buffer.
         for (const auto& pixel_colour : pixel_colours) {
             row_buffer[row_pixel++] = pixel_colour;
         }
@@ -444,7 +444,7 @@ void LCD::RenderWindow(std::size_t num_bg_pixels) {
             GetPixelColoursFromPaletteCGB(tile_iter->palette_num, false);
         }
 
-        // Copy the pixels to the row buffer. If this tile has BG priority set, set the alpha bit.
+        // Copy the pixels to the row buffer.
         for (const auto& pixel_colour : pixel_colours) {
             row_buffer[row_pixel++] = pixel_colour;
         }
@@ -633,19 +633,6 @@ void LCD::FetchSpriteTiles() {
         u16 tile_addr = 0x8000 | (static_cast<u16>(sa.tile_index) << 4);
         mem->CopyFromVRAM(tile_addr, tile_size, sa.bank_num, sa.sprite_tiles.begin());
     }
-}
-
-template<std::size_t N>
-void LCD::DecodePaletteIndexes(const std::array<u8, N>& tile, const std::size_t tile_row) {
-    // Get the two bytes containing the row of the tile.
-    const u8 lsb = tile[tile_row], msb = tile[tile_row + 1];
-
-    // Each row of 8 pixels in a tile is 2 bytes. The first byte contains the low bit of the palette index for
-    // each pixel, and the second byte contains the high bit of the palette index.
-    for (std::size_t j = 0; j < 7; ++j) {
-        pixel_colours[j] = ((lsb >> (7-j)) & 0x01) | ((msb >> (6-j)) & 0x02);
-    }
-    pixel_colours[7] = (lsb & 0x01) | ((msb << 1) & 0x02); // Can't shift right by -1...
 }
 
 void LCD::GetPixelColoursFromPaletteDMG(u8 palette, bool sprite) {

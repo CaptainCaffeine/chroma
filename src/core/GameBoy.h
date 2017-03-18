@@ -47,6 +47,7 @@ public:
     void EmulatorLoop();
     void SwapBuffers(std::vector<u16>& back_buffer);
     void WriteSaveFile(std::ofstream& save_file) const;
+    void Screenshot() const;
 
     void HardwareTick(unsigned int cycles);
     void HaltedTick(unsigned int cycles);

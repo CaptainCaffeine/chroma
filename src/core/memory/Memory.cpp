@@ -21,7 +21,7 @@
 #include "core/memory/Memory.h"
 #include "core/Timer.h"
 #include "core/Serial.h"
-#include "core/LCD.h"
+#include "core/lcd/LCD.h"
 #include "core/Joypad.h"
 #include "core/memory/RTC.h"
 

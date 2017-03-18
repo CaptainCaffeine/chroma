@@ -2,12 +2,14 @@
 include_directories(.)
 
 set(COMMON_SOURCES
+    common/Util.cpp
     common/logging/Disassembler.cpp
     common/logging/Logging.cpp)
 
 set(COMMON_HEADERS
     common/CommonTypes.h
     common/CommonEnums.h
+    common/Util.h
     common/logging/Logging.h)
 
 set(CORE_SOURCES
@@ -17,7 +19,8 @@ set(CORE_SOURCES
     core/Joypad.cpp
     core/Serial.cpp
     core/Timer.cpp
-    core/LCD.cpp
+    core/lcd/LCD.cpp
+    core/lcd/Debug.cpp
     core/memory/Memory.cpp
     core/memory/DMA.cpp
     core/memory/MBC.cpp
@@ -31,7 +34,7 @@ set(CORE_HEADERS
     core/Joypad.h
     core/Serial.h
     core/Timer.h
-    core/LCD.h
+    core/lcd/LCD.h
     core/memory/Memory.h
     core/memory/RTC.h
     core/CartridgeHeader.h)

@@ -43,3 +43,4 @@ A reasonably recent compiler is required to build Chroma (at least GCC 5.x or Cl
 | Quit       | Escape/Q   |
 | Pause      | P          |
 | Fullscreen | V          |
+| Screenshot | T          |

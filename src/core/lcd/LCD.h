@@ -64,6 +64,8 @@ public:
 
     void SetSTATSignal() { stat_interrupt_signal = true; }
 
+    void DumpEverything();
+
     // ******** OAM ********
     // The Sprite Attribute Table (OAM) contains 40 sprite attributes each 4 bytes long.
     // Byte 0: the Y position of the sprite, minus 16.
@@ -197,10 +199,20 @@ private:
     void SearchOAM();
     void FetchTiles();
     void FetchSpriteTiles();
-    template<std::size_t N>
-    void DecodePaletteIndexes(const std::array<u8, N>& tile, const std::size_t tile_row);
     void GetPixelColoursFromPaletteDMG(u8 palette, bool sprite);
     void GetPixelColoursFromPaletteCGB(int palette_num, bool sprite);
+    template<std::size_t N>
+    void DecodePaletteIndexes(const std::array<u8, N>& tile, const std::size_t tile_row) {
+        // Get the two bytes containing the row of the tile.
+        const u8 lsb = tile[tile_row], msb = tile[tile_row + 1];
+
+        // Each row of 8 pixels in a tile is 2 bytes. The first byte contains the low bit of the palette index for
+        // each pixel, and the second byte contains the high bit of the palette index.
+        for (std::size_t j = 0; j < 7; ++j) {
+            pixel_colours[j] = ((lsb >> (7-j)) & 0x01) | ((msb >> (6-j)) & 0x02);
+        }
+        pixel_colours[7] = (lsb & 0x01) | ((msb << 1) & 0x02); // Can't shift right by -1...
+    }
 
     // STAT functions
     void SetSTATMode(unsigned int mode) { stat = (stat & 0xFC) | mode; }
@@ -224,6 +236,11 @@ private:
     u16 WindowTileMapStartAddr() const { return (lcdc & 0x40) ? 0x9C00 : 0x9800; }
     bool SpritesEnabled() const { return lcdc & 0x02; }
     int SpriteSize() const { return (lcdc & 0x04) ? 16 : 8; }
+
+    // Graphics data debug functions
+    void DumpBackBuffer() const;
+    void DumpBGWin(u16 start_addr, const std::string& filename);
+    void DumpTileSet(int bank);
 };
 
 } // End namespace Core

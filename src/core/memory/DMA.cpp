@@ -17,7 +17,7 @@
 #include <algorithm>
 
 #include "core/memory/Memory.h"
-#include "core/LCD.h"
+#include "core/lcd/LCD.h"
 
 namespace Core {
 
