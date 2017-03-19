@@ -401,7 +401,7 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
     // NR50 -- Channel Control/Volume
     case 0xFF24:
         return volume;
-    // NR51 -- Sount Output Terminal Selection
+    // NR51 -- Sound Output Terminal Selection
     case 0xFF25:
         return sound_select;
     // NR52 -- Sound On/Off
@@ -632,7 +632,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     case 0xFF24:
         volume = data;
         break;
-    // NR51 -- Sount Output Terminal Selection
+    // NR51 -- Sound Output Terminal Selection
     case 0xFF25:
         sound_select = data;
         break;

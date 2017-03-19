@@ -200,7 +200,7 @@ private:
     void GetPixelColoursFromPaletteDMG(u8 palette, bool sprite);
     void GetPixelColoursFromPaletteCGB(int palette_num, bool sprite);
     template<std::size_t N>
-    void DecodePaletteIndexes(const std::array<u8, N>& tile, const std::size_t tile_row) {
+    void DecodePaletteIndices(const std::array<u8, N>& tile, const std::size_t tile_row) {
         // Get the two bytes containing the row of the tile.
         const u8 lsb = tile[tile_row], msb = tile[tile_row + 1];
 

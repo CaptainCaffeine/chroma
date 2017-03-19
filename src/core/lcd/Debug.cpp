@@ -57,7 +57,7 @@ void LCD::DumpBGWin(u16 start_addr, const std::string& filename) {
             for (std::size_t j = 0; j < 32; ++j) {
                 std::size_t tile_row = row * 2;
                 // If this tile has the Y flip flag set, decode the mirrored row in the other half of the tile.
-                DecodePaletteIndexes(tile_iter->tile, (tile_iter->y_flip) ? (14 - tile_row) : tile_row);
+                DecodePaletteIndices(tile_iter->tile, (tile_iter->y_flip) ? (14 - tile_row) : tile_row);
 
                 // If this tile has the X flip flag set, reverse the pixels.
                 if (tile_iter->x_flip) {
@@ -103,7 +103,7 @@ void LCD::DumpTileSet(int bank) {
                 std::size_t tile_row = row * 2;
                 // If this tile has the Y flip flag set, decode the mirrored row in the other half of the tile.
                 std::copy_n(tileset.begin() + tile_index + j * tile_bytes, tile_bytes, tile.begin());
-                DecodePaletteIndexes(tile, tile_row);
+                DecodePaletteIndices(tile, tile_row);
 
                 u8 palette = 0xE4;
                 for (auto& colour : pixel_colours) {

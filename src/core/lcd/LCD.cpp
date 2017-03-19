@@ -186,7 +186,7 @@ int LCD::Mode3Cycles() const {
     // The number and attributes of sprites on this scanline increase the mode 3 cycles.
     // cycles += (1 + 2 * num_sprites - (num_sprites + 1) / 2) * 4;
     // The above is an expression I found through experimentation to account for the cycles added by sprites in
-    // the first 10 testcases of Mooneye-GB's intr_2_mode0_timing_sprites test. It only considers the number
+    // the first 10 test cases of Mooneye-GB's intr_2_mode0_timing_sprites test. It only considers the number
     // of sprites. However, I couldn't get anywhere with it.
 
     return cycles;
@@ -327,7 +327,7 @@ void LCD::RenderBackground(std::size_t num_bg_pixels) {
 
     while (row_pixel < num_bg_pixels) {
         // If this tile has the Y flip flag set, decode the mirrored row in the other half of the tile.
-        DecodePaletteIndexes(tile_iter->tile, (tile_iter->y_flip) ? (14 - tile_row) : tile_row);
+        DecodePaletteIndices(tile_iter->tile, (tile_iter->y_flip) ? (14 - tile_row) : tile_row);
 
         // If this tile has the X flip flag set, reverse the pixels.
         if (tile_iter->x_flip) {
@@ -381,7 +381,7 @@ void LCD::RenderWindow(std::size_t num_bg_pixels) {
 
     while (row_pixel < 160) {
         // If this tile has the Y flip flag set, decode the mirrored row in the other half of the tile.
-        DecodePaletteIndexes(tile_iter->tile, (tile_iter->y_flip) ? (14 - tile_row) : tile_row);
+        DecodePaletteIndices(tile_iter->tile, (tile_iter->y_flip) ? (14 - tile_row) : tile_row);
 
         // If this tile has the X flip flag set, reverse the pixels.
         if (tile_iter->x_flip) {
@@ -417,7 +417,7 @@ std::size_t LCD::RenderFirstTile(std::size_t start_pixel, std::size_t start_tile
     auto& bg_tile = tile_data[start_tile];
 
     // If this tile has the Y flip flag set, decode the mirrored row in the other half of the tile.
-    DecodePaletteIndexes(bg_tile.tile, (bg_tile.y_flip) ? (14 - tile_row) : tile_row);
+    DecodePaletteIndices(bg_tile.tile, (bg_tile.y_flip) ? (14 - tile_row) : tile_row);
 
     // If this tile has the X flip flag set, reverse the pixels.
     if (bg_tile.x_flip) {
@@ -464,7 +464,7 @@ void LCD::RenderSprites() {
         // Two bytes per tile row.
         tile_row *= 2;
 
-        DecodePaletteIndexes(sa.sprite_tiles, tile_row);
+        DecodePaletteIndices(sa.sprite_tiles, tile_row);
 
         if (mem->game_mode == GameMode::DMG) {
             GetPixelColoursFromPaletteDMG((sa.palette_num) ? obj_palette_dmg1 : obj_palette_dmg0, true);
@@ -561,7 +561,7 @@ void LCD::InitTileMap(u16 tile_map_addr) {
     // The tile maps are located at 0x9800-0x9BFF and 0x9C00-0x9FFF. They consist of 32 rows of 32 bytes each
     // which index the tileset.
 
-    // Get the current row of tile indicies from VRAM.
+    // Get the current row of tile indices from VRAM.
     std::array<u8, tile_map_row_len> row_tile_map;
     mem->CopyFromVRAM(tile_map_addr, tile_map_row_len, 0, row_tile_map.begin());
 
@@ -584,7 +584,7 @@ void LCD::InitTileMap(u16 tile_map_addr) {
 
 void LCD::FetchTiles() {
     // The background tiles are located at either 0x8000-0x8FFF or 0x8800-0x97FF. For the first region, the
-    // tile map indicies are unsigned offsets from 0x8000; for the second region, the indicies are signed
+    // tile map indices are unsigned offsets from 0x8000; for the second region, the indices are signed
     // offsets from 0x9000.
 
     u16 region_start_addr = TileDataStartAddr();

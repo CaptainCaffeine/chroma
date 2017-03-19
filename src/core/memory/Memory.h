@@ -80,7 +80,7 @@ public:
         std::copy_n(vram.cbegin() + (start_addr - 0x8000) + 0x2000 * bank_num, num_bytes, dest);
     }
 
-    // MBC/Saving funtions
+    // MBC/Saving functions
     void SaveExternalRAM(std::ofstream& save_file) const;
 private:
     Timer& timer;
