@@ -40,7 +40,7 @@ set(CORE_HEADERS
     core/CartridgeHeader.h)
 
 set(EMU_SOURCES
-    emu/chroma.cpp
+    emu/main.cpp
     emu/SDL_Utils.cpp
     emu/ParseOptions.cpp)
 
