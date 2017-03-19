@@ -303,34 +303,13 @@ void LCD::RenderScanline() {
 }
 
 void LCD::RenderBackground(std::size_t num_bg_pixels) {
-    tile_data.clear();
-    // The background is composed of 32x32 tiles of 8x8 pixels. The scroll registers (SCY and SCX) allow the
-    // top-left corner of the screen to be positioned anywhere on the background, and the background wraps around
-    // when it hits the edge.
+    // The background is composed of 32x32 tiles. The scroll registers (SCY and SCX) allow the top-left corner of
+    // the screen to be positioned anywhere on the background, and the background wraps around when it hits the edge.
 
-    // The background tile map is located at either 0x9800-0x9BFF or 0x9C00-0x9FFF, and consists of 32 rows
-    // of 32 bytes each to index the background tiles. We first determine which row we need to fetch from the
-    // current values of SCY and LY.
+    // Determine which row we need to fetch from the current values of SCY and LY.
     unsigned int row_num = ((scroll_y + ly) / 8) % tile_map_row_len;
-    u16 tile_map_addr = BGTileMapStartAddr() + row_num * tile_map_row_len;
+    InitTileMap(BGTileMapStartAddr() + row_num * tile_map_row_len);
 
-    // Get the row of tile indicies from VRAM.
-    mem->CopyFromVRAM(tile_map_addr, tile_map_row_len, 0, row_tile_map.begin());
-
-    if (mem->game_mode == GameMode::DMG) {
-        for (std::size_t i = 0; i < row_tile_map.size(); ++i) {
-            tile_data.emplace_back(row_tile_map[i]);
-        }
-    } else {
-        // Get the row of background tile attributes from VRAM.
-        mem->CopyFromVRAM(tile_map_addr, tile_map_row_len, 1, row_attr_map.begin());
-
-        for (std::size_t i = 0; i < row_tile_map.size(); ++i) {
-            tile_data.emplace_back(row_tile_map[i], row_attr_map[i]);
-        }
-    }
-
-    // Fetch the tile bitmaps pointed to by the indicies in the tile map row. Each tile is 16 bytes.
     FetchTiles();
 
     // Determine which row of pixels we're on, and in which tile we start reading data.
@@ -379,42 +358,19 @@ void LCD::RenderBackground(std::size_t num_bg_pixels) {
 }
 
 void LCD::RenderWindow(std::size_t num_bg_pixels) {
-    tile_data.clear();
-    // The window is composed of 32x32 tiles of 8x8 pixels (of which only 21x18 tiles can be seen). Unlike the
-    // background, the window cannot be scrolled; it is always displayed from its top-left corner and does not
-    // wrap around. Instead, the position of its top-left corner can be set with the WY and WX registers.
+    // The window is composed of 32x32 tiles (of which only 21x18 tiles can be seen). Unlike the background, the
+    // window cannot be scrolled; it is always displayed from its top-left corner and does not wrap around.
+    // Instead, the position of its top-left corner can be set with the WY and WX registers.
 
-    // The behaviour of WY differs from SCY. At the beginning of a frame, the LCD hardware stores the current value
-    // of WY and ignores all writes to that register until the next VBLANK. In addition, the row of window pixels
-    // rendered to a scanline is not directly dependent on LY. While the window is enabled, the rows of the window
-    // are rendered one after another starting at the top of the window. However, if it is disabled during HBLANK
-    // and later re-enabled before the frame has ended, the window will resume drawing from the exact row
-    // at which it left off; ignoring the LY increments that happened while it was disabled.
-
-    // The window tile map is located at either 0x9800-0x9BFF or 0x9C00-0x9FFF, and consists of 32 rows
-    // of 32 bytes each to index the window tiles. We first determine which row we need to fetch from the
-    // current internal value of the window progression.
-    u16 tile_map_addr = WindowTileMapStartAddr() + (window_progress / 8) * tile_map_row_len;
-
-    // Get the row of tile indicies from VRAM.
-    mem->CopyFromVRAM(tile_map_addr, tile_map_row_len, 0, row_tile_map.begin());
-
-    if (mem->game_mode == GameMode::DMG) {
-        for (std::size_t i = 0; i < row_tile_map.size(); ++i) {
-            tile_data.emplace_back(row_tile_map[i]);
-        }
-    } else {
-        // Get the row of background tile attributes from VRAM.
-        mem->CopyFromVRAM(tile_map_addr, tile_map_row_len, 1, row_attr_map.begin());
-
-        for (std::size_t i = 0; i < row_tile_map.size(); ++i) {
-            tile_data.emplace_back(row_tile_map[i], row_attr_map[i]);
-        }
-    }
+    // Determine which row we need to fetch from the current internal value of the window progression.
+    InitTileMap(WindowTileMapStartAddr() + (window_progress / 8) * tile_map_row_len);
 
     FetchTiles();
 
-    // The window always starts rendering at the leftmost/first tile.
+    // While the window is enabled, each row of the window is drawn successively starting from the top. If it is
+    // disabled while a frame is being drawn and later re-enabled during the same frame, the window will resume
+    // drawing from the row at which it left off; hence, the window progress must be tracked separately of LY.
+
     // Determine which row of pixels we're on.
     std::size_t tile_row = ((window_progress) % 8) * 2;
     auto tile_iter = tile_data.begin();
@@ -490,15 +446,13 @@ std::size_t LCD::RenderFirstTile(std::size_t start_pixel, std::size_t start_tile
 }
 
 void LCD::RenderSprites() {
-    oam_sprites.clear();
-
     SearchOAM();
 
     FetchSpriteTiles();
 
     // Each row of 8 pixels in a tile is 2 bytes. The first byte contains the low bit of the palette index for
     // each pixel, and the second byte contains the high bit of the palette index.
-    for (const SpriteAttrs& sa : oam_sprites) {
+    for (const auto& sa : oam_sprites) {
         // Determine which row of the sprite tile is being drawn.
         std::size_t tile_row = (ly - (sa.y_pos - 16));
 
@@ -572,6 +526,7 @@ void LCD::SearchOAM() {
     u8 index_mask = (sprite_gap >> 3) | 0xFE;
 
     // Store the first 10 sprites from OAM which are on this scanline.
+    oam_sprites.clear();
     for (std::size_t i = 0; i < oam.size(); i += 4) {
         // Check that the sprite is not off the screen.
         if (oam[i] > sprite_gap && oam[i] < 160) {
@@ -602,6 +557,31 @@ void LCD::SearchOAM() {
     }
 }
 
+void LCD::InitTileMap(u16 tile_map_addr) {
+    // The tile maps are located at 0x9800-0x9BFF and 0x9C00-0x9FFF. They consist of 32 rows of 32 bytes each
+    // which index the tileset.
+
+    // Get the current row of tile indicies from VRAM.
+    std::array<u8, tile_map_row_len> row_tile_map;
+    mem->CopyFromVRAM(tile_map_addr, tile_map_row_len, 0, row_tile_map.begin());
+
+    tile_data.clear();
+
+    if (mem->game_mode == GameMode::DMG) {
+        for (std::size_t i = 0; i < row_tile_map.size(); ++i) {
+            tile_data.emplace_back(row_tile_map[i]);
+        }
+    } else {
+        // Get the current row of background tile attributes from VRAM.
+        std::array<u8, tile_map_row_len> row_attr_map;
+        mem->CopyFromVRAM(tile_map_addr, tile_map_row_len, 1, row_attr_map.begin());
+
+        for (std::size_t i = 0; i < row_tile_map.size(); ++i) {
+            tile_data.emplace_back(row_tile_map[i], row_attr_map[i]);
+        }
+    }
+}
+
 void LCD::FetchTiles() {
     // The background tiles are located at either 0x8000-0x8FFF or 0x8800-0x97FF. For the first region, the
     // tile map indicies are unsigned offsets from 0x8000; for the second region, the indicies are signed
@@ -629,7 +609,8 @@ void LCD::FetchSpriteTiles() {
         tile_size *= 2;
     }
 
-    for (SpriteAttrs& sa : oam_sprites) {
+    // Sprite tiles can only be located in 0x8000-0x8FFF.
+    for (auto& sa : oam_sprites) {
         u16 tile_addr = 0x8000 | (static_cast<u16>(sa.tile_index) << 4);
         mem->CopyFromVRAM(tile_addr, tile_size, sa.bank_num, sa.sprite_tiles.begin());
     }
@@ -647,20 +628,19 @@ void LCD::GetPixelColoursFromPaletteDMG(u8 palette, bool sprite) {
 }
 
 void LCD::GetPixelColoursFromPaletteCGB(int palette_num, bool sprite) {
-    std::size_t index;
     if (sprite) {
         for (auto& colour : pixel_colours) {
             if (colour == 0) {
                 // Palette index 0 is transparent for sprites. Set the alpha bit.
                 colour |= 0x8000;
             } else {
-                index = palette_num * 8 + colour * 2;
+                std::size_t index = palette_num * 8 + colour * 2;
                 colour = (static_cast<u16>((obj_palette_data[index + 1] & 0x7F)) << 8) | obj_palette_data[index];
             }
         }
     } else {
         for (auto& colour : pixel_colours) {
-            index = palette_num * 8 + colour * 2;
+            std::size_t index = palette_num * 8 + colour * 2;
             colour = (static_cast<u16>((bg_palette_data[index + 1] & 0x7F)) << 8) | bg_palette_data[index];
         }
     }

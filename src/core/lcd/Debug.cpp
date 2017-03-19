@@ -27,8 +27,9 @@ void LCD::DumpBackBuffer() const {
 void LCD::DumpBGWin(u16 start_addr, const std::string& filename) {
     tile_data.clear();
     // Get BG/Window tile map.
-    std::vector<u8> tile_map(32*32);
-    mem->CopyFromVRAM(start_addr, tile_map_row_len * tile_map_row_len, 0, tile_map.begin());
+    std::size_t tile_map_len = tile_map_row_len * tile_map_row_len;
+    std::vector<u8> tile_map(tile_map_len);
+    mem->CopyFromVRAM(start_addr, tile_map_len, 0, tile_map.begin());
 
     if (mem->game_mode == GameMode::DMG) {
         for (std::size_t i = 0; i < tile_map.size(); ++i) {
@@ -36,15 +37,14 @@ void LCD::DumpBGWin(u16 start_addr, const std::string& filename) {
         }
     } else {
         // Get BG tile attributes.
-        std::vector<u8> tile_attrs(32*32);
-        mem->CopyFromVRAM(start_addr, tile_map_row_len * tile_map_row_len, 1, tile_attrs.begin());
+        std::vector<u8> tile_attrs(tile_map_len);
+        mem->CopyFromVRAM(start_addr, tile_map_len, 1, tile_attrs.begin());
 
         for (std::size_t i = 0; i < tile_map.size(); ++i) {
             tile_data.emplace_back(tile_map[i], tile_attrs[i]);
         }
     }
 
-    // Fetch the tile bitmaps pointed to by the indicies in the tile map row. Each tile is 16 bytes.
     FetchTiles();
 
     std::vector<u16> bg_buffer(256*256);
@@ -87,20 +87,22 @@ void LCD::DumpTileSet(int bank) {
     std::vector<u8> tileset(0x17FF);
     mem->CopyFromVRAM(0x8000, 0x1800, bank, tileset.begin());
 
-    std::vector<u16> buffer(384*64);
+    // 24 rows of 16 tiles.
+    std::vector<u16> buffer(192*128);
 
-    std::array<u8, 16> tile;
+    std::array<u8, tile_bytes> tile;
     std::size_t buffer_pixel = 0;
 
     for (std::size_t i = 0; i < 24; ++i) {
 
+        // Draw the 8 rows (scanlines) of the current tiles.
         for (std::size_t row = 0; row < 8; ++row) {
 
-            std::size_t tile_index = i * 16 * 16;
+            std::size_t tile_index = i * tile_bytes * 16;
             for (std::size_t j = 0; j < 16; ++j) {
                 std::size_t tile_row = row * 2;
                 // If this tile has the Y flip flag set, decode the mirrored row in the other half of the tile.
-                std::copy_n(tileset.begin() + tile_index + j * 16, 16, tile.begin());
+                std::copy_n(tileset.begin() + tile_index + j * tile_bytes, tile_bytes, tile.begin());
                 DecodePaletteIndexes(tile, tile_row);
 
                 u8 palette = 0xE4;
