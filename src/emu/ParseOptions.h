@@ -22,6 +22,8 @@
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
 
+namespace Core { struct CartridgeHeader; }
+
 namespace Emu {
 
 std::vector<std::string> GetTokens(char** begin, char** end);
@@ -35,7 +37,8 @@ unsigned int GetPixelScale(const std::vector<std::string>& tokens);
 
 std::string SaveGamePath(const std::string& rom_path);
 std::vector<u8> LoadROM(const std::string& filename);
-std::vector<u8> LoadSaveGame(const std::string& filename);
+std::vector<u8> LoadSaveGame(const Core::CartridgeHeader& cart_header, const std::string& save_path);
+std::vector<u8> ReadSaveFile(const std::string& filename);
 void CheckPathIsRegularFile(const std::string& filename);
 
 } // End namespace Emu

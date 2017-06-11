@@ -15,10 +15,20 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <fstream>
+#include <iostream>
 
 #include "core/memory/RTC.h"
 
 namespace Core {
+
+RTC::RTC(std::vector<u8>& save_game) {
+    if ((save_game.size() % 0x2000) != 0x30) {
+        std::cerr << "No RTC save data found. RTC initialized to default time.\n";
+    } else {
+        LoadRTCData(save_game);
+        save_game.erase(save_game.cend() - 0x30, save_game.cend());
+    }
+}
 
 void RTC::LatchCurrentTime() {
     latched_time = CurrentInternalTime();
@@ -39,8 +49,7 @@ void RTC::SetFlags(u8 value) {
     // Handle the MSBit of the Days counter.
     Days::Duration diff{(value & 0x01) * 256 - (flags & 0x01) * 256};
 
-    // std::chrono::time_point::operator-= isn't constexpr until C++17.
-    reference_time = reference_time - diff;
+    reference_time -= diff;
 
     // Handle the RTC halt flag.
     if ((flags & 0x40) ^ (value & 0x40)) {
@@ -66,7 +75,7 @@ std::chrono::seconds RTC::CurrentInternalTime() const {
 }
 
 void RTC::LoadRTCData(const std::vector<u8>& save_game) {
-    std::size_t save_size = save_game.size();
+    const std::size_t save_size = save_game.size();
 
     // Load the latched time first.
     u8 saved_value = save_game[save_size - 28];
@@ -114,13 +123,13 @@ void RTC::LoadRTCData(const std::vector<u8>& save_game) {
     // Get elapsed time between last save and now.
     auto saved_system_time = std::chrono::system_clock::from_time_t(static_cast<std::time_t>(save_timestamp));
     auto elapsed_real_time = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-                                    std::chrono::system_clock::now() - saved_system_time
-                                );
+                                 std::chrono::system_clock::now() - saved_system_time
+                             );
 
     reference_time -= elapsed_real_time;
 }
 
-void RTC::WriteRTCData(std::ofstream& save_file) const {
+void RTC::AppendRTCData(std::vector<u8>& save_game) const {
     // Since it's not actually part of the external RAM address space, the saved format of the RTC state is up
     // to the implementation. There is a somewhat-agreed upon format between emulators that was put in place
     // by either VBA or BGB ages ago.
@@ -129,35 +138,37 @@ void RTC::WriteRTCData(std::ofstream& save_file) const {
     // little-endian 32-bit words, with the low word first.
     // Not all emulators store the RTC state this way, but at least mGBA, BGB, and VBA-M do. Gambatte, GBE+, and
     // Higan do not.
-    WriteRTCRegs(save_file, CurrentInternalTime());
-    WriteRTCRegs(save_file, latched_time);
-    WriteTimeStamp(save_file);
+    AppendRTCRegs(save_game, CurrentInternalTime());
+    AppendRTCRegs(save_game, latched_time);
+    AppendTimeStamp(save_game);
 }
 
-void RTC::WriteRTCRegs(std::ofstream& save_file, std::chrono::seconds save_time) const {
-    u32 save_value = BackCompatTimeValue<Seconds>(save_time);
-    save_file.write(reinterpret_cast<char*>(&save_value), sizeof(u32));
-
-    save_value = BackCompatTimeValue<Minutes>(save_time);
-    save_file.write(reinterpret_cast<char*>(&save_value), sizeof(u32));
-
-    save_value = BackCompatTimeValue<Hours>(save_time);
-    save_file.write(reinterpret_cast<char*>(&save_value), sizeof(u32));
-
-    save_value = BackCompatTimeValue<Days>(save_time);
-    save_file.write(reinterpret_cast<char*>(&save_value), sizeof(u32));
-
-    save_value = static_cast<u32>(flags);
-    save_file.write(reinterpret_cast<char*>(&save_value), sizeof(u32));
+void RTC::AppendRTCRegs(std::vector<u8>& save_file, std::chrono::seconds save_time) const {
+    PushBackAs32Bits(save_file, GetTimeValue<Seconds>(save_time));
+    PushBackAs32Bits(save_file, GetTimeValue<Minutes>(save_time));
+    PushBackAs32Bits(save_file, GetTimeValue<Hours>(save_time));
+    PushBackAs32Bits(save_file, GetTimeValue<Days>(save_time));
+    PushBackAs32Bits(save_file, flags);
 }
 
-void RTC::WriteTimeStamp(std::ofstream& save_file) const {
-    u64 timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+void RTC::AppendTimeStamp(std::vector<u8>& save_file) const {
+    const u64 timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
-    u32 save_value = timestamp & 0x00000000FFFFFFFF;
-    save_file.write(reinterpret_cast<char*>(&save_value), sizeof(u32));
-    save_value = (timestamp & 0xFFFFFFFF00000000) >> 32;
-    save_file.write(reinterpret_cast<char*>(&save_value), sizeof(u32));
+    save_file.push_back(static_cast<u8>(timestamp));
+    save_file.push_back(static_cast<u8>(timestamp >> 8));
+    save_file.push_back(static_cast<u8>(timestamp >> 16));
+    save_file.push_back(static_cast<u8>(timestamp >> 24));
+    save_file.push_back(static_cast<u8>(timestamp >> 32));
+    save_file.push_back(static_cast<u8>(timestamp >> 40));
+    save_file.push_back(static_cast<u8>(timestamp >> 48));
+    save_file.push_back(static_cast<u8>(timestamp >> 56));
+}
+
+void RTC::PushBackAs32Bits(std::vector<u8>& save_file, const u8 value) const {
+    save_file.push_back(value);
+    save_file.push_back(0);
+    save_file.push_back(0);
+    save_file.push_back(0);
 }
 
 } // End namespace Core

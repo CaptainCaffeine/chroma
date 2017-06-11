@@ -18,7 +18,6 @@
 
 #include <chrono>
 #include <vector>
-#include <iosfwd> // for std::ofstream
 
 #include "common/CommonTypes.h"
 
@@ -26,29 +25,30 @@ namespace Core {
 
 class RTC {
 public:
-    u8 latch_last_value_written = 0xFF;
+    RTC(std::vector<u8>& save_game);
 
     void LatchCurrentTime();
-    constexpr u8 GetFlags() const { return flags; }
+    u8 GetFlags() const { return flags | 0x3E; }
     void SetFlags(u8 value);
 
     void LoadRTCData(const std::vector<u8>& save_game);
-    void WriteRTCData(std::ofstream& save_file) const;
+    void AppendRTCData(std::vector<u8>& save_game) const;
 
     template<typename T>
-    constexpr u8 GetLatchedTime() const {
-        return std::chrono::duration_cast<typename T::Duration>(latched_time).count() % T::mod;
+    u8 GetLatchedTime() const {
+        return GetTimeValue<T>(latched_time);
     }
 
     template<typename T>
-    constexpr void SetTime(u8 value) {
+    void SetTime(u8 value) {
         typename T::Duration value_duration{value % T::mod};
         auto current_time_val{std::chrono::duration_cast<typename T::Duration>(CurrentInternalTime()) % T::mod};
         auto diff{value_duration - current_time_val};
 
-        // std::chrono::time_point::operator-= isn't constexpr until C++17.
-        reference_time = reference_time - diff;
+        reference_time -= diff;
     }
+
+    u8 latch_last_value_written = 0xFF;
 
     template<typename T, int N>
     struct RTCDuration {
@@ -71,14 +71,16 @@ private:
     // bit 7: Day Counter Carry Bit
     u8 flags = 0x00;
 
+    template<typename T>
+    u8 GetTimeValue(std::chrono::seconds time_value) const {
+        return std::chrono::duration_cast<typename T::Duration>(time_value).count() % T::mod;
+    }
+
     std::chrono::seconds CurrentInternalTime() const;
 
-    void WriteRTCRegs(std::ofstream& save_file, std::chrono::seconds save_time) const;
-    void WriteTimeStamp(std::ofstream& save_file) const;
-    template<typename T>
-    constexpr u32 BackCompatTimeValue(std::chrono::seconds save_time) const {
-        return static_cast<u32>(std::chrono::duration_cast<typename T::Duration>(save_time).count() % T::mod);
-    }
+    void AppendRTCRegs(std::vector<u8>& save_file, std::chrono::seconds save_time) const;
+    void AppendTimeStamp(std::vector<u8>& save_file) const;
+    void PushBackAs32Bits(std::vector<u8>& save_file, const u8 value) const;
 };
 
 } // End namespace Core

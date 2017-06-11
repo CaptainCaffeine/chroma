@@ -41,12 +41,12 @@ public:
     Log::Logging& logging;
 
     GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logging& logger, Emu::SDLContext& context,
-            std::vector<u8> rom, std::vector<u8> save_game);
+            const std::vector<u8>& rom, std::vector<u8>& save_game);
     ~GameBoy();
 
     void EmulatorLoop();
     void SwapBuffers(std::vector<u16>& back_buffer);
-    void WriteSaveFile(std::ofstream& save_file) const;
+    void WriteSaveFile(const std::string& save_path) const;
     void Screenshot() const;
 
     void HardwareTick(unsigned int cycles);

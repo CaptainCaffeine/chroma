@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <iostream>
 #include <algorithm>
 
 #include "core/CartridgeHeader.h"
@@ -28,7 +27,7 @@
 namespace Core {
 
 Memory::Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima, Serial& sio, LCD& display,
-               Joypad& pad, std::vector<u8> rom_contents, std::vector<u8> save_game)
+               Joypad& pad, const std::vector<u8>& rom_contents, std::vector<u8>& save_game)
         : console(gb_type)
         , game_mode(header.game_mode)
         , timer(tima)
@@ -41,24 +40,12 @@ Memory::Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima
         , rumble_present(header.rumble_present)
         , num_rom_banks(header.num_rom_banks)
         , num_ram_banks((header.ram_size) ? std::max(header.ram_size / 0x2000, 1u) : 0)
-        , rtc((rtc_present) ? new RTC() : nullptr)
-        , rom(std::move(rom_contents)) {
-
-    // External RAM initialized first to minimize time between RTC creation and initialization.
-    ExtRAMInit(std::move(save_game), header.ram_size);
-
-    if (game_mode == GameMode::DMG) {
-        // 8KB VRAM and WRAM
-        vram = std::vector<u8>(0x2000);
-        wram = std::vector<u8>(0x2000);
-    } else if (game_mode == GameMode::CGB) {
-        // 16KB VRAM and 32KB WRAM
-        vram = std::vector<u8>(0x4000);
-        wram = std::vector<u8>(0x8000);
-    }
-
-    // 127 bytes high RAM.
-    hram = std::vector<u8>(0x7F);
+        , rom(rom_contents)
+        , vram((game_mode == GameMode::DMG) ? 0x2000 : 0x4000)
+        , wram((game_mode == GameMode::DMG) ? 0x2000 : 0x8000)
+        , hram(0x7F)
+        , ext_ram(save_game)
+        , rtc((rtc_present) ? new RTC(ext_ram) : nullptr) {
 
     IORegisterInit();
     VRAMInit();
@@ -66,25 +53,6 @@ Memory::Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima
 
 // Needed to use forward declarations as template parameters in Memory.h.
 Memory::~Memory() = default;
-
-void Memory::ExtRAMInit(std::vector<u8> save_game, unsigned int ram_size) {
-    if (ext_ram_present) {
-        if (save_game.empty()) {
-            ext_ram = std::vector<u8>(ram_size);
-        } else {
-            if (rtc_present) {
-                if ((save_game.size() % 0x2000) != 48) {
-                    std::cerr << "No RTC save data appended to save game. RTC initialized to default time.\n";
-                } else {
-                    rtc->LoadRTCData(save_game);
-                    save_game.erase(save_game.cend() - 48, save_game.cend());
-                }
-            }
-
-            ext_ram = std::move(save_game);
-        }
-    }
-}
 
 void Memory::IORegisterInit() {
     if (game_mode == GameMode::DMG) {

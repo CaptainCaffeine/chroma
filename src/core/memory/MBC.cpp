@@ -15,17 +15,27 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <fstream>
+#include <iostream>
 
 #include "core/memory/Memory.h"
 #include "core/memory/RTC.h"
 
 namespace Core {
 
-void Memory::SaveExternalRAM(std::ofstream& save_file) const {
-    save_file.write(reinterpret_cast<const char*>(ext_ram.data()), ext_ram.size());
-    if (rtc_present) {
-        // Store RTC data.
-        rtc->WriteRTCData(save_file);
+void Memory::SaveExternalRAM(const std::string& save_path) const {
+    if (ext_ram_present) {
+        std::ofstream save_ostream(save_path);
+
+        if (!save_ostream) {
+            std::cerr << "Error: could not open " << save_path << " to write save file to disk.\n";
+        } else {
+            if (rtc_present) {
+                rtc->AppendRTCData(ext_ram);
+            }
+
+            save_ostream.write(reinterpret_cast<const char*>(ext_ram.data()), ext_ram.size());
+            save_ostream.flush();
+        }
     }
 }
 
@@ -66,7 +76,7 @@ u8 Memory::ReadExternalRAM(const u16 addr) const {
                 case 0x0B:
                     return rtc->GetLatchedTime<RTC::Days>();
                 case 0x0C:
-                    return rtc->GetFlags() | 0x3E;
+                    return rtc->GetFlags();
                 default:
                     // I'm assuming an invalid register value (0x0D-0x0F) returns 0xFF, needs confirmation though.
                     return 0xFF;

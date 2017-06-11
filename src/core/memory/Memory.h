@@ -40,7 +40,7 @@ class Memory {
     friend class Log::Logging;
 public:
     Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima, Serial& sio, LCD& display,
-           Joypad& pad, std::vector<u8> rom_contents, std::vector<u8> save_game);
+           Joypad& pad, const std::vector<u8>& rom_contents, std::vector<u8>& save_game);
     ~Memory();
 
     const Console console;
@@ -81,7 +81,7 @@ public:
     }
 
     // MBC/Saving functions
-    void SaveExternalRAM(std::ofstream& save_file) const;
+    void SaveExternalRAM(const std::string& save_path) const;
 private:
     Timer& timer;
     Serial& serial;
@@ -94,16 +94,15 @@ private:
     const bool rumble_present;
     const int num_rom_banks;
     const int num_ram_banks;
-    std::unique_ptr<RTC> rtc;
 
-    const std::vector<u8> rom;
+    const std::vector<u8>& rom;
     std::vector<u8> vram;
     std::vector<u8> wram;
     std::vector<u8> hram;
-    std::vector<u8> ext_ram;
+    std::vector<u8>& ext_ram;
+    std::unique_ptr<RTC> rtc;
 
     // Init functions
-    void ExtRAMInit(std::vector<u8> save_game, unsigned int ram_size);
     void IORegisterInit();
     void VRAMInit();
 
