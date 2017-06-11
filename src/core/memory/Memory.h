@@ -29,7 +29,7 @@ namespace Log { class Logging; }
 
 namespace Core {
 
-struct CartridgeHeader;
+class CartridgeHeader;
 class Timer;
 class Serial;
 class LCD;

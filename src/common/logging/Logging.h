@@ -37,14 +37,12 @@ class Logging {
 public:
     LogLevel log_level;
 
-    Logging(LogLevel log_lvl, std::ofstream log_stream);
+    Logging(LogLevel log_lvl);
 
     void LogCPURegisterState(const Core::Memory& mem, const Core::CPU& cpu);
     void LogInterrupt(const Core::Memory& mem);
     void LogTimerRegisterState(const Core::Timer& timer);
     void LogLCDRegisterState(const Core::LCD& lcd);
-    void DumpBothTileMaps(const Core::LCD& lcd, const Core::Memory& mem, int bank_num);
-    void DumpTileMap(const Core::LCD& lcd, const Core::Memory& mem, u16 start, int bank_num);
 
     std::string Disassemble(const Core::Memory& mem, const u16 pc) const;
 
@@ -52,7 +50,7 @@ public:
 private:
     LogLevel alt_level = LogLevel::None;
 
-    std::ofstream log_file;
+    std::ofstream log_stream;
 };
 
 } // End namespace Log

@@ -22,32 +22,75 @@
 
 namespace Core {
 
-void GetRAMSize(CartridgeHeader& cart_header, const std::vector<u8>& rom) {
+CartridgeHeader::CartridgeHeader(Console& console, const std::vector<u8>& rom, bool multicart_requested) {
+    // Determine if this game enables CGB functions. A value of 0xC0 implies the game is CGB-only, and
+    // 0x80 implies it can also run on pre-CGB devices. They both have the same effect, as it's up to
+    // the game to test if it is running on a pre-CGB device.
+    bool cgb_flag = rom[0x0143] == 0xC0 || rom[0x0143] == 0x80;
+
+    // If no console was specified, we emulate a CGB if the game has CGB features, and a DMG otherwise.
+    if (console == Console::Default) {
+        if (cgb_flag) {
+            console = Console::CGB;
+        } else {
+            console = Console::DMG;
+        }
+    }
+
+    if (console == Console::CGB && cgb_flag) {
+        game_mode = GameMode::CGB;
+    } else {
+        game_mode = GameMode::DMG;
+    }
+
+    // The ROM size is at 0x0148 in cartridge header. Each ROM bank is 16KB.
+    num_rom_banks = (0x8000 << rom[0x0148]) / 0x4000;
+    if (rom.size() != num_rom_banks * 0x4000) {
+        std::cerr << "WARNING: Size of provided ROM does not match size given in cartridge header." << std::endl;
+    }
+
+    GetRAMSize(rom);
+    GetMBCType(rom);
+    CheckNintendoLogo(console, rom);
+    HeaderChecksum(rom);
+
+    // If the user gave the multicart option and this game reports itself as using an MBC1, emulate an MBC1M instead.
+    if (mbc_mode == MBC::MBC1 && multicart_requested) {
+        mbc_mode = MBC::MBC1M;
+    }
+
+    // MBC2 carts always have 0x00 in the RAM size field.
+    if (mbc_mode == MBC::MBC2 && ext_ram_present) {
+        ram_size = 0x200;
+    }
+}
+
+void CartridgeHeader::GetRAMSize(const std::vector<u8>& rom) {
     // The RAM size identifier is at 0x0149 in cartridge header.
     switch (rom[0x0149]) {
     case 0x00:
         // Either no external RAM, or MBC2
-        cart_header.ram_size = 0x00;
+        ram_size = 0x00;
         break;
     case 0x01:
         // 2KB external RAM
-        cart_header.ram_size = 0x800;
+        ram_size = 0x800;
         break;
     case 0x02:
         // 8KB external RAM
-        cart_header.ram_size = 0x2000;
+        ram_size = 0x2000;
         break;
     case 0x03:
         // 32KB external RAM - 4 banks
-        cart_header.ram_size = 0x8000;
+        ram_size = 0x8000;
         break;
     case 0x04:
         // 128KB external RAM - 16 banks
-        cart_header.ram_size = 0x20000;
+        ram_size = 0x20000;
         break;
     case 0x05:
         // 64KB external RAM - 8 banks
-        cart_header.ram_size = 0x10000;
+        ram_size = 0x10000;
         break;
     default:
         // I don't know if this happens in official games, but it could happen in homebrew.
@@ -56,42 +99,42 @@ void GetRAMSize(CartridgeHeader& cart_header, const std::vector<u8>& rom) {
     }
 }
 
-void GetMBCType(CartridgeHeader& cart_header, const std::vector<u8>& rom) {
+void CartridgeHeader::GetMBCType(const std::vector<u8>& rom) {
     // The MBC type is at 0x0147. The MBC identifier also tells us if this cartridge contains external RAM.
     switch (rom[0x0147]) {
     case 0x00:
         // ROM only, no MBC
-        cart_header.mbc_mode = MBC::None;
-        cart_header.ext_ram_present = false;
+        mbc_mode = MBC::None;
+        ext_ram_present = false;
         break;
     case 0x01:
         // MBC1, no RAM
-        cart_header.mbc_mode = MBC::MBC1;
-        cart_header.ext_ram_present = false;
+        mbc_mode = MBC::MBC1;
+        ext_ram_present = false;
         break;
     case 0x02:
     case 0x03:
         // MBC1 with external RAM, 0x03 implies the cart has a battery as well.
-        cart_header.mbc_mode = MBC::MBC1;
-        cart_header.ext_ram_present = true;
+        mbc_mode = MBC::MBC1;
+        ext_ram_present = true;
         break;
     case 0x05:
         // MBC2, no RAM
-        cart_header.mbc_mode = MBC::MBC2;
-        cart_header.ext_ram_present = false;
+        mbc_mode = MBC::MBC2;
+        ext_ram_present = false;
         break;
     case 0x06:
         // MBC2 with embedded nybble RAM
-        cart_header.mbc_mode = MBC::MBC2;
-        cart_header.ext_ram_present = true;
+        mbc_mode = MBC::MBC2;
+        ext_ram_present = true;
         break;
     case 0x08:
     case 0x09:
         // ROM + external RAM, no MBC, 0x09 implies battery as well.
         // This is listed in a few cartridge header tables, but Gekkio claims no official games with this
         // configuration exist. (http://gekkio.fi/blog/2015-02-28-mooneye-gb-cartridge-analysis-tetris.html)
-        cart_header.mbc_mode = MBC::None;
-        cart_header.ext_ram_present = true;
+        mbc_mode = MBC::None;
+        ext_ram_present = true;
         break;
     case 0x0B:
         // MMM01, no RAM.
@@ -106,50 +149,50 @@ void GetMBCType(CartridgeHeader& cart_header, const std::vector<u8>& rom) {
         break;
     case 0x0F:
         // MBC3 with timer and battery, no RAM.
-        cart_header.mbc_mode = MBC::MBC3;
-        cart_header.ext_ram_present = false;
-        cart_header.rtc_present = true;
+        mbc_mode = MBC::MBC3;
+        ext_ram_present = false;
+        rtc_present = true;
         break;
     case 0x10:
         // MBC3 with RAM, timer, and battery.
-        cart_header.mbc_mode = MBC::MBC3;
-        cart_header.ext_ram_present = true;
-        cart_header.rtc_present = true;
+        mbc_mode = MBC::MBC3;
+        ext_ram_present = true;
+        rtc_present = true;
         break;
     case 0x11:
         // MBC3, no RAM.
-        cart_header.mbc_mode = MBC::MBC3;
-        cart_header.ext_ram_present = false;
+        mbc_mode = MBC::MBC3;
+        ext_ram_present = false;
         break;
     case 0x12:
     case 0x13:
         // MBC3 with external RAM. 0x13 implies battery.
-        cart_header.mbc_mode = MBC::MBC3;
-        cart_header.ext_ram_present = true;
+        mbc_mode = MBC::MBC3;
+        ext_ram_present = true;
         break;
     case 0x19:
         // MBC5, no RAM.
-        cart_header.mbc_mode = MBC::MBC5;
-        cart_header.ext_ram_present = false;
+        mbc_mode = MBC::MBC5;
+        ext_ram_present = false;
         break;
     case 0x1C:
         // MBC5 with rumble, no RAM.
-        cart_header.mbc_mode = MBC::MBC5;
-        cart_header.ext_ram_present = false;
-        cart_header.rumble_present = true;
+        mbc_mode = MBC::MBC5;
+        ext_ram_present = false;
+        rumble_present = true;
         break;
     case 0x1A:
     case 0x1B:
         // MBC5 with external RAM. 0x1B implies battery.
-        cart_header.mbc_mode = MBC::MBC5;
-        cart_header.ext_ram_present = true;
+        mbc_mode = MBC::MBC5;
+        ext_ram_present = true;
         break;
     case 0x1D:
     case 0x1E:
         // MBC5 with external RAM and rumble. 0x1E implies battery.
-        cart_header.mbc_mode = MBC::MBC5;
-        cart_header.ext_ram_present = true;
-        cart_header.rumble_present = true;
+        mbc_mode = MBC::MBC5;
+        ext_ram_present = true;
+        rumble_present = true;
         break;
     case 0x20:
         // MBC6 with external RAM and battery.
@@ -181,7 +224,7 @@ void GetMBCType(CartridgeHeader& cart_header, const std::vector<u8>& rom) {
     }
 }
 
-void HeaderChecksum(const std::vector<u8>& rom) {
+void CartridgeHeader::HeaderChecksum(const std::vector<u8>& rom) const {
     u8 checksum = 0;
     for (std::size_t i = 0x0134; i < 0x014D; ++i) {
         checksum -= rom[i] + 1;
@@ -194,7 +237,7 @@ void HeaderChecksum(const std::vector<u8>& rom) {
     }
 }
 
-void CheckNintendoLogo(const Console console, const std::vector<u8>& rom) {
+void CartridgeHeader::CheckNintendoLogo(const Console console, const std::vector<u8>& rom) const {
     const std::array<u8, 48> logo{{
         0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D,
         0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99,
@@ -210,53 +253,6 @@ void CheckNintendoLogo(const Console console, const std::vector<u8>& rom) {
             break;
         }
     }
-}
-
-CartridgeHeader GetCartridgeHeaderInfo(Console& console, const std::vector<u8>& rom, bool multicart_requested) {
-    CartridgeHeader cart_header;
-
-    // Determine if this game enables CGB functions. A value of 0xC0 implies the game is CGB-only, and
-    // 0x80 implies it can also run on pre-CGB devices. This both have the same effect, as it's up to
-    // the game to test if it is running on a pre-CGB device.
-    bool cgb_flag = rom[0x0143] == 0xC0 || rom[0x0143] == 0x80;
-
-    // If no console was specified, we emulate a CGB if the game has CGB features, and a DMG otherwise.
-    if (console == Console::Default) {
-        if (cgb_flag) {
-            console = Console::CGB;
-        } else {
-            console = Console::DMG;
-        }
-    }
-
-    if (console == Console::CGB && cgb_flag) {
-        cart_header.game_mode = GameMode::CGB;
-    } else {
-        cart_header.game_mode = GameMode::DMG;
-    }
-
-    // The ROM size is at 0x0148 in cartridge header. Each ROM bank is 16KB.
-    cart_header.num_rom_banks = (0x8000 << rom[0x0148]) / 0x4000;
-    if (rom.size() != cart_header.num_rom_banks*0x4000) {
-        std::cerr << "WARNING: Size of provided ROM does not match size given in cartridge header." << std::endl;
-    }
-
-    GetRAMSize(cart_header, rom);
-    GetMBCType(cart_header, rom);
-    CheckNintendoLogo(console, rom);
-    HeaderChecksum(rom);
-
-    // If the user gave the multicart option and this game reports itself as using an MBC1, emulate an MBC1M instead.
-    if (cart_header.mbc_mode == MBC::MBC1 && multicart_requested) {
-        cart_header.mbc_mode = MBC::MBC1M;
-    }
-
-    // MBC2 carts always have 0x00 in the RAM size field.
-    if (cart_header.mbc_mode == MBC::MBC2 && cart_header.ext_ram_present) {
-        cart_header.ram_size = 0x200;
-    }
-
-    return cart_header;
 }
 
 } // End namespace Core

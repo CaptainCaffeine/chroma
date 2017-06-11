@@ -23,7 +23,10 @@
 
 namespace Core {
 
-struct CartridgeHeader {
+class CartridgeHeader {
+public:
+    CartridgeHeader(Console& console, const std::vector<u8>& rom, bool multicart_requested);
+
     GameMode game_mode;
     MBC mbc_mode;
     bool ext_ram_present;
@@ -31,8 +34,11 @@ struct CartridgeHeader {
     unsigned int num_rom_banks;
     bool rtc_present = false;
     bool rumble_present = false;
+private:
+    void GetRAMSize(const std::vector<u8>& rom);
+    void GetMBCType(const std::vector<u8>& rom);
+    void HeaderChecksum(const std::vector<u8>& rom) const;
+    void CheckNintendoLogo(const Console console, const std::vector<u8>& rom) const;
 };
-
-CartridgeHeader GetCartridgeHeaderInfo(Console& console, const std::vector<u8>& rom, bool multicart_requested);
 
 } // End namespace Core

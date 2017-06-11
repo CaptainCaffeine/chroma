@@ -41,11 +41,11 @@ set(CORE_HEADERS
 
 set(EMU_SOURCES
     emu/main.cpp
-    emu/SDL_Utils.cpp
+    emu/SDLContext.cpp
     emu/ParseOptions.cpp)
 
 set(EMU_HEADERS
-    emu/SDL_Utils.h
+    emu/SDLContext.h
     emu/ParseOptions.h)
 
 add_executable(chroma ${EMU_SOURCES}

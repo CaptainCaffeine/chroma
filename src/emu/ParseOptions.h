@@ -22,7 +22,7 @@
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
 
-namespace Core { struct CartridgeHeader; }
+namespace Core { class CartridgeHeader; }
 
 namespace Emu {
 

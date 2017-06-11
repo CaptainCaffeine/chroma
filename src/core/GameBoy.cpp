@@ -24,15 +24,16 @@
 #include "core/lcd/LCD.h"
 #include "core/Joypad.h"
 #include "core/cpu/CPU.h"
-#include "emu/SDL_Utils.h"
+#include "emu/SDLContext.h"
 
 namespace Core {
 
 GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logging& logger, Emu::SDLContext& context,
-                 const std::vector<u8>& rom, std::vector<u8>& save_game)
+                 const std::string& save_file, const std::vector<u8>& rom, std::vector<u8>& save_game)
         : logging(logger)
         , sdl_context(context)
         , front_buffer(160*144)
+        , save_path(save_file)
         , timer(new Timer())
         , serial(new Serial())
         , lcd(new LCD())
@@ -50,8 +51,9 @@ GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logg
     joypad->LinkToMemory(mem.get());
 }
 
-// Needed to use forward declarations as template parameters in GameBoy.h.
-GameBoy::~GameBoy() = default;
+GameBoy::~GameBoy() {
+    mem->SaveExternalRAM(save_path);
+}
 
 void GameBoy::EmulatorLoop() {
     int overspent_cycles = 0;
@@ -68,7 +70,7 @@ void GameBoy::EmulatorLoop() {
         // Overspent cycles is always zero or negative.
         overspent_cycles = cpu->RunFor((70224 << mem->double_speed) + overspent_cycles);
 
-        Emu::RenderFrame(front_buffer.data(), sdl_context);
+        sdl_context.RenderFrame(front_buffer.data());
     }
 }
 
@@ -96,7 +98,7 @@ std::tuple<bool, bool> GameBoy::PollEvents(bool pause) {
                 break;
             case SDLK_v:
                 if (e.key.repeat == 0) {
-                    Emu::ToggleFullscreen(sdl_context);
+                    sdl_context.ToggleFullscreen();
                 }
                 break;
             case SDLK_t:
@@ -180,10 +182,6 @@ std::tuple<bool, bool> GameBoy::PollEvents(bool pause) {
 
 void GameBoy::SwapBuffers(std::vector<u16>& back_buffer) {
     front_buffer.swap(back_buffer);
-}
-
-void GameBoy::WriteSaveFile(const std::string& save_path) const {
-    mem->SaveExternalRAM(save_path);
 }
 
 void GameBoy::Screenshot() const {

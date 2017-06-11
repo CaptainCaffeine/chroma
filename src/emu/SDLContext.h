@@ -16,24 +16,31 @@
 
 #pragma once
 
+#include <string>
 #include <SDL.h>
 
 #include "common/CommonTypes.h"
 
 namespace Emu {
 
-struct SDLContext {
+class SDLContext {
+public:
+    SDLContext(unsigned int scale, bool fullscreen);
+    ~SDLContext();
+
+    void RenderFrame(const u16* fb_ptr);
+    void ToggleFullscreen();
+private:
     SDL_Window* window;
     SDL_Renderer* renderer;
     SDL_Texture* texture;
 
     int texture_pitch;
     void* texture_pixels;
-};
 
-void InitSDL(SDLContext& context, unsigned int scale, bool fullscreen);
-void RenderFrame(const u16* fb_ptr, SDLContext& context);
-void ToggleFullscreen(SDLContext& context);
-void CleanupSDL(SDLContext& context);
+    const std::string GetSDLErrorString(const std::string& error_function) const {
+        return {"SDL_" + error_function + " Error: " + SDL_GetError()};
+    }
+};
 
 } // End namespace Emu

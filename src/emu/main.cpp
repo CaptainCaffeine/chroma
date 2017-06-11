@@ -17,7 +17,6 @@
 #include <string>
 #include <vector>
 #include <iostream>
-#include <fstream>
 #include <stdexcept>
 
 #include "common/CommonTypes.h"
@@ -26,7 +25,7 @@
 #include "core/CartridgeHeader.h"
 #include "core/GameBoy.h"
 #include "emu/ParseOptions.h"
-#include "emu/SDL_Utils.h"
+#include "emu/SDLContext.h"
 
 int main(int argc, char** argv) {
     std::vector<std::string> tokens = Emu::GetTokens(argv, argv+argc);
@@ -53,45 +52,24 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    std::ofstream log_stream;
-    // Leave log_stream unopened if logging disabled.
-    if (log_level != LogLevel::None) {
-        log_stream = std::ofstream("log.txt");
-        if (!log_stream) {
-            std::cerr << "Error when attempting to open ./log.txt for writing.\n";
-            return 1;
-        }
-    }
-
-    const std::string rom_path{tokens.back()};
-    std::vector<u8> rom;
-    Core::CartridgeHeader cart_header;
-    std::string save_path;
-    std::vector<u8> save_game;
-    Emu::SDLContext sdl_context;
     try {
-        rom = Emu::LoadROM(rom_path);
-        cart_header = Core::GetCartridgeHeaderInfo(gameboy_type, rom, multicart);
-        save_path = Emu::SaveGamePath(rom_path);
-        save_game = Emu::LoadSaveGame(cart_header, save_path);
-        Emu::InitSDL(sdl_context, pixel_scale, fullscreen);
+        const std::string rom_path{tokens.back()};
+        const std::vector<u8> rom{Emu::LoadROM(rom_path)};
+
+        const Core::CartridgeHeader cart_header{gameboy_type, rom, multicart};
+
+        std::string save_path{Emu::SaveGamePath(rom_path)};
+        std::vector<u8> save_game{Emu::LoadSaveGame(cart_header, save_path)};
+
+        Log::Logging logger{log_level};
+        Emu::SDLContext sdl_context{pixel_scale, fullscreen};
+        Core::GameBoy gameboy_core{gameboy_type, cart_header, logger, sdl_context, save_path, rom, save_game};
+
+        gameboy_core.EmulatorLoop();
     } catch (const std::runtime_error& e) {
         std::cerr << e.what() << "\n";
         return 1;
     }
 
-    Log::Logging logger{log_level, std::move(log_stream)};
-    Core::GameBoy gameboy_core{gameboy_type, cart_header, logger, sdl_context, rom, save_game};
-
-    try {
-        gameboy_core.EmulatorLoop();
-    } catch (const std::runtime_error& e) {
-        std::cerr << e.what() << "\n";
-    }
-
-    gameboy_core.WriteSaveFile(save_path);
-    Emu::CleanupSDL(sdl_context);
-
-    std::cout << "End emulation." << std::endl;
     return 0;
 }

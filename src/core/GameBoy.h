@@ -24,11 +24,11 @@
 #include "common/CommonEnums.h"
 
 namespace Log { class Logging; }
-namespace Emu { struct SDLContext; }
+namespace Emu { class SDLContext; }
 
 namespace Core {
 
-struct CartridgeHeader;
+class CartridgeHeader;
 class Timer;
 class Serial;
 class LCD;
@@ -41,12 +41,11 @@ public:
     Log::Logging& logging;
 
     GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logging& logger, Emu::SDLContext& context,
-            const std::vector<u8>& rom, std::vector<u8>& save_game);
+            const std::string& save_file, const std::vector<u8>& rom, std::vector<u8>& save_game);
     ~GameBoy();
 
     void EmulatorLoop();
     void SwapBuffers(std::vector<u16>& back_buffer);
-    void WriteSaveFile(const std::string& save_path) const;
     void Screenshot() const;
 
     void HardwareTick(unsigned int cycles);
@@ -59,6 +58,8 @@ public:
 private:
     Emu::SDLContext& sdl_context;
     std::vector<u16> front_buffer;
+
+    const std::string save_path;
 
     // Game Boy hardware components.
     std::unique_ptr<Timer> timer;
