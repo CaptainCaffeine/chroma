@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016 Matthew Murray
+// Copyright (C) 2016-2017 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
