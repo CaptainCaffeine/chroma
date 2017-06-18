@@ -64,6 +64,9 @@ void Memory::IORegisterInit() {
 
             lcd.bg_palette_index = 0xFF;
             lcd.obj_palette_index = 0xFF;
+
+            lcd.obj_palette_dmg0 = 0xFF;
+            lcd.obj_palette_dmg1 = 0xFF;
         } else {
             joypad.p1 = 0xFF; // CGB starts with joypad inputs disabled, even in DMG mode.
             timer.divider = 0x267C;
@@ -72,6 +75,9 @@ void Memory::IORegisterInit() {
 
             lcd.bg_palette_index = 0x88;
             lcd.obj_palette_index = 0x90;
+
+            lcd.obj_palette_dmg0 = 0x00;
+            lcd.obj_palette_dmg1 = 0x00;
         }
     } else {
         joypad.p1 = 0xFF; // Probably?
@@ -81,6 +87,9 @@ void Memory::IORegisterInit() {
 
         lcd.bg_palette_index = 0x88;
         lcd.obj_palette_index = 0x90;
+
+        lcd.obj_palette_dmg0 = 0x00;
+        lcd.obj_palette_dmg1 = 0x00;
     }
 
     // I'm assuming the initial value of the internal serial clock is equal to the lower byte of DIV.

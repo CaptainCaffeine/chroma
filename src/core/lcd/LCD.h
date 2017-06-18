@@ -120,9 +120,9 @@ public:
     //     bits 1-0: Background Colour 0
     u8 bg_palette_dmg = 0xFC;
     // OBP0 register: 0xFF48
-    u8 obj_palette_dmg0 = 0xFF;
+    u8 obj_palette_dmg0;
     // OBP1 register: 0xFF49
-    u8 obj_palette_dmg1 = 0xFF;
+    u8 obj_palette_dmg1;
 
     // WY register: 0xFF4A
     u8 window_y = 0x00;
@@ -132,7 +132,7 @@ public:
     // BGPI register: 0xFF68
     //     bits 7: Auto Increment (1=Increment after write)
     //     bits 5-0: Palette Index (0x00-0x3F)
-    u8 bg_palette_index = 0x00;
+    u8 bg_palette_index;
     // BGPD register: 0xFF69
     //     bits 7-0 in first byte, 8-14 in second byte
     //     bits 14-10: Blue Intensity
@@ -142,7 +142,7 @@ public:
     // OBPI register: 0xFF6A
     //     bits 7: Auto Increment (1=Increment after write)
     //     bits 5-0: Palette Index (0x00-0x3F)
-    u8 obj_palette_index = 0x00;
+    u8 obj_palette_index;
     // OBP1 register: 0xFF6B
     //     bits 7-0 in first byte, 8-14 in second byte
     //     bits 14-10: Blue Intensity
