@@ -96,8 +96,8 @@ void LCD::UpdateLCD() {
 }
 
 void LCD::UpdatePowerOnState() {
-    u8 lcdc_power_on = lcdc & 0x80;
-    if (lcdc_power_on ^ lcd_on) {
+    bool lcdc_power_on = lcdc & 0x80;
+    if (lcdc_power_on != lcd_on) {
         lcd_on = lcdc_power_on;
 
         if (lcd_on) {

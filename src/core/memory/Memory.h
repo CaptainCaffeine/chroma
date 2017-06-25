@@ -34,13 +34,14 @@ class Timer;
 class Serial;
 class LCD;
 class Joypad;
+class Audio;
 class RTC;
 
 class Memory {
     friend class Log::Logging;
 public:
     Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima, Serial& sio, LCD& display,
-           Joypad& pad, const std::vector<u8>& rom_contents, std::vector<u8>& save_game);
+           Joypad& pad, Audio& audio, const std::vector<u8>& rom_contents, std::vector<u8>& save_game);
     ~Memory();
 
     const Console console;
@@ -87,6 +88,7 @@ private:
     Serial& serial;
     LCD& lcd;
     Joypad& joypad;
+    Audio& audio;
 
     const MBC mbc_mode;
     const bool ext_ram_present;
@@ -169,50 +171,79 @@ private:
     u8 interrupt_flags = 0x01;
 
     // NR10 register: 0xFF10
-    u8 sweep_mode1 = 0x00;
+    //     bit 6-4: Sweep Time (n/128Hz)
+    //     bit 3:   Sweep Direction (0=increase, 1=decrease)
+    //     bit 2-0: Sweep Shift
     // NR11 register: 0xFF11
-    u8 pattern_duty_mode1 = 0x80;
+    //     bit 7-6: Wave Pattern Duty
+    //     bit 5-0: Sound Length (Write Only)
     // NR12 register: 0xFF12
-    u8 envelope_mode1 = 0xF3;
-    // NR13 register: 0xFF13
-    u8 frequency_lo_mode1 = 0xFF;
+    //     bit 7-4: Initial Volume of Envelope
+    //     bit 3:   Envelope Direction (0=decrease, 1=increase)
+    //     bit 2-0: Step Time (n/64 seconds)
+    // NR13 register: 0xFF13 (Write Only)
     // NR14 register: 0xFF14
-    u8 frequency_hi_mode1 = 0x00;
+    //     bit 7:   Reset (1=Restart Sound) (Write Only)
+    //     bit 6:   Timed Mode (0=continuous, 1=stop when length expires)
+    //     bit 2-0: Frequency High 3 Bits (Write Only)
     // NR21 register: 0xFF16
-    u8 pattern_duty_mode2 = 0x00;
+    //     bit 7-6: Wave Pattern Duty
+    //     bit 5-0: Sound Length (Write Only)
     // NR22 register: 0xFF17
-    u8 envelope_mode2 = 0x00;
+    //     bit 7-4: Initial Volume of Envelope
+    //     bit 3:   Envelope Direction (0=decrease, 1=increase)
+    //     bit 2-0: Step Time (n/64 seconds)
     // NR23 register: 0xFF18
-    u8 frequency_lo_mode2 = 0xFF;
     // NR24 register: 0xFF19
-    u8 frequency_hi_mode2 = 0x00;
+    //     bit 7:   Reset (1=Restart Sound) (Write Only)
+    //     bit 6:   Timed Mode (0=continuous, 1=stop when length expires)
+    //     bit 2-0: Frequency High 3 Bits (Write Only)
     // NR30 register: 0xFF1A
-    u8 sound_on_mode3 = 0x00;
+    //     bit 7: Channel On/Off (0=Off, 1=On)
     // NR31 register: 0xFF1B
-    u8 sound_length_mode3 = 0xFF;
+    //     bit 7-0: Sound Length
     // NR32 register: 0xFF1C
-    u8 output_mode3 = 0x00;
+    //     bit 6-5: Output Level (0=Silent, 1=unshifted/100%, 2=shifted right once/50%, 3=shifted right twice/25%)
     // NR33 register: 0xFF1D
-    u8 frequency_lo_mode3 = 0xFF;
     // NR34 register: 0xFF1E
-    u8 frequency_hi_mode3 = 0x00;
+    //     bit 7:   Reset (1=Restart Sound) (Write Only)
+    //     bit 6:   Timed Mode (0=continuous, 1=stop when length expires)
+    //     bit 2-0: Frequency High 3 Bits (Write Only)
     // NR41 register: 0xFF20
-    u8 sound_length_mode4 = 0x1F;
+    //     bit 5-0: Sound Length
     // NR42 register: 0xFF21
-    u8 envelope_mode4 = 0x00;
+    //     bit 7-4: Initial Volume of Envelope
+    //     bit 3:   Envelope Direction (0=decrease, 1=increase)
+    //     bit 2-0: Step Time (n/64 seconds)
     // NR43 register: 0xFF22
-    u8 poly_counter_mode4 = 0x00;
+    //     bit 7-4: Shift Clock Frequency
+    //     bit 3:   Counter Step (0=15 bits, 1=7 bits)
+    //     bit 2-0: Clock Divider
     // NR44 register: 0xFF23
-    u8 counter_mode4 = 0x00;
+    //     bit 7: Reset (1=Restart Sound) (Write Only)
+    //     bit 6: Timed Mode (0=continuous, 1=stop when length expires)
     // NR50 register: 0xFF24
-    u8 volume = 0x77;
+    //     bit 7:   Output Vin to SO2 (1=Enable)
+    //     bit 6-4: SO2 Output Level
+    //     bit 3:   Output Vin to SO1 (1=Enable)
+    //     bit 2-0: SO1 Output Level
     // NR51 register: 0xFF25
-    u8 sound_select = 0xF3;
+    //     bit 7: Output Channel 4 to SO2
+    //     bit 6: Output Channel 3 to SO2
+    //     bit 5: Output Channel 2 to SO2
+    //     bit 4: Output Channel 1 to SO2
+    //     bit 3: Output Channel 4 to SO1
+    //     bit 2: Output Channel 3 to SO1
+    //     bit 1: Output Channel 2 to SO1
+    //     bit 0: Output Channel 1 to SO1
     // NR52 register: 0xFF26
-    u8 sound_on = 0x81;
+    //     bit 7: Master Sound On/Off (0=Off)
+    //     bit 3: Channel 4 On (Read Only)
+    //     bit 2: Channel 3 On (Read Only)
+    //     bit 1: Channel 2 On (Read Only)
+    //     bit 0: Channel 1 On (Read Only)
     // Wave Pattern RAM: 0xFF30-0xFF3F
-    std::array<u8, 0x10> wave_ram{{0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
-                                   0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF}};
+    // Implementations located in Audio class.
 
     // LCDC register: 0xFF40
     //     bit 7: LCD On

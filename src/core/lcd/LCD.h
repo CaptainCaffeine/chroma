@@ -67,7 +67,7 @@ public:
     void DumpEverything();
 
     // ******** OAM ********
-    // The Sprite Attribute Table (OAM) contains 40 sprite attributes each 4 bytes long.
+    // The Object Attribute Memory (OAM) contains 40 sprite attributes each 4 bytes long.
     // Byte 0: the Y position of the sprite, minus 16.
     // Byte 1: the X position of the sprite, minus 8.
     // Byte 2: the tile number, an unsigned offset which indicates a tile at 0x8NN0. Sprite tiles have the same
@@ -154,7 +154,7 @@ private:
     Memory* mem;
     GameBoy* gameboy;
 
-    u8 lcd_on = 0x80;
+    bool lcd_on = true;
     void UpdatePowerOnState();
 
     int scanline_cycles = 452;

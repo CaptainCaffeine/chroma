@@ -17,6 +17,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <SDL.h>
 
 #include "common/CommonTypes.h"
@@ -30,10 +31,12 @@ public:
 
     void RenderFrame(const u16* fb_ptr);
     void ToggleFullscreen();
+    void PushBackAudio(const std::vector<u8>& sample_buffer);
 private:
     SDL_Window* window;
     SDL_Renderer* renderer;
     SDL_Texture* texture;
+    SDL_AudioDeviceID audio_device;
 
     int texture_pitch;
     void* texture_pixels;

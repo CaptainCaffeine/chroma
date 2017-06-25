@@ -23,6 +23,7 @@
 #include "core/Serial.h"
 #include "core/lcd/LCD.h"
 #include "core/Joypad.h"
+#include "core/Audio.h"
 #include "core/cpu/CPU.h"
 #include "emu/SDLContext.h"
 
@@ -38,17 +39,18 @@ GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logg
         , serial(new Serial())
         , lcd(new LCD())
         , joypad(new Joypad())
-        , mem(new Memory(gb_type, header, *timer, *serial, *lcd, *joypad, rom, save_game))
+        , audio(new Audio())
+        , mem(new Memory(gb_type, header, *timer, *serial, *lcd, *joypad, *audio, rom, save_game))
         , cpu(new CPU(*mem)) {
 
-    // Link together circular dependencies after all components are constructed. For the CPU and LCD, these are
-    // necessary. However, currently Timer and Serial only need a reference to Memory to request interrupts.
+    // Link together circular dependencies after all components are constructed.
     lcd->LinkToGameBoy(this);
     cpu->LinkToGameBoy(this);
     timer->LinkToMemory(mem.get());
     serial->LinkToMemory(mem.get());
     lcd->LinkToMemory(mem.get());
     joypad->LinkToMemory(mem.get());
+    audio->LinkToMemory(mem.get());
 }
 
 GameBoy::~GameBoy() {
@@ -204,9 +206,10 @@ void GameBoy::HardwareTick(unsigned int cycles) {
         mem->UpdateOAM_DMA();
         mem->UpdateHDMA();
         timer->UpdateTimer();
-        lcd->UpdateLCD();
         serial->UpdateSerial();
+        lcd->UpdateLCD();
         joypad->UpdateJoypad();
+        audio->UpdateAudio();
 
         mem->IF_written_this_cycle = false;
     }
@@ -223,9 +226,10 @@ void GameBoy::HaltedTick(unsigned int cycles) {
 
         // Update the rest of the system hardware.
         timer->UpdateTimer();
-        lcd->UpdateLCD();
         serial->UpdateSerial();
+        lcd->UpdateLCD();
         joypad->UpdateJoypad();
+        audio->UpdateAudio();
     }
 }
 

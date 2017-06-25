@@ -33,6 +33,7 @@ class Timer;
 class Serial;
 class LCD;
 class Joypad;
+class Audio;
 class Memory;
 class CPU;
 
@@ -66,6 +67,7 @@ private:
     std::unique_ptr<Serial> serial;
     std::unique_ptr<LCD> lcd;
     std::unique_ptr<Joypad> joypad;
+    std::unique_ptr<Audio> audio;
     std::unique_ptr<Memory> mem;
     std::unique_ptr<CPU> cpu;
 

@@ -21,15 +21,15 @@
 namespace Emu {
 
 SDLContext::SDLContext(unsigned int scale, bool fullscreen) {
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
         throw std::runtime_error(GetSDLErrorString("Init"));
     }
 
     window = SDL_CreateWindow("Chroma",
                               SDL_WINDOWPOS_UNDEFINED,
                               SDL_WINDOWPOS_UNDEFINED,
-                              160*scale,
-                              144*scale,
+                              160 * scale,
+                              144 * scale,
                               SDL_WINDOW_SHOWN);
     if (window == nullptr) {
         SDL_Quit();
@@ -63,9 +63,29 @@ SDLContext::SDLContext(unsigned int scale, bool fullscreen) {
     if (fullscreen) {
         SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
     }
+
+    SDL_AudioSpec want, have;
+    want.freq = 48000;
+    want.format = AUDIO_U8;
+    want.channels = 2;
+    want.samples = 4096;
+    want.callback = nullptr; // nullptr for using a queue instead.
+
+    audio_device = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
+
+    if (audio_device == 0) {
+        SDL_DestroyTexture(texture);
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        throw std::runtime_error(GetSDLErrorString("OpenAudioDevice"));
+    }
+
+    SDL_PauseAudioDevice(audio_device, 0);
 }
 
 SDLContext::~SDLContext() {
+    SDL_CloseAudioDevice(audio_device);
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
@@ -74,7 +94,7 @@ SDLContext::~SDLContext() {
 
 void SDLContext::RenderFrame(const u16* fb_ptr) {
     SDL_LockTexture(texture, nullptr, &texture_pixels, &texture_pitch);
-    memcpy(texture_pixels, fb_ptr, 160*144*sizeof(u16));
+    memcpy(texture_pixels, fb_ptr, 160 * 144 * sizeof(u16));
     SDL_UnlockTexture(texture);
 
     SDL_RenderClear(renderer);
@@ -85,6 +105,10 @@ void SDLContext::RenderFrame(const u16* fb_ptr) {
 void SDLContext::ToggleFullscreen() {
     u32 fullscreen = SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP;
     SDL_SetWindowFullscreen(window, fullscreen ^ SDL_WINDOW_FULLSCREEN_DESKTOP);
+}
+
+void SDLContext::PushBackAudio(const std::vector<u8>& sample_buffer) {
+    SDL_QueueAudio(audio_device, sample_buffer.data(), sample_buffer.size());
 }
 
 } // End namespace Emu

@@ -20,8 +20,6 @@
 namespace Core {
 
 void Timer::UpdateTimer() {
-    // Increment the timer subsystem by 4 cycles.
- 
     // DIV increments by 1 each clock cycle.
     divider += 4;
 
@@ -50,10 +48,7 @@ void Timer::UpdateTimer() {
     // This is accomplished by testing if either bit 9, 7, 5, or 3 of the DIV register goes from 1 to 0; the 
     // particular bit depends on the frequency set in TAC.
     // In reality, the bit from DIV is ANDed with the timer enable bit *before* it goes through the falling edge
-    // detector. This can cause the timer to increase in several unexpected situations. The easiest way to
-    // handle this behaviour is to LLE what we know of the timer increment circuit in the Game Boy (courtesy 
-    // of AntonioND's thorough timing documentation) instead of attempting to HLE each edge case. Unfortunately,
-    // not enough is known about the rest of the timer circuitry (overflow, write priorities) to attempt LLE.
+    // detector. This can cause the timer to increase in several unexpected situations.
 
     bool tima_inc = DivFrequencyBitSet() && TimerEnabled();
 

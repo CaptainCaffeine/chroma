@@ -16,6 +16,7 @@ set(CORE_SOURCES
     core/GameBoy.cpp
     core/cpu/CPU.cpp
     core/cpu/Ops.cpp
+    core/Audio.cpp
     core/Joypad.cpp
     core/Serial.cpp
     core/Timer.cpp
@@ -31,6 +32,7 @@ set(CORE_HEADERS
     core/GameBoy.h
     core/cpu/CPU.h
     core/cpu/Flags.h
+    core/Audio.h
     core/Joypad.h
     core/Serial.h
     core/Timer.h
