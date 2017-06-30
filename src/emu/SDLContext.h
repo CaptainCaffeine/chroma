@@ -31,7 +31,11 @@ public:
 
     void RenderFrame(const u16* fb_ptr);
     void ToggleFullscreen();
+
     void PushBackAudio(const std::vector<u8>& sample_buffer);
+    void UnpauseAudio();
+    void PauseAudio();
+
 private:
     SDL_Window* window;
     SDL_Renderer* renderer;

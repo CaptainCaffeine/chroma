@@ -17,6 +17,7 @@ set(CORE_SOURCES
     core/cpu/CPU.cpp
     core/cpu/Ops.cpp
     core/Audio.cpp
+    core/Channel.cpp
     core/Joypad.cpp
     core/Serial.cpp
     core/Timer.cpp
@@ -33,6 +34,7 @@ set(CORE_HEADERS
     core/cpu/CPU.h
     core/cpu/Flags.h
     core/Audio.h
+    core/Channel.h
     core/Joypad.h
     core/Serial.h
     core/Timer.h

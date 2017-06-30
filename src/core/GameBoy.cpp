@@ -60,6 +60,9 @@ GameBoy::~GameBoy() {
 void GameBoy::EmulatorLoop() {
     int overspent_cycles = 0;
     bool quit = false, pause = false;
+
+    sdl_context.UnpauseAudio();
+
     while (!quit) {
         std::tie(quit, pause) = PollEvents(pause);
 
@@ -72,8 +75,12 @@ void GameBoy::EmulatorLoop() {
         // Overspent cycles is always zero or negative.
         overspent_cycles = cpu->RunFor((70224 << mem->double_speed) + overspent_cycles);
 
+        sdl_context.PushBackAudio(audio->sample_buffer);
+        audio->sample_buffer.clear();
         sdl_context.RenderFrame(front_buffer.data());
     }
+
+    sdl_context.PauseAudio();
 }
 
 std::tuple<bool, bool> GameBoy::PollEvents(bool pause) {

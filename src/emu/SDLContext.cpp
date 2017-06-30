@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdexcept>
+#include <array>
 
 #include "emu/SDLContext.h"
 
@@ -68,7 +69,7 @@ SDLContext::SDLContext(unsigned int scale, bool fullscreen) {
     want.freq = 48000;
     want.format = AUDIO_U8;
     want.channels = 2;
-    want.samples = 4096;
+    want.samples = 1600;
     want.callback = nullptr; // nullptr for using a queue instead.
 
     audio_device = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
@@ -80,8 +81,6 @@ SDLContext::SDLContext(unsigned int scale, bool fullscreen) {
         SDL_Quit();
         throw std::runtime_error(GetSDLErrorString("OpenAudioDevice"));
     }
-
-    SDL_PauseAudioDevice(audio_device, 0);
 }
 
 SDLContext::~SDLContext() {
@@ -108,7 +107,21 @@ void SDLContext::ToggleFullscreen() {
 }
 
 void SDLContext::PushBackAudio(const std::vector<u8>& sample_buffer) {
-    SDL_QueueAudio(audio_device, sample_buffer.data(), sample_buffer.size());
+    std::size_t remaining_buffer = 3200 - SDL_GetQueuedAudioSize(audio_device);
+    std::size_t bytes_to_queue = std::min(remaining_buffer, sample_buffer.size());
+
+    SDL_QueueAudio(audio_device, sample_buffer.data(), bytes_to_queue);
+}
+
+void SDLContext::UnpauseAudio() {
+    SDL_PauseAudioDevice(audio_device, 0);
+
+    std::array<u8, 3200> silence_buffer{};
+    SDL_QueueAudio(audio_device, silence_buffer.data(), silence_buffer.size());
+}
+
+void SDLContext::PauseAudio() {
+    SDL_PauseAudioDevice(audio_device, 1);
 }
 
 } // End namespace Emu

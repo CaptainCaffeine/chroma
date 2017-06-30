@@ -325,63 +325,63 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         return interrupt_flags | 0xE0;
     // NR10 -- Sound Mode 1 Sweep Register
     case 0xFF10:
-        return audio.sweep_channel1 | 0x80;
+        return audio.square1.sweep | 0x80;
     // NR11 -- Sound Mode 1 Wave Pattern Duty
     case 0xFF11:
-        return audio.sound_length_channel1 | 0x3F;
+        return audio.square1.sound_length | 0x3F;
     // NR12 -- Sound Mode 1 Envelope
     case 0xFF12:
-        return audio.envelope_channel1;
+        return audio.square1.volume_envelope;
     // NR13 -- Sound Mode 1 Low Frequency
     case 0xFF13:
         // This register is write-only.
         return 0xFF;
     // NR14 -- Sound Mode 1 High Frequency
     case 0xFF14:
-        return audio.frequency_hi_channel1 | 0xBF;
+        return audio.square1.frequency_hi | 0xBF;
     // NR21 --  Sound Mode 2 Wave Pattern Duty
     case 0xFF16:
-        return audio.sound_length_channel2 | 0x3F;
+        return audio.square2.sound_length | 0x3F;
     // NR22 --  Sound Mode 2 Envelope
     case 0xFF17:
-        return audio.envelope_channel2;
+        return audio.square2.volume_envelope;
     // NR23 -- Sound Mode 2 Low Frequency
     case 0xFF18:
         // This register is write-only.
         return 0xFF;
     // NR24 -- Sound Mode 2 High Frequency
     case 0xFF19:
-        return audio.frequency_hi_channel2 | 0xBF;
+        return audio.square2.frequency_hi | 0xBF;
     // NR30 -- Sound Mode 3 On/Off
     case 0xFF1A:
-        return audio.sound_on_channel3 | 0x7F;
+        return audio.wave.channel_on | 0x7F;
     // NR31 -- Sound Mode 3 Sound Length
     case 0xFF1B:
         // This register is write-only.
         return 0xFF;
     // NR32 -- Sound Mode 3 Select Output
     case 0xFF1C:
-        return audio.output_channel3 | 0x9F;
+        return audio.wave.volume_envelope | 0x9F;
     // NR33 -- Sound Mode 3 Low Frequency
     case 0xFF1D:
         // This register is write-only.
         return 0xFF;
     // NR34 -- Sound Mode 3 High Frequency
     case 0xFF1E:
-        return audio.frequency_hi_channel3 | 0xBF;
+        return audio.wave.frequency_hi | 0xBF;
     // NR41 -- Sound Mode 4 Sound Length
     case 0xFF20:
         // This register is write-only.
         return 0xFF;
     // NR42 -- Sound Mode 4 Envelope
     case 0xFF21:
-        return audio.envelope_channel4;
+        return audio.noise.volume_envelope;
     // NR43 -- Sound Mode 4 Polynomial Counter
     case 0xFF22:
-        return audio.poly_counter_channel4;
+        return audio.noise.frequency_lo;
     // NR44 -- Sound Mode 4 Counter
     case 0xFF23:
-        return audio.counter_channel4 | 0xBF;
+        return audio.noise.frequency_hi | 0xBF;
     // NR50 -- Channel Control/Volume
     case 0xFF24:
         return audio.volume;
@@ -390,7 +390,7 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         return audio.sound_select;
     // NR52 -- Sound On/Off
     case 0xFF26:
-        return audio.sound_on | 0x70;
+        return audio.ReadNR52();
     // Wave Pattern RAM
     case 0xFF30: case 0xFF31: case 0xFF32: case 0xFF33: case 0xFF34: case 0xFF35: case 0xFF36: case 0xFF37:
     case 0xFF38: case 0xFF39: case 0xFF3A: case 0xFF3B: case 0xFF3C: case 0xFF3D: case 0xFF3E: case 0xFF3F:
@@ -543,109 +543,133 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     // NR10 -- Sound Mode 1 Sweep Register
     case 0xFF10:
         if (audio.IsPoweredOn()) {
-            audio.sweep_channel1 = data & 0x7F;
+            audio.square1.sweep = data & 0x7F;
         }
         break;
     // NR11 -- Sound Mode 1 Wave Pattern Duty
     case 0xFF11:
         if (audio.IsPoweredOn() || console == Console::DMG) {
-            audio.sound_length_channel1 = data;
+            audio.square1.sound_length = data;
+            audio.square1.ReloadLengthCounter();
         }
         break;
     // NR12 -- Sound Mode 1 Envelope
     case 0xFF12:
         if (audio.IsPoweredOn()) {
-            audio.envelope_channel1 = data;
+            audio.square1.volume_envelope = data;
+            if ((audio.square1.volume_envelope & 0xF0) == 0) {
+                audio.square1.channel_enabled = false;
+            } else {
+                audio.square1.channel_enabled = true;
+            }
         }
         break;
     // NR13 -- Sound Mode 1 Low Frequency
     case 0xFF13:
         if (audio.IsPoweredOn()) {
-            audio.frequency_lo_channel1 = data;
+            audio.square1.frequency_lo = data;
         }
         break;
     // NR14 -- Sound Mode 1 High Frequency
     case 0xFF14:
         if (audio.IsPoweredOn()) {
-            audio.frequency_hi_channel1 = data & 0xC7;
+            audio.square1.frequency_hi = data & 0xC7;
         }
         break;
     // NR21 --  Sound Mode 2 Wave Pattern Duty
     case 0xFF16:
         if (audio.IsPoweredOn() || console == Console::DMG) {
-            audio.sound_length_channel2 = data;
+            audio.square2.sound_length = data;
+            audio.square2.ReloadLengthCounter();
         }
         break;
     // NR22 --  Sound Mode 2 Envelope
     case 0xFF17:
         if (audio.IsPoweredOn()) {
-            audio.envelope_channel2 = data;
+            audio.square2.volume_envelope = data;
+            if ((audio.square2.volume_envelope & 0xF0) == 0) {
+                audio.square2.channel_enabled = false;
+            } else {
+                audio.square2.channel_enabled = true;
+            }
         }
         break;
     // NR23 -- Sound Mode 2 Low Frequency
     case 0xFF18:
         if (audio.IsPoweredOn()) {
-            audio.frequency_lo_channel2 = data;
+            audio.square2.frequency_lo = data;
         }
         break;
     // NR24 -- Sound Mode 2 High Frequency
     case 0xFF19:
         if (audio.IsPoweredOn()) {
-            audio.frequency_hi_channel2 = data & 0xC7;
+            audio.square2.frequency_hi = data & 0xC7;
         }
         break;
     // NR30 -- Sound Mode 3 On/Off
     case 0xFF1A:
         if (audio.IsPoweredOn()) {
-            audio.sound_on_channel3 = data & 0x80;
+            audio.wave.channel_on = data & 0x80;
+            if ((audio.wave.channel_on & 0x80) == 0) {
+                audio.wave.channel_enabled = false;
+            } else {
+                audio.wave.channel_enabled = true;
+            }
         }
         break;
     // NR31 -- Sound Mode 3 Sound Length
     case 0xFF1B:
         if (audio.IsPoweredOn() || console == Console::DMG) {
-            audio.sound_length_channel3 = data;
+            audio.wave.sound_length = data;
+            audio.wave.ReloadLengthCounter();
         }
         break;
     // NR32 -- Sound Mode 3 Select Output
     case 0xFF1C:
         if (audio.IsPoweredOn()) {
-            audio.output_channel3 = data & 0x60;
+            audio.wave.volume_envelope = data & 0x60;
         }
         break;
     // NR33 -- Sound Mode 3 Low Frequency
     case 0xFF1D:
         if (audio.IsPoweredOn()) {
-            audio.frequency_lo_channel3 = data;
+            audio.wave.frequency_lo = data;
         }
         break;
     // NR34 -- Sound Mode 3 High Frequency
     case 0xFF1E:
         if (audio.IsPoweredOn()) {
-            audio.frequency_hi_channel3 = data & 0xC7;
+            audio.wave.frequency_hi = data & 0xC7;
         }
         break;
     // NR41 -- Sound Mode 4 Sound Length
     case 0xFF20:
         if (audio.IsPoweredOn() || console == Console::DMG) {
-            audio.sound_length_channel4 = data & 0x1F;
+            audio.noise.sound_length = data & 0x1F;
+            audio.noise.ReloadLengthCounter();
         }
         break;
     // NR42 -- Sound Mode 4 Envelope
     case 0xFF21:
         if (audio.IsPoweredOn()) {
-            audio.envelope_channel4 = data;
+            audio.noise.volume_envelope = data;
+            if ((audio.noise.volume_envelope & 0xF0) == 0) {
+                audio.noise.channel_enabled = false;
+            } else {
+                audio.noise.channel_enabled = true;
+            }
         }
         break;
     // NR43 -- Sound Mode 4 Polynomial Counter
     case 0xFF22:
         if (audio.IsPoweredOn()) {
-            audio.poly_counter_channel4 = data;
+            audio.noise.frequency_lo = data;
         }
         break;
     // NR44 -- Sound Mode 4 Counter
     case 0xFF23:
         if (audio.IsPoweredOn()) {
-            audio.counter_channel4 = data & 0xC0;
+            audio.noise.frequency_hi = data & 0xC0;
         }
         break;
     // NR50 -- Channel Control/Volume

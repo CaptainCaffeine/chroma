@@ -20,11 +20,64 @@
 namespace Core {
 
 void Audio::UpdateAudio() {
-    UpdatePowerOnState();
+    FrameSequencerTick();
 
+    UpdatePowerOnState();
     if (!audio_on) {
         return;
     }
+
+    square1.CheckTrigger();
+    square2.CheckTrigger();
+
+    square1.TimerTick();
+    square2.TimerTick();
+
+    square1.LengthCounterTick(frame_seq_counter);
+    square2.LengthCounterTick(frame_seq_counter);
+
+    square1.EnvelopeTick(frame_seq_counter);
+    square2.EnvelopeTick(frame_seq_counter);
+
+    u8 left_sample_value = 0x00;
+    u8 right_sample_value = 0x00;
+
+    u8 sample_channel1 = square1.GenSample();
+    u8 sample_channel2 = square2.GenSample();
+
+    if (square1.EnabledLeft(sound_select)) {
+        left_sample_value += sample_channel1;
+    }
+
+    if (square2.EnabledLeft(sound_select)) {
+        left_sample_value += sample_channel2;
+    }
+
+    if (square1.EnabledRight(sound_select)) {
+        right_sample_value += sample_channel1;
+    }
+
+    if (square2.EnabledRight(sound_select)) {
+        right_sample_value += sample_channel2;
+    }
+
+    if (--sample_drop == 0) {
+        sample_buffer.push_back(left_sample_value);
+        sample_buffer.push_back(right_sample_value);
+
+        sample_drop = 22;
+    }
+}
+
+void Audio::FrameSequencerTick() {
+    frame_seq_clock += 4;
+
+    bool frame_seq_inc = frame_seq_clock & 0x1000;
+    if (!frame_seq_inc && prev_frame_seq_inc) {
+        frame_seq_counter += 1;
+    }
+
+    prev_frame_seq_inc = frame_seq_inc;
 }
 
 void Audio::UpdatePowerOnState() {
@@ -33,38 +86,39 @@ void Audio::UpdatePowerOnState() {
         audio_on = audio_power_on;
 
         if (!audio_on) {
-            // Clear all sound registers.
-            sweep_channel1 = 0x00;
-            envelope_channel1 = 0x00;
-            frequency_lo_channel1 = 0x00;
-            frequency_hi_channel1 = 0x00;
+            ClearRegisters();
+        } else {
+            square1.PowerOn();
+            square2.PowerOn();
 
-            envelope_channel2 = 0x00;
-            frequency_lo_channel2 = 0x00;
-            frequency_hi_channel2 = 0x00;
-
-            sound_on_channel3 = 0x00;
-            output_channel3 = 0x00;
-            frequency_lo_channel3 = 0x00;
-            frequency_hi_channel3 = 0x00;
-
-            envelope_channel4 = 0x00;
-            poly_counter_channel4 = 0x00;
-            counter_channel4 = 0x00;
-
-            volume = 0x00;
-            sound_select = 0x00;
-            sound_on = 0x00;
-
-            if (mem->console != Console::DMG) {
-                // On DMG, the length counters are unaffected by power state.
-                // TODO: Is the wave duty preserved too? Or just the length counter?
-                sound_length_channel1 = 0x00;
-                sound_length_channel2 = 0x00;
-                sound_length_channel3 = 0x00;
-                sound_length_channel4 = 0x00;
-            }
+            frame_seq_counter = 0x00;
         }
+    }
+}
+
+void Audio::ClearRegisters() {
+    square1.ClearRegisters(mem->console);
+    square2.ClearRegisters(mem->console);
+    wave.ClearRegisters(mem->console);
+    noise.ClearRegisters(mem->console);
+
+    volume = 0x00;
+    sound_select = 0x00;
+    sound_on = 0x00;
+}
+
+std::array<unsigned int, 8> Channel::DutyCycle(const u8 cycle) const {
+    switch(cycle) {
+    case 0x00:
+        return {{0, 0, 0, 0, 0, 0, 0, 1}};
+    case 0x01:
+        return {{1, 0, 0, 0, 0, 0, 0, 1}};
+    case 0x02:
+        return {{1, 0, 0, 0, 0, 1, 1, 1}};
+    case 0x03:
+        return {{0, 1, 1, 1, 1, 1, 1, 0}};
+    default:
+        return {{0, 0, 0, 0, 0, 0, 0, 0}};
     }
 }
 
