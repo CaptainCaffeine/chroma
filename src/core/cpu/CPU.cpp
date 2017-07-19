@@ -684,7 +684,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     // Flags: same as ADD A, R
     case 0xC6:
         Add(GetImmediateByte());
-        return 4; //4; //cycles 8
+        return 8;
     // ADC A, R -- Add value in register R + the carry flag to A
     // Flags:
     //     Z: Set if result is zero
@@ -719,7 +719,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     // Flags: same as ADC A, R
     case 0xCE:
         AddWithCarry(GetImmediateByte());
-        return 4; //4; //cycles 8
+        return 8;
     // SUB R -- Subtract the value in register R from  A
     // Flags:
     //     Z: Set if result is zero
@@ -754,7 +754,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     // Flags: same as SUB R
     case 0xD6:
         Sub(GetImmediateByte());
-        return 4; //4; //cycles 8
+        return 8;
     // SBC A, R -- Subtract the value in register R + carry flag from  A
     // Flags:
     //     Z: Set if result is zero
@@ -789,7 +789,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     // Flags: same as SBC A, R
     case 0xDE:
         SubWithCarry(GetImmediateByte());
-        return 4; //4; //cycles 8
+        return 8;
     // AND R -- Bitwise AND the value in register R with A. 
     // Flags:
     //     Z: Set if result is zero
@@ -824,7 +824,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     // Flags: same as AND R
     case 0xE6:
         And(GetImmediateByte());
-        return 4; //4; //cycles 8
+        return 8;
     // OR R -- Bitwise OR the value in register R with A. 
     // Flags:
     //     Z: Set if result is zero
@@ -859,7 +859,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     // Flags: same as OR R
     case 0xF6:
         Or(GetImmediateByte());
-        return 4; //4; //cycles 8
+        return 8;
     // XOR R -- Bitwise XOR the value in register R with A. 
     // Flags:
     //     Z: Set if result is zero
@@ -894,7 +894,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     // Flags: same as XOR R
     case 0xEE:
         Xor(GetImmediateByte());
-        return 4; //4; //cycles 8
+        return 8;
     // CP R -- Compare A with the value in register R. This performs a subtraction but does not modify A.
     // Flags:
     //     Z: Set if result is zero, i.e. A is equal to R
@@ -929,7 +929,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     // Flags: same as CP R
     case 0xFE:
         Compare(GetImmediateByte());
-        return 4; //4; //cycles 8
+        return 8;
     // INC R -- Increment the value in register R.
     // Flags:
     //     Z: Set if result is zero
