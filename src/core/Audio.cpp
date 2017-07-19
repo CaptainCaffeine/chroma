@@ -20,10 +20,25 @@
 namespace Core {
 
 void Audio::UpdateAudio() {
+    // The APU does not change speed in double-speed mode, so skip every other tick.
+    // TODO: The APU acutally runs at 2MHz, so this is temporary until I implement that correctly.
+    if (mem->double_speed) {
+        double_speed_skip ^= 1;
+
+        if (double_speed_skip) {
+            return;
+        }
+    }
+
+    // Increment the sample counter and reset it on every frame.
+    sample_drop = (sample_drop + 1) % 17556;
+
     FrameSequencerTick();
 
     UpdatePowerOnState();
     if (!audio_on) {
+        // Queue silence when audio is off.
+        QueueSample(0x00, 0x00);
         return;
     }
 
@@ -39,34 +54,29 @@ void Audio::UpdateAudio() {
     square1.EnvelopeTick(frame_seq_counter);
     square2.EnvelopeTick(frame_seq_counter);
 
-    u8 left_sample_value = 0x00;
-    u8 right_sample_value = 0x00;
+    u8 left_sample = 0x00;
+    u8 right_sample = 0x00;
 
     u8 sample_channel1 = square1.GenSample();
     u8 sample_channel2 = square2.GenSample();
 
     if (square1.EnabledLeft(sound_select)) {
-        left_sample_value += sample_channel1;
+        left_sample += sample_channel1;
     }
 
     if (square2.EnabledLeft(sound_select)) {
-        left_sample_value += sample_channel2;
+        left_sample += sample_channel2;
     }
 
     if (square1.EnabledRight(sound_select)) {
-        right_sample_value += sample_channel1;
+        right_sample += sample_channel1;
     }
 
     if (square2.EnabledRight(sound_select)) {
-        right_sample_value += sample_channel2;
+        right_sample += sample_channel2;
     }
 
-    if (--sample_drop == 0) {
-        sample_buffer.push_back(left_sample_value);
-        sample_buffer.push_back(right_sample_value);
-
-        sample_drop = 22;
-    }
+    QueueSample(left_sample, right_sample);
 }
 
 void Audio::FrameSequencerTick() {
@@ -107,18 +117,12 @@ void Audio::ClearRegisters() {
     sound_on = 0x00;
 }
 
-std::array<unsigned int, 8> Channel::DutyCycle(const u8 cycle) const {
-    switch(cycle) {
-    case 0x00:
-        return {{0, 0, 0, 0, 0, 0, 0, 1}};
-    case 0x01:
-        return {{1, 0, 0, 0, 0, 0, 0, 1}};
-    case 0x02:
-        return {{1, 0, 0, 0, 0, 1, 1, 1}};
-    case 0x03:
-        return {{0, 1, 1, 1, 1, 1, 1, 0}};
-    default:
-        return {{0, 0, 0, 0, 0, 0, 0, 0}};
+void Audio::QueueSample(u8 left_sample, u8 right_sample) {
+    // Take every 22nd sample to get 1596 samples per frame. We need 1600 samples per frame for 48kHz at 60FPS,
+    // so take another sample at roughly 1/3 and 2/3 through the frame.
+    if (sample_drop % 22 == 0 || sample_drop == 5863 || sample_drop == 11715) {
+        sample_buffer.push_back(left_sample);
+        sample_buffer.push_back(right_sample);
     }
 }
 

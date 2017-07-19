@@ -156,8 +156,10 @@ private:
     void FrameSequencerTick();
     void UpdatePowerOnState();
     void ClearRegisters();
+    void QueueSample(u8 left_sample, u8 right_sample);
 
-    unsigned int sample_drop = 22;
+    unsigned int double_speed_skip = 0;
+    unsigned int sample_drop = 0;
 
     bool audio_on = true;
 

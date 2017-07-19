@@ -58,7 +58,9 @@ GameBoy::~GameBoy() {
 }
 
 void GameBoy::EmulatorLoop() {
+    constexpr int cycles_per_frame = 70224;
     int overspent_cycles = 0;
+
     bool quit = false, pause = false;
 
     sdl_context.UnpauseAudio();
@@ -71,9 +73,9 @@ void GameBoy::EmulatorLoop() {
             continue;
         }
 
-        // 70224 is the number of cycles between VBLANKs, when the LCD is on.
         // Overspent cycles is always zero or negative.
-        overspent_cycles = cpu->RunFor((70224 << mem->double_speed) + overspent_cycles);
+        int target_cycles = (cycles_per_frame << mem->double_speed) + overspent_cycles;
+        overspent_cycles = cpu->RunFor(target_cycles);
 
         sdl_context.PushBackAudio(audio->sample_buffer);
         audio->sample_buffer.clear();

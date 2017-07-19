@@ -115,9 +115,6 @@ void SDLContext::PushBackAudio(const std::vector<u8>& sample_buffer) {
 
 void SDLContext::UnpauseAudio() {
     SDL_PauseAudioDevice(audio_device, 0);
-
-    std::array<u8, 3200> silence_buffer{};
-    SDL_QueueAudio(audio_device, silence_buffer.data(), silence_buffer.size());
 }
 
 void SDLContext::PauseAudio() {

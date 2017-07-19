@@ -17,6 +17,7 @@
 #include "core/Channel.h"
 
 namespace Core {
+
 void Channel::CheckTrigger() {
     if (frequency_hi & 0x80) {
         // Clear reset flag.
@@ -110,6 +111,21 @@ void Channel::ClearRegisters(const Console console) {
     }
 
     channel_enabled = false;
+}
+
+std::array<unsigned int, 8> Channel::DutyCycle(const u8 cycle) const {
+    switch(cycle) {
+    case 0x00:
+        return {{0, 0, 0, 0, 0, 0, 0, 1}};
+    case 0x01:
+        return {{1, 0, 0, 0, 0, 0, 0, 1}};
+    case 0x02:
+        return {{1, 0, 0, 0, 0, 1, 1, 1}};
+    case 0x03:
+        return {{0, 1, 1, 1, 1, 1, 1, 0}};
+    default:
+        return {{0, 0, 0, 0, 0, 0, 0, 0}};
+    }
 }
 
 } // End namespace Core
