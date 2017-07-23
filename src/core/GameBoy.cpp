@@ -218,7 +218,12 @@ void GameBoy::HardwareTick(unsigned int cycles) {
         serial->UpdateSerial();
         lcd->UpdateLCD();
         joypad->UpdateJoypad();
-        audio->UpdateAudio();
+
+        // The APU always updates at 2MHz, regardless of double speed mode. So we need to update it twice an M-cycle
+        // in single-speed mode.
+        for (int i = 0; i < (2 >> mem->double_speed); ++i) {
+            audio->UpdateAudio();
+        }
 
         mem->IF_written_this_cycle = false;
     }
@@ -238,7 +243,12 @@ void GameBoy::HaltedTick(unsigned int cycles) {
         serial->UpdateSerial();
         lcd->UpdateLCD();
         joypad->UpdateJoypad();
-        audio->UpdateAudio();
+
+        // The APU always updates at 2MHz, regardless of double speed mode. So we need to update it twice an M-cycle
+        // in single-speed mode.
+        for (int i = 0; i < (2 >> mem->double_speed); ++i) {
+            audio->UpdateAudio();
+        }
     }
 }
 

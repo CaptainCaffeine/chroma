@@ -48,7 +48,7 @@ public:
     bool channel_enabled;
 
     u8 GenSample() const {
-        return DutyCycle((sound_length & 0xC0) >> 6)[duty_pos] * ((volume_envelope & 0xF0) >> 4);
+        return DutyCycle((sound_length & 0xC0) >> 6)[duty_pos] * volume;
     }
 
     u8 EnabledFlag() const {
@@ -94,14 +94,14 @@ private:
     bool envelope_enabled = false;
 
     void ReloadPeriod() {
-        period_timer = 2048 - (frequency_lo | ((frequency_hi & 0x07) << 8));
-    }
-
-    u8 EnvelopeStep() const {
-        return volume_envelope & 0x07;
+        period_timer = (2048 - (frequency_lo | ((frequency_hi & 0x07) << 8))) << 1;
     }
 
     std::array<unsigned int, 8> DutyCycle(const u8 cycle) const;
+
+    u8 EnvelopeStep() const { return volume_envelope & 0x07; }
+    u8 EnvelopeDirection() const { return (volume_envelope & 0x08) >> 3; }
+    u8 EnvelopeInitialVolume() const { return (volume_envelope & 0xF0) >> 4; }
 };
 
 } // End namespace Core

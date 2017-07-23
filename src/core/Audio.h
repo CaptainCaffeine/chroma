@@ -34,13 +34,7 @@ public:
     void LinkToMemory(Memory* memory) { mem = memory; }
     bool IsPoweredOn() const { return audio_on; }
 
-    u8 ReadNR52() const {
-        return sound_on | 0x70
-               | square1.EnabledFlag()
-               | square2.EnabledFlag()
-               | wave.EnabledFlag()
-               | noise.EnabledFlag();
-    }
+    u8 ReadNR52() const;
 
     std::vector<u8> sample_buffer;
 
@@ -151,21 +145,20 @@ public:
     std::array<u8, 0x10> wave_ram{{0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
                                    0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF}};
 private:
-    Memory* mem;
+    const Memory* mem;
 
     void FrameSequencerTick();
     void UpdatePowerOnState();
     void ClearRegisters();
     void QueueSample(u8 left_sample, u8 right_sample);
 
-    unsigned int double_speed_skip = 0;
     unsigned int sample_drop = 0;
 
     bool audio_on = true;
 
     unsigned int frame_seq_clock = 0x00;
-    bool prev_frame_seq_inc = false;
     unsigned int frame_seq_counter = 0x00;
+    bool prev_frame_seq_inc = false;
 };
 
 } // End namespace Core

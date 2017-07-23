@@ -20,18 +20,8 @@
 namespace Core {
 
 void Audio::UpdateAudio() {
-    // The APU does not change speed in double-speed mode, so skip every other tick.
-    // TODO: The APU acutally runs at 2MHz, so this is temporary until I implement that correctly.
-    if (mem->double_speed) {
-        double_speed_skip ^= 1;
-
-        if (double_speed_skip) {
-            return;
-        }
-    }
-
     // Increment the sample counter and reset it on every frame.
-    sample_drop = (sample_drop + 1) % 17556;
+    sample_drop = (sample_drop + 1) % 35112;
 
     FrameSequencerTick();
 
@@ -80,9 +70,9 @@ void Audio::UpdateAudio() {
 }
 
 void Audio::FrameSequencerTick() {
-    frame_seq_clock += 4;
+    frame_seq_clock += 2;
 
-    bool frame_seq_inc = frame_seq_clock & 0x1000;
+    bool frame_seq_inc = frame_seq_clock & 0x2000;
     if (!frame_seq_inc && prev_frame_seq_inc) {
         frame_seq_counter += 1;
     }
@@ -118,12 +108,16 @@ void Audio::ClearRegisters() {
 }
 
 void Audio::QueueSample(u8 left_sample, u8 right_sample) {
-    // Take every 22nd sample to get 1596 samples per frame. We need 1600 samples per frame for 48kHz at 60FPS,
-    // so take another sample at roughly 1/3 and 2/3 through the frame.
-    if (sample_drop % 22 == 0 || sample_drop == 5863 || sample_drop == 11715) {
+    // Take every 44th sample to get 1596 samples per frame. We need 1600 samples per frame for 48kHz at 60FPS,
+    // so take another sample at 1/4 and 3/4 through the frame.
+    if (sample_drop % 44 == 0 || sample_drop == 8778 || sample_drop == 26334) {
         sample_buffer.push_back(left_sample);
         sample_buffer.push_back(right_sample);
     }
+}
+
+u8 Audio::ReadNR52() const {
+    return sound_on | 0x70 | square1.EnabledFlag() | square2.EnabledFlag() | wave.EnabledFlag() | noise.EnabledFlag();
 }
 
 } // End namespace Core

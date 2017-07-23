@@ -26,17 +26,22 @@ void Channel::CheckTrigger() {
         channel_enabled = true;
         ReloadPeriod();
 
-        volume = (volume_envelope & 0xF0) >> 4;
+        // Initialize volume envelope.
+        volume = EnvelopeInitialVolume();
         envelope_counter = EnvelopeStep();
-
         envelope_enabled = (envelope_counter != 0);
-        if (((volume_envelope & 0x08) == 0 && volume == 0x00) || ((volume_envelope & 0x08) == 1 && volume == 0x0F)) {
+        if ((EnvelopeDirection() == 0 && volume == 0x00) || (EnvelopeDirection() == 1 && volume == 0x0F)) {
             envelope_enabled = false;
         }
 
-
+        // If the length counter is zero on trigger, it's set to the maximum value.
         if (length_counter == 0) {
             length_counter = 64;
+        }
+
+        // If the current volume is zero, the channel will be disabled immediately after initialization.
+        if (volume == 0x00) {
+            channel_enabled = false;
         }
     }
 }
@@ -53,26 +58,30 @@ void Channel::TimerTick() {
 }
 
 void Channel::LengthCounterTick(const unsigned int frame_seq_counter) {
+    bool length_counter_dec = frame_seq_counter & 0x01;
+
     if ((frequency_hi & 0x40) && length_counter > 0) {
-        bool length_counter_dec = frame_seq_counter & 0x01;
         if (!length_counter_dec && prev_length_counter_dec) {
-            --length_counter;
+            length_counter -= 1;
 
             if (length_counter == 0) {
                 channel_enabled = false;
             }
         }
-
-        prev_length_counter_dec = length_counter_dec;
     }
+
+    prev_length_counter_dec = length_counter_dec;
 }
 
 void Channel::EnvelopeTick(const unsigned int frame_seq_counter) {
+    bool envelope_inc = frame_seq_counter & 0x04;
+
     if (envelope_enabled && channel_enabled) {
-        bool envelope_inc = frame_seq_counter & 0x04;
         if (!envelope_inc && prev_envelope_inc) {
-            if (--envelope_counter == 0) {
-                if ((volume_envelope & 0x08) == 0) {
+            envelope_counter -= 1;
+
+            if (envelope_counter == 0) {
+                if (EnvelopeDirection() == 0) {
                     volume -= 1;
                     if (volume == 0x00) {
                         envelope_enabled = false;
@@ -87,13 +96,14 @@ void Channel::EnvelopeTick(const unsigned int frame_seq_counter) {
                 envelope_counter = EnvelopeStep();
             }
         }
-
-        prev_envelope_inc = envelope_inc;
     }
+
+    prev_envelope_inc = envelope_inc;
 }
 
 void Channel::ReloadLengthCounter() {
     length_counter = 64 - (sound_length & 0x3F);
+
     // Clear the written length data.
     sound_length &= 0xC0;
 }
@@ -104,9 +114,10 @@ void Channel::ClearRegisters(const Console console) {
     frequency_lo = 0x00;
     frequency_hi = 0x00;
 
-    if (console != Console::DMG) {
+    if (console == Console::DMG) {
         // On DMG, the length counters are unaffected by power state.
-        // TODO: Is the wave duty preserved too? Or just the length counter?
+        sound_length &= 0x3F;
+    } else {
         sound_length = 0x00;
     }
 
