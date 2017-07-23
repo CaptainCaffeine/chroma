@@ -150,8 +150,10 @@ std::vector<u8> LoadSaveGame(const Core::CartridgeHeader& cart_header, const std
         if (save_game.size() != 0) {
             unsigned int cart_ram_size = cart_header.ram_size;
             if (cart_header.rtc_present) {
-                // Account for RTC save data at end of save file.
-                cart_ram_size += 0x30;
+                // Account for size of RTC save data, if present at the end of the save file.
+                if (save_game.size() % 0x400 == 0x30) {
+                    cart_ram_size += 0x30;
+                }
             }
 
             if (cart_ram_size != save_game.size()) {

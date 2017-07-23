@@ -21,7 +21,7 @@
 namespace Core {
 
 RTC::RTC(std::vector<u8>& save_game) {
-    if ((save_game.size() % 0x2000) != 0x30) {
+    if ((save_game.size() % 0x400) != 0x30) {
         std::cerr << "No RTC save data found. RTC initialized to default time.\n";
     } else {
         LoadRTCData(save_game);
