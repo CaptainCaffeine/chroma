@@ -544,6 +544,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     case 0xFF10:
         if (audio.IsPoweredOn()) {
             audio.square1.sweep = data & 0x7F;
+            audio.square1.SweepWriteHandler();
         }
         break;
     // NR11 -- Sound Mode 1 Wave Pattern Duty

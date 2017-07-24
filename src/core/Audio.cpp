@@ -35,6 +35,8 @@ void Audio::UpdateAudio() {
     square1.CheckTrigger();
     square2.CheckTrigger();
 
+    square1.SweepTick(frame_seq_counter);
+
     square1.TimerTick();
     square2.TimerTick();
 

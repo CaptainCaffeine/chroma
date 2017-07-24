@@ -47,10 +47,7 @@ public:
 
     bool channel_enabled;
 
-    u8 GenSample() const {
-        return DutyCycle((sound_length & 0xC0) >> 6)[duty_pos] * volume;
-    }
-
+    u8 GenSample() const { return DutyCycle((sound_length & 0xC0) >> 6)[duty_pos] * volume; }
     u8 EnabledFlag() const {
         if (channel_enabled) {
             return static_cast<u8>(gen_type);
@@ -59,22 +56,17 @@ public:
         }
     }
 
-    bool EnabledLeft(const u8 sound_select) const {
-        return channel_enabled && (sound_select & left_enable_mask);
-    }
+    bool EnabledLeft(const u8 sound_select) const { return channel_enabled && (sound_select & left_enable_mask); }
+    bool EnabledRight(const u8 sound_select) const { return channel_enabled && (sound_select & right_enable_mask); }
 
-    bool EnabledRight(const u8 sound_select) const {
-        return channel_enabled && (sound_select & right_enable_mask);
-    }
-
-    void PowerOn() {
-        duty_pos = 0x00;
-    }
+    void PowerOn() { duty_pos = 0x00; }
+    void SweepWriteHandler();
 
     void CheckTrigger();
     void TimerTick();
     void LengthCounterTick(const unsigned int frame_seq_counter);
     void EnvelopeTick(const unsigned int frame_seq_counter);
+    void SweepTick(const unsigned int frame_seq_counter);
     void ReloadLengthCounter();
     void ClearRegisters(const Console console);
 private:
@@ -82,26 +74,34 @@ private:
     const u8 left_enable_mask;
     const u8 right_enable_mask;
 
-    unsigned int period_timer = 0x00;
-    unsigned int duty_pos = 0x00;
+    unsigned int period_timer = 0;
+    unsigned int duty_pos = 0;
 
-    unsigned int length_counter = 0x00;
+    unsigned int length_counter = 0;
     bool prev_length_counter_dec = false;
 
     u8 volume = 0x00;
-    unsigned int envelope_counter = 0x00;
+    unsigned int envelope_counter = 0;
     bool prev_envelope_inc = false;
     bool envelope_enabled = false;
 
-    void ReloadPeriod() {
-        period_timer = (2048 - (frequency_lo | ((frequency_hi & 0x07) << 8))) << 1;
-    }
+    u16 shadow_frequency = 0x0000;
+    unsigned int sweep_counter = 0;
+    bool prev_sweep_inc = false;
+    bool sweep_enabled = false;
+    bool performed_negative_calculation = false;
 
+    void ReloadPeriod() { period_timer = (2048 - (frequency_lo | ((frequency_hi & 0x07) << 8))) << 1; }
     std::array<unsigned int, 8> DutyCycle(const u8 cycle) const;
 
-    u8 EnvelopeStep() const { return volume_envelope & 0x07; }
+    u8 EnvelopePeriod() const { return volume_envelope & 0x07; }
     u8 EnvelopeDirection() const { return (volume_envelope & 0x08) >> 3; }
     u8 EnvelopeInitialVolume() const { return (volume_envelope & 0xF0) >> 4; }
+
+    u16 CalculateSweepFrequency();
+    u8 SweepPeriod() const { return (sweep & 0x70) >> 4; }
+    u8 SweepDirection() const { return (sweep & 0x08) >> 3; }
+    u8 SweepShift() const { return sweep & 0x07; }
 };
 
 } // End namespace Core

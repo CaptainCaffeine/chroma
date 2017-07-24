@@ -26,9 +26,22 @@ void Channel::CheckTrigger() {
         channel_enabled = true;
         ReloadPeriod();
 
+        if (gen_type == Generator::Square1) {
+            shadow_frequency = frequency_lo | ((frequency_hi & 0x07) << 8);
+            sweep_counter = SweepPeriod();
+            sweep_enabled = (sweep_counter != 0 && SweepShift() != 0);
+
+            // The next frequency value is calculated immediately when the sweep unit is enabled, but it is not
+            // written back to the frequency registers. It will, however, disable the channel if the next value
+            // fails the overflow check.
+            CalculateSweepFrequency();
+
+            performed_negative_calculation = false;
+        }
+
         // Initialize volume envelope.
         volume = EnvelopeInitialVolume();
-        envelope_counter = EnvelopeStep();
+        envelope_counter = EnvelopePeriod();
         envelope_enabled = (envelope_counter != 0);
         if ((EnvelopeDirection() == 0 && volume == 0x00) || (EnvelopeDirection() == 1 && volume == 0x0F)) {
             envelope_enabled = false;
@@ -93,7 +106,7 @@ void Channel::EnvelopeTick(const unsigned int frame_seq_counter) {
                     }
                 }
 
-                envelope_counter = EnvelopeStep();
+                envelope_counter = EnvelopePeriod();
             }
         }
     }
@@ -101,11 +114,63 @@ void Channel::EnvelopeTick(const unsigned int frame_seq_counter) {
     prev_envelope_inc = envelope_inc;
 }
 
+void Channel::SweepTick(const unsigned int frame_seq_counter) {
+    bool sweep_inc = frame_seq_counter & 0x02;
+
+    //if (sweep_enabled && channel_enabled) {
+    if (sweep_enabled) {
+        if (!sweep_inc && prev_sweep_inc) {
+            sweep_counter -= 1;
+
+            if (sweep_counter == 0) {
+                shadow_frequency = CalculateSweepFrequency();
+                frequency_lo = shadow_frequency & 0x00FF;
+                frequency_hi = (frequency_hi & 0xF8) | ((shadow_frequency & 0x0700) >> 8);
+
+                // After writing back the new frequency, it calculates the next value with the new frequency and
+                // performs the overflow check again.
+                CalculateSweepFrequency();
+
+                // The counter likely stays on zero until the next decrement, but it's easier to just reload it right
+                // away with the period + 1.
+                sweep_counter = SweepPeriod() + 1;
+            }
+        }
+    }
+
+    prev_sweep_inc = sweep_inc;
+}
+
 void Channel::ReloadLengthCounter() {
     length_counter = 64 - (sound_length & 0x3F);
 
     // Clear the written length data.
     sound_length &= 0xC0;
+}
+
+u16 Channel::CalculateSweepFrequency() {
+    u16 frequency_delta = shadow_frequency >> SweepShift();
+    if (SweepDirection() == 1) {
+        frequency_delta *= -1;
+        frequency_delta &= 0x07FF;
+
+        performed_negative_calculation = true;
+    }
+
+    u16 new_frequency = (shadow_frequency + frequency_delta) & 0x07FF;
+
+    if (new_frequency > 2047) {
+        sweep_enabled = false;
+        channel_enabled = false;
+    }
+
+    return new_frequency;
+}
+
+void Channel::SweepWriteHandler() {
+    if (SweepPeriod() == 0 || SweepShift() == 0 || (SweepDirection() == 0 && performed_negative_calculation)) {
+        sweep_enabled = false;
+    }
 }
 
 void Channel::ClearRegisters(const Console console) {
