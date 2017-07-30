@@ -39,7 +39,7 @@ public:
     std::vector<u8> sample_buffer;
 
     // ******** Audio I/O registers ********
-    Channel square1 {Generator::Square1,
+    Channel square1 {Generator::Square1, wave_ram,
     // NR10 register: 0xFF10
     //     bit 6-4: Sweep Time (n/128Hz)
     //     bit 3:   Sweep Direction (0=increase, 1=decrease)
@@ -62,7 +62,7 @@ public:
     //     bit 2-0: Frequency High 3 Bits (Write Only)
     0x00};
 
-    Channel square2 {Generator::Square2, 0x00,
+    Channel square2 {Generator::Square2, wave_ram, 0x00,
     // NR21 register: 0xFF16
     //     bit 7-6: Wave Pattern Duty
     //     bit 5-0: Sound Length (Write Only)
@@ -80,7 +80,7 @@ public:
     //     bit 2-0: Frequency High 3 Bits (Write Only)
     0x00};
 
-    Channel wave {Generator::Wave,
+    Channel wave {Generator::Wave, wave_ram,
     // NR30 register: 0xFF1A
     //     bit 7: Channel On/Off (0=Off, 1=On)
     0x00,
@@ -98,7 +98,7 @@ public:
     //     bit 2-0: Frequency High 3 Bits (Write Only)
     0x00};
 
-    Channel noise {Generator::Noise, 0x00,
+    Channel noise {Generator::Noise, wave_ram, 0x00,
     // NR41 register: 0xFF20
     //     bit 5-0: Sound Length
     0x1F,

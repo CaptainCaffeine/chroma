@@ -359,7 +359,7 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
     case 0xFF1B:
         // This register is write-only.
         return 0xFF;
-    // NR32 -- Sound Mode 3 Select Output
+    // NR32 -- Sound Mode 3 Volume Level
     case 0xFF1C:
         return audio.wave.volume_envelope | 0x9F;
     // NR33 -- Sound Mode 3 Low Frequency
@@ -394,7 +394,19 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
     // Wave Pattern RAM
     case 0xFF30: case 0xFF31: case 0xFF32: case 0xFF33: case 0xFF34: case 0xFF35: case 0xFF36: case 0xFF37:
     case 0xFF38: case 0xFF39: case 0xFF3A: case 0xFF3B: case 0xFF3C: case 0xFF3D: case 0xFF3E: case 0xFF3F:
-        return audio.wave_ram[addr - 0xFF30];
+        if (audio.wave.channel_on) {
+            // While the wave channel is enabled, reads to wave RAM return the byte containing the sample
+            // currently being played.
+            if (console != Console::DMG || audio.wave.reading_sample) {
+                return audio.wave_ram[audio.wave.wave_pos >> 1];
+            } else {
+                // On DMG, the wave RAM can only be accessed within 2 cycles after the sample position has been
+                // incremented, while the APU is reading the sample.
+                return 0xFF;
+            }
+        } else {
+            return audio.wave_ram[addr - 0xFF30];
+        }
     // LCDC -- LCD control
     case 0xFF40:
         return lcd.lcdc;
@@ -692,7 +704,17 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     // Wave Pattern RAM
     case 0xFF30: case 0xFF31: case 0xFF32: case 0xFF33: case 0xFF34: case 0xFF35: case 0xFF36: case 0xFF37:
     case 0xFF38: case 0xFF39: case 0xFF3A: case 0xFF3B: case 0xFF3C: case 0xFF3D: case 0xFF3E: case 0xFF3F:
-        audio.wave_ram[addr - 0xFF30] = data;
+        if (audio.wave.channel_on) {
+            // While the wave channel is enabled, writes to wave RAM write the byte containing the sample
+            // currently being played.
+            if (console != Console::DMG || audio.wave.reading_sample) {
+                // On DMG, the wave RAM can only be accessed within 2 cycles after the sample position has been
+                // incremented, while the APU is reading the sample.
+                audio.wave_ram[audio.wave.wave_pos >> 1] = data;
+            }
+        } else {
+            audio.wave_ram[addr - 0xFF30] = data;
+        }
         break;
     // LCDC -- LCD control
     case 0xFF40:

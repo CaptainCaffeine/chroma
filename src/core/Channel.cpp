@@ -18,7 +18,7 @@
 
 namespace Core {
 
-void Channel::CheckTrigger() {
+void Channel::CheckTrigger(const Console console) {
     if (frequency_hi & 0x80) {
         // Clear reset flag.
         frequency_hi &= 0x7F;
@@ -39,30 +39,60 @@ void Channel::CheckTrigger() {
             performed_negative_calculation = false;
         }
 
-        // Initialize volume envelope.
-        volume = EnvelopeInitialVolume();
-        envelope_counter = EnvelopePeriod();
-        envelope_enabled = (envelope_counter != 0);
-        if ((EnvelopeDirection() == 0 && volume == 0x00) || (EnvelopeDirection() == 1 && volume == 0x0F)) {
-            envelope_enabled = false;
+
+        if (gen_type != Generator::Wave) {
+            // Initialize volume envelope.
+            volume = EnvelopeInitialVolume();
+            envelope_counter = EnvelopePeriod();
+            envelope_enabled = (envelope_counter != 0);
+            if ((EnvelopeDirection() == 0 && volume == 0x00) || (EnvelopeDirection() == 1 && volume == 0x0F)) {
+                envelope_enabled = false;
+            }
         }
 
         // If the length counter is zero on trigger, it's set to the maximum value.
         if (length_counter == 0) {
-            length_counter = 64;
+            if (gen_type == Generator::Wave) {
+                length_counter = 256;
+            } else {
+                length_counter = 64;
+            }
         }
 
-        // If the current volume is zero, the channel will be disabled immediately after initialization.
-        if (volume == 0x00) {
-            channel_enabled = false;
+        if (gen_type == Generator::Wave) {
+            if (console == Console::DMG && reading_sample) {
+                CorruptWaveRAM();
+            }
+
+            wave_pos = 0;
+            channel_enabled = WaveChannelOn();
+
+            // When triggering the wave channel, the first sample to be played is the last sample that was completely
+            // played back by the wave channel.
+            current_sample = last_played_sample;
+        } else {
+            // If the current volume is zero, the channel will be disabled immediately after initialization.
+            if (volume == 0x00) {
+                channel_enabled = false;
+            }
+
+            // The wave position is *not* reset to 0 on trigger for the square wave channels.
         }
     }
 }
 
 void Channel::TimerTick() {
+    reading_sample = false;
+
     if (period_timer == 0) {
-        duty_pos += 1;
-        duty_pos &= 0x07;
+        if (gen_type == Generator::Wave) {
+            last_played_sample = current_sample;
+            wave_pos = (wave_pos + 1) & 0x1F;
+            current_sample = GetNextSample();
+            reading_sample = true;
+        } else {
+            wave_pos = (wave_pos + 1) & 0x07;
+        }
 
         ReloadPeriod();
     } else {
@@ -89,7 +119,7 @@ void Channel::LengthCounterTick(const unsigned int frame_seq_counter) {
 void Channel::EnvelopeTick(const unsigned int frame_seq_counter) {
     bool envelope_inc = frame_seq_counter & 0x04;
 
-    if (envelope_enabled && channel_enabled) {
+    if (envelope_enabled) {
         if (!envelope_inc && prev_envelope_inc) {
             envelope_counter -= 1;
 
@@ -117,7 +147,6 @@ void Channel::EnvelopeTick(const unsigned int frame_seq_counter) {
 void Channel::SweepTick(const unsigned int frame_seq_counter) {
     bool sweep_inc = frame_seq_counter & 0x02;
 
-    //if (sweep_enabled && channel_enabled) {
     if (sweep_enabled) {
         if (!sweep_inc && prev_sweep_inc) {
             sweep_counter -= 1;
@@ -142,7 +171,11 @@ void Channel::SweepTick(const unsigned int frame_seq_counter) {
 }
 
 void Channel::ReloadLengthCounter() {
-    length_counter = 64 - (sound_length & 0x3F);
+    if (gen_type == Generator::Wave) {
+        length_counter = 256 - sound_length;
+    } else {
+        length_counter = 64 - (sound_length & 0x3F);
+    }
 
     // Clear the written length data.
     sound_length &= 0xC0;
@@ -187,6 +220,21 @@ void Channel::ClearRegisters(const Console console) {
     }
 
     channel_enabled = false;
+}
+
+void Channel::CorruptWaveRAM() {
+    // On DMG, if the wave channel is triggered while a sample is being read from the wave RAM, the first few bytes
+    // of wave RAM get corrupted.
+    if (wave_pos < 4) {
+        // If the sample being read is one of the first four bytes, then the first byte is set to the byte being read.
+        wave_ram[0] = current_sample;
+    } else {
+        // Otherwise, the first 4 bytes are overwritten with 4 bytes in the 4-aligned block around the byte being read.
+        unsigned int copy_pos = (wave_pos / 4) * 4;
+        for (int i = 0; i < 4; ++i) {
+            wave_ram[i] = wave_ram[copy_pos + i];
+        }
+    }
 }
 
 std::array<unsigned int, 8> Channel::DutyCycle(const u8 cycle) const {

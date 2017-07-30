@@ -32,16 +32,19 @@ void Audio::UpdateAudio() {
         return;
     }
 
-    square1.CheckTrigger();
-    square2.CheckTrigger();
+    square1.CheckTrigger(mem->console);
+    square2.CheckTrigger(mem->console);
+    wave.CheckTrigger(mem->console);
 
     square1.SweepTick(frame_seq_counter);
 
     square1.TimerTick();
     square2.TimerTick();
+    wave.TimerTick();
 
     square1.LengthCounterTick(frame_seq_counter);
     square2.LengthCounterTick(frame_seq_counter);
+    wave.LengthCounterTick(frame_seq_counter);
 
     square1.EnvelopeTick(frame_seq_counter);
     square2.EnvelopeTick(frame_seq_counter);
@@ -51,6 +54,7 @@ void Audio::UpdateAudio() {
 
     u8 sample_channel1 = square1.GenSample();
     u8 sample_channel2 = square2.GenSample();
+    u8 sample_channel3 = wave.GenSample();
 
     if (square1.EnabledLeft(sound_select)) {
         left_sample += sample_channel1;
@@ -60,12 +64,20 @@ void Audio::UpdateAudio() {
         left_sample += sample_channel2;
     }
 
+    if (wave.EnabledLeft(sound_select)) {
+        left_sample += sample_channel3;
+    }
+
     if (square1.EnabledRight(sound_select)) {
         right_sample += sample_channel1;
     }
 
     if (square2.EnabledRight(sound_select)) {
         right_sample += sample_channel2;
+    }
+
+    if (wave.EnabledRight(sound_select)) {
+        right_sample += sample_channel3;
     }
 
     QueueSample(left_sample, right_sample);
