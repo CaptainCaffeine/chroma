@@ -384,7 +384,7 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         return audio.noise.frequency_hi | 0xBF;
     // NR50 -- Channel Control/Volume
     case 0xFF24:
-        return audio.volume;
+        return audio.master_volume;
     // NR51 -- Sound Output Terminal Selection
     case 0xFF25:
         return audio.sound_select;
@@ -688,7 +688,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     // NR50 -- Channel Control/Volume
     case 0xFF24:
         if (audio.IsPoweredOn()) {
-            audio.volume = data;
+            audio.master_volume = data;
         }
         break;
     // NR51 -- Sound Output Terminal Selection

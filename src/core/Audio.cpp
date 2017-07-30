@@ -116,7 +116,7 @@ void Audio::ClearRegisters() {
     wave.ClearRegisters(mem->console);
     noise.ClearRegisters(mem->console);
 
-    volume = 0x00;
+    master_volume = 0x00;
     sound_select = 0x00;
     sound_on = 0x00;
 }
@@ -125,6 +125,12 @@ void Audio::QueueSample(u8 left_sample, u8 right_sample) {
     // Take every 44th sample to get 1596 samples per frame. We need 1600 samples per frame for 48kHz at 60FPS,
     // so take another sample at 1/4 and 3/4 through the frame.
     if (sample_drop % 44 == 0 || sample_drop == 8778 || sample_drop == 26334) {
+        // Multiply the samples by the master volume. This is done after the DAC and after the channels have been
+        // mixed, and so can be greater than 0x0F.
+        // The largest value is (0xF * 4) * 7 = 420, which is larger than 255, so we need to divide the samples by 2.
+        // Otherwise the samples will overflow. It's also just way too loud.
+        left_sample = (left_sample * (((master_volume & 0x70) >> 4) + 1)) >> 1;
+        right_sample = (right_sample * ((master_volume & 0x07) + 1)) >> 1;
         sample_buffer.push_back(left_sample);
         sample_buffer.push_back(right_sample);
     }

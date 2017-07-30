@@ -107,10 +107,7 @@ void SDLContext::ToggleFullscreen() {
 }
 
 void SDLContext::PushBackAudio(const std::vector<u8>& sample_buffer) {
-    std::size_t remaining_buffer = 3200 - SDL_GetQueuedAudioSize(audio_device);
-    std::size_t bytes_to_queue = std::min(remaining_buffer, sample_buffer.size());
-
-    SDL_QueueAudio(audio_device, sample_buffer.data(), bytes_to_queue);
+    SDL_QueueAudio(audio_device, sample_buffer.data(), sample_buffer.size());
 }
 
 void SDLContext::UnpauseAudio() {

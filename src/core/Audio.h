@@ -122,7 +122,7 @@ public:
     //     bit 6-4: SO2 Output Level
     //     bit 3:   Output Vin to SO1 (1=Enable)
     //     bit 2-0: SO1 Output Level
-    u8 volume = 0x77;
+    u8 master_volume = 0x77;
     // NR51 register: 0xFF25
     //     bit 7: Output Channel 4 to SO2
     //     bit 6: Output Channel 3 to SO2
