@@ -572,8 +572,6 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
             audio.square1.volume_envelope = data;
             if ((audio.square1.volume_envelope & 0xF0) == 0) {
                 audio.square1.channel_enabled = false;
-            } else {
-                audio.square1.channel_enabled = true;
             }
         }
         break;
@@ -602,8 +600,6 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
             audio.square2.volume_envelope = data;
             if ((audio.square2.volume_envelope & 0xF0) == 0) {
                 audio.square2.channel_enabled = false;
-            } else {
-                audio.square2.channel_enabled = true;
             }
         }
         break;
@@ -625,8 +621,6 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
             audio.wave.channel_on = data & 0x80;
             if ((audio.wave.channel_on & 0x80) == 0) {
                 audio.wave.channel_enabled = false;
-            } else {
-                audio.wave.channel_enabled = true;
             }
         }
         break;
@@ -668,8 +662,6 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
             audio.noise.volume_envelope = data;
             if ((audio.noise.volume_envelope & 0xF0) == 0) {
                 audio.noise.channel_enabled = false;
-            } else {
-                audio.noise.channel_enabled = true;
             }
         }
         break;

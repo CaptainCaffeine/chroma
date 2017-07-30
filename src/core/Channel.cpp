@@ -173,12 +173,15 @@ void Channel::SweepTick(const unsigned int frame_seq_counter) {
 void Channel::ReloadLengthCounter() {
     if (gen_type == Generator::Wave) {
         length_counter = 256 - sound_length;
+
+        // Clear the written length data.
+        sound_length = 0x00;
     } else {
         length_counter = 64 - (sound_length & 0x3F);
-    }
 
-    // Clear the written length data.
-    sound_length &= 0xC0;
+        // Clear the written length data.
+        sound_length &= 0xC0;
+    }
 }
 
 u16 Channel::CalculateSweepFrequency() {
