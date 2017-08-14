@@ -55,9 +55,10 @@ public:
     //     bit 2-0: Step Time (n/64 seconds)
     0xF3,
     // NR13 register: 0xFF13 (Write Only)
+    //     bit 7-0: Frequency Low 8 Bits (Write Only)
     0xFF,
     // NR14 register: 0xFF14
-    //     bit 7:   Reset (1=Restart Sound) (Write Only)
+    //     bit 7:   Reset (1=Trigger Channel) (Write Only)
     //     bit 6:   Timed Mode (0=continuous, 1=stop when length expires)
     //     bit 2-0: Frequency High 3 Bits (Write Only)
     0x00};
@@ -73,9 +74,10 @@ public:
     //     bit 2-0: Step Time (n/64 seconds)
     0x00,
     // NR23 register: 0xFF18
+    //     bit 7-0: Frequency Low 8 Bits (Write Only)
     0xFF,
     // NR24 register: 0xFF19
-    //     bit 7:   Reset (1=Restart Sound) (Write Only)
+    //     bit 7:   Reset (1=Trigger Channel) (Write Only)
     //     bit 6:   Timed Mode (0=continuous, 1=stop when length expires)
     //     bit 2-0: Frequency High 3 Bits (Write Only)
     0x00};
@@ -86,14 +88,15 @@ public:
     0x00,
     // NR31 register: 0xFF1B
     //     bit 7-0: Sound Length
-    0xFF,
+    0x00,
     // NR32 register: 0xFF1C
     //     bit 6-5: Output Level (0=Silent, 1=unshifted/100%, 2=shifted right once/50%, 3=shifted right twice/25%)
     0x00,
     // NR33 register: 0xFF1D
+    //     bit 7-0: Frequency Low 8 Bits (Write Only)
     0xFF,
     // NR34 register: 0xFF1E
-    //     bit 7:   Reset (1=Restart Sound) (Write Only)
+    //     bit 7:   Reset (1=Trigger Channel) (Write Only)
     //     bit 6:   Timed Mode (0=continuous, 1=stop when length expires)
     //     bit 2-0: Frequency High 3 Bits (Write Only)
     0x00};
@@ -101,7 +104,7 @@ public:
     Channel noise {Generator::Noise, wave_ram, 0x00,
     // NR41 register: 0xFF20
     //     bit 5-0: Sound Length
-    0x1F,
+    0x00,
     // NR42 register: 0xFF21
     //     bit 7-4: Initial Volume of Envelope
     //     bit 3:   Envelope Direction (0=decrease, 1=increase)
@@ -109,11 +112,11 @@ public:
     0x00,
     // NR43 register: 0xFF22
     //     bit 7-4: Shift Clock Frequency
-    //     bit 3:   Counter Step (0=15 bits, 1=7 bits)
+    //     bit 3:   LFSR Width (0=15 bits, 1=7 bits)
     //     bit 2-0: Clock Divider
     0x00,
     // NR44 register: 0xFF23
-    //     bit 7: Reset (1=Restart Sound) (Write Only)
+    //     bit 7: Reset (1=Trigger Channel) (Write Only)
     //     bit 6: Timed Mode (0=continuous, 1=stop when length expires)
     0x00};
 

@@ -39,7 +39,6 @@ void Channel::CheckTrigger(const Console console) {
             performed_negative_calculation = false;
         }
 
-
         if (gen_type != Generator::Wave) {
             // Initialize volume envelope.
             volume = EnvelopeInitialVolume();
@@ -57,6 +56,10 @@ void Channel::CheckTrigger(const Console console) {
             } else {
                 length_counter = 64;
             }
+        }
+
+        if (gen_type == Generator::Noise) {
+            lfsr = 0xFFFF;
         }
 
         if (gen_type == Generator::Wave) {
@@ -90,6 +93,17 @@ void Channel::TimerTick() {
             wave_pos = (wave_pos + 1) & 0x1F;
             current_sample = GetNextSample();
             reading_sample = true;
+        } else if (gen_type == Generator::Noise) {
+            if (ShiftClock() < 14) {
+                const unsigned int xored_bits = (lfsr ^ (lfsr >> 1)) & 0x0001;
+                lfsr >>= 1;
+                lfsr |= xored_bits << 14;
+
+                if (frequency_lo & 0x08) {
+                    lfsr &= ~0x0040;
+                    lfsr |= xored_bits << 6;
+                }
+            }
         } else {
             wave_pos = (wave_pos + 1) & 0x07;
         }

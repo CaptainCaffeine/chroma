@@ -57,6 +57,8 @@ public:
         if (gen_type == Generator::Wave) {
             u8 volume_shift = (WaveVolumeShift()) ? WaveVolumeShift() - 1 : 4;
             return current_sample >> volume_shift;
+        } else if (gen_type == Generator::Noise) {
+            return ((~lfsr) & 0x0001) * volume;
         } else {
             return DutyCycle((sound_length & 0xC0) >> 6)[wave_pos] * volume;
         }
@@ -111,9 +113,19 @@ private:
     u8 current_sample = 0x00;
     u8 last_played_sample = 0x00;
 
+    // Noise
+    u16 lfsr = 0x0001;
+
     void ReloadPeriod() {
         if (gen_type == Generator::Wave) {
             period_timer = (2048 - (frequency_lo | ((frequency_hi & 0x07) << 8)));
+        } else if (gen_type == Generator::Noise) {
+            unsigned int clock_divisor = (frequency_lo & 0x07) << 1;
+            if (clock_divisor == 0) {
+                clock_divisor = 1;
+            }
+
+            period_timer = clock_divisor << (ShiftClock() + 2);
         } else {
             period_timer = (2048 - (frequency_lo | ((frequency_hi & 0x07) << 8))) << 1;
         }
@@ -136,6 +148,8 @@ private:
         u8 sample_byte = wave_ram[(wave_pos & 0x1E) >> 1];
         return (wave_pos & 0x01) ? (sample_byte & 0x0F) : ((sample_byte & 0xF0) >> 4);
     }
+
+    u16 ShiftClock() const { return (frequency_lo & 0xF0) >> 4; }
 
     void CorruptWaveRAM();
 };

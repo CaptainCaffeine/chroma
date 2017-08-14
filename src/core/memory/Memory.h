@@ -182,8 +182,9 @@ private:
     //     bit 3:   Envelope Direction (0=decrease, 1=increase)
     //     bit 2-0: Step Time (n/64 seconds)
     // NR13 register: 0xFF13 (Write Only)
+    //     bit 7-0: Frequency Low 8 Bits (Write Only)
     // NR14 register: 0xFF14
-    //     bit 7:   Reset (1=Restart Sound) (Write Only)
+    //     bit 7:   Reset (1=Trigger Channel) (Write Only)
     //     bit 6:   Timed Mode (0=continuous, 1=stop when length expires)
     //     bit 2-0: Frequency High 3 Bits (Write Only)
     // NR21 register: 0xFF16
@@ -194,8 +195,9 @@ private:
     //     bit 3:   Envelope Direction (0=decrease, 1=increase)
     //     bit 2-0: Step Time (n/64 seconds)
     // NR23 register: 0xFF18
+    //     bit 7-0: Frequency Low 8 Bits (Write Only)
     // NR24 register: 0xFF19
-    //     bit 7:   Reset (1=Restart Sound) (Write Only)
+    //     bit 7:   Reset (1=Trigger Channel) (Write Only)
     //     bit 6:   Timed Mode (0=continuous, 1=stop when length expires)
     //     bit 2-0: Frequency High 3 Bits (Write Only)
     // NR30 register: 0xFF1A
@@ -205,8 +207,9 @@ private:
     // NR32 register: 0xFF1C
     //     bit 6-5: Output Level (0=Silent, 1=unshifted/100%, 2=shifted right once/50%, 3=shifted right twice/25%)
     // NR33 register: 0xFF1D
+    //     bit 7-0: Frequency Low 8 Bits (Write Only)
     // NR34 register: 0xFF1E
-    //     bit 7:   Reset (1=Restart Sound) (Write Only)
+    //     bit 7:   Reset (1=Trigger Channel) (Write Only)
     //     bit 6:   Timed Mode (0=continuous, 1=stop when length expires)
     //     bit 2-0: Frequency High 3 Bits (Write Only)
     // NR41 register: 0xFF20
@@ -217,10 +220,10 @@ private:
     //     bit 2-0: Step Time (n/64 seconds)
     // NR43 register: 0xFF22
     //     bit 7-4: Shift Clock Frequency
-    //     bit 3:   Counter Step (0=15 bits, 1=7 bits)
+    //     bit 3:   LFSR Width (0=15 bits, 1=7 bits)
     //     bit 2-0: Clock Divider
     // NR44 register: 0xFF23
-    //     bit 7: Reset (1=Restart Sound) (Write Only)
+    //     bit 7: Reset (1=Trigger Channel) (Write Only)
     //     bit 6: Timed Mode (0=continuous, 1=stop when length expires)
     // NR50 register: 0xFF24
     //     bit 7:   Output Vin to SO2 (1=Enable)
