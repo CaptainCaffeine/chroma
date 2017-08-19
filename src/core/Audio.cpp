@@ -99,7 +99,7 @@ void Audio::UpdateAudio() {
 void Audio::FrameSequencerTick() {
     frame_seq_clock += 2;
 
-    bool frame_seq_inc = frame_seq_clock & 0x2000;
+    bool frame_seq_inc = frame_seq_clock & 0x1000;
     if (!frame_seq_inc && prev_frame_seq_inc) {
         frame_seq_counter += 1;
     }
