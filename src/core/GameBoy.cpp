@@ -77,8 +77,7 @@ void GameBoy::EmulatorLoop() {
         int target_cycles = (cycles_per_frame << mem->double_speed) + overspent_cycles;
         overspent_cycles = cpu->RunFor(target_cycles);
 
-        sdl_context.PushBackAudio(audio->sample_buffer);
-        audio->sample_buffer.clear();
+        sdl_context.PushBackAudio(audio->output_buffer);
         sdl_context.RenderFrame(front_buffer.data());
     }
 

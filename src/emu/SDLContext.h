@@ -17,7 +17,7 @@
 #pragma once
 
 #include <string>
-#include <vector>
+#include <array>
 #include <SDL.h>
 
 #include "common/CommonTypes.h"
@@ -32,7 +32,7 @@ public:
     void RenderFrame(const u16* fb_ptr);
     void ToggleFullscreen();
 
-    void PushBackAudio(const std::vector<u8>& sample_buffer);
+    void PushBackAudio(const std::array<s16, 1600>& sample_buffer);
     void UnpauseAudio();
     void PauseAudio();
 

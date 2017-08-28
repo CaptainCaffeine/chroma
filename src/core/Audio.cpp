@@ -19,10 +19,11 @@
 
 namespace Core {
 
-void Audio::UpdateAudio() {
-    // Increment the sample counter and reset it on every frame.
-    sample_drop = (sample_drop + 1) % 35112;
+Audio::Audio()
+    : left_upsampled(interpolated_buffer_size)
+    , right_upsampled(interpolated_buffer_size) {}
 
+void Audio::UpdateAudio() {
     FrameSequencerTick();
 
     UpdatePowerOnState();
@@ -136,22 +137,104 @@ void Audio::ClearRegisters() {
 }
 
 void Audio::QueueSample(u8 left_sample, u8 right_sample) {
-    // Take every 44th sample to get 1596 samples per frame. We need 1600 samples per frame for 48kHz at 60FPS,
-    // so take another sample at 1/4 and 3/4 through the frame.
-    if (sample_drop % 44 == 0 || sample_drop == 8778 || sample_drop == 26334) {
+    sample_counter += 1;
+
+    // We pre-downsample the signal by 7 so the IIR filter can run in real time. So technically aliasing can still
+    // occur, but it's much better than nearest-neighbour downsampling by 44.
+    if (sample_counter % divisor == 0) {
         // Multiply the samples by the master volume. This is done after the DAC and after the channels have been
-        // mixed, and so can be greater than 0x0F.
-        // The largest value is (0xF * 4) * 7 = 420, which is larger than 255, so we need to divide the samples by 2.
-        // Otherwise the samples will overflow. It's also just way too loud.
-        left_sample = (left_sample * (((master_volume & 0x70) >> 4) + 1)) >> 1;
-        right_sample = (right_sample * ((master_volume & 0x07) + 1)) >> 1;
-        sample_buffer.push_back(left_sample);
-        sample_buffer.push_back(right_sample);
+        // mixed, and so the final sample value can be greater than 0x0F.
+        sample_buffer.push_back(left_sample * (((master_volume & 0x70) >> 4) + 1));
+        sample_buffer.push_back(right_sample * ((master_volume & 0x07) + 1));
+    }
+
+    if (sample_buffer.size() == num_samples * 2) {
+        Resample();
+        sample_buffer.clear();
     }
 }
 
 u8 Audio::ReadNR52() const {
     return sound_on | 0x70 | square1.EnabledFlag() | square2.EnabledFlag() | wave.EnabledFlag() | noise.EnabledFlag();
+}
+
+void Audio::Resample() {
+    // The Game Boy generates 35112 samples per channel per frame, which we pre-downsample to 5016. We then resample
+    // to 800 samples per channel by interpolating by a factor of 100 and decimating by a factor of 627.
+    Upsample();
+    LowPassIIRFilter();
+    Downsample();
+}
+
+void Audio::Upsample() {
+    // Upsample the signal by placing interpolation_factor-1 zeroes between each sample.
+    for (std::size_t i = 0; i < interpolated_buffer_size; ++i) {
+        left_upsampled[i] = 0;
+        right_upsampled[i] = 0;
+    }
+
+    for (std::size_t i = 0; i < num_samples; ++i) {
+        // Multiply the samples by 64 to increase the amplitude for the IIR filter.
+        left_upsampled[i * interpolation_factor] = sample_buffer[i * 2] * 64.0;
+        right_upsampled[i * interpolation_factor] = sample_buffer[i * 2 + 1] * 64.0;
+    }
+}
+
+void Audio::Downsample() {
+    for (std::size_t i = 0; i < output_buffer.size() / 2; ++i) {
+        // Multiply by 64 to scale the volume for s16 samples.
+        output_buffer[i * 2] = left_upsampled[i * decimation_factor] * 64;
+        output_buffer[i * 2 + 1] = right_upsampled[i * decimation_factor] * 64;
+    }
+}
+
+void Audio::LowPassIIRFilter() {
+    // Two-pass Butterworth lowpass IIR filter.
+    // Biquad form used is the Transposed Direct Form 2.
+    for (std::size_t i = 0; i < interpolated_buffer_size; ++i) {
+        // Left signal first pass.
+        double in = left_upsampled[i];
+        double inb0 = in * left_biquad1.b0;
+        double out = left_biquad1.z2 + inb0;
+        left_biquad1.z2 = in * left_biquad1.b1 - out * left_biquad1.a1 + left_biquad1.z1;
+        left_biquad1.z1 = inb0 - out * left_biquad1.a2;
+
+        // Left signal second pass.
+        in = out;
+        inb0 = in * left_biquad2.b0;
+        out = left_biquad2.z2 + inb0;
+        left_biquad2.z2 = in * left_biquad2.b1 - out * left_biquad2.a1 + left_biquad2.z1;
+        left_biquad2.z1 = inb0 - out * left_biquad2.a2;
+        left_upsampled[i] = out;
+
+        // Right signal first pass.
+        in = right_upsampled[i];
+        inb0 = in * right_biquad1.b0;
+        out = right_biquad1.z2 + inb0;
+        right_biquad1.z2 = in * right_biquad1.b1 - out * right_biquad1.a1 + right_biquad1.z1;
+        right_biquad1.z1 = inb0 - out * right_biquad1.a2;
+
+        // Right signal second pass.
+        in = out;
+        inb0 = in * right_biquad2.b0;
+        out = right_biquad2.z2 + inb0;
+        right_biquad2.z2 = in * right_biquad2.b1 - out * right_biquad2.a1 + right_biquad2.z1;
+        right_biquad2.z1 = inb0 - out * right_biquad2.a2;
+        right_upsampled[i] = out;
+
+        // This algorithm has minor numerical issues which often leave extremely small values in the z delays
+        // (like 1E-400) which are far too small to leave an impact on the signal and slow down the calculation
+        // significantly. So we clear any z delays with absolute value less than 1E-15.
+        constexpr double limit = 0.000000000000001;
+        if (std::abs(left_biquad1.z1) < limit) { left_biquad1.z1 = 0.0; }
+        if (std::abs(left_biquad1.z2) < limit) { left_biquad1.z2 = 0.0; }
+        if (std::abs(left_biquad2.z1) < limit) { left_biquad2.z1 = 0.0; }
+        if (std::abs(left_biquad2.z2) < limit) { left_biquad2.z2 = 0.0; }
+        if (std::abs(right_biquad1.z1) < limit) { right_biquad1.z1 = 0.0; }
+        if (std::abs(right_biquad1.z2) < limit) { right_biquad1.z2 = 0.0; }
+        if (std::abs(right_biquad2.z1) < limit) { right_biquad2.z1 = 0.0; }
+        if (std::abs(right_biquad2.z2) < limit) { right_biquad2.z2 = 0.0; }
+    }
 }
 
 } // End namespace Core

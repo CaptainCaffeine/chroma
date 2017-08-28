@@ -15,7 +15,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdexcept>
-#include <array>
 
 #include "emu/SDLContext.h"
 
@@ -31,7 +30,7 @@ SDLContext::SDLContext(unsigned int scale, bool fullscreen) {
                               SDL_WINDOWPOS_UNDEFINED,
                               160 * scale,
                               144 * scale,
-                              SDL_WINDOW_SHOWN);
+                              SDL_WINDOW_OPENGL);
     if (window == nullptr) {
         SDL_Quit();
         throw std::runtime_error(GetSDLErrorString("CreateWindow"));
@@ -67,7 +66,7 @@ SDLContext::SDLContext(unsigned int scale, bool fullscreen) {
 
     SDL_AudioSpec want, have;
     want.freq = 48000;
-    want.format = AUDIO_U8;
+    want.format = AUDIO_S16;
     want.channels = 2;
     want.samples = 1600;
     want.callback = nullptr; // nullptr for using a queue instead.
@@ -106,8 +105,8 @@ void SDLContext::ToggleFullscreen() {
     SDL_SetWindowFullscreen(window, fullscreen ^ SDL_WINDOW_FULLSCREEN_DESKTOP);
 }
 
-void SDLContext::PushBackAudio(const std::vector<u8>& sample_buffer) {
-    SDL_QueueAudio(audio_device, sample_buffer.data(), sample_buffer.size());
+void SDLContext::PushBackAudio(const std::array<s16, 1600>& sample_buffer) {
+    SDL_QueueAudio(audio_device, sample_buffer.data(), sample_buffer.size() * sizeof(s16));
 }
 
 void SDLContext::UnpauseAudio() {
