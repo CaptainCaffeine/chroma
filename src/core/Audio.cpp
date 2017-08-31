@@ -19,9 +19,10 @@
 
 namespace Core {
 
-Audio::Audio()
-    : left_upsampled(interpolated_buffer_size)
-    , right_upsampled(interpolated_buffer_size) {}
+Audio::Audio(bool enable_filter)
+    : enable_iir(enable_filter)
+    , left_upsampled((enable_filter) ? interpolated_buffer_size : 0)
+    , right_upsampled((enable_filter) ? interpolated_buffer_size : 0) {}
 
 void Audio::UpdateAudio() {
     FrameSequencerTick();
@@ -137,20 +138,41 @@ void Audio::ClearRegisters() {
 }
 
 void Audio::QueueSample(u8 left_sample, u8 right_sample) {
-    sample_counter += 1;
+    if (enable_iir) {
+        sample_counter += 1;
 
-    // We pre-downsample the signal by 7 so the IIR filter can run in real time. So technically aliasing can still
-    // occur, but it's much better than nearest-neighbour downsampling by 44.
-    if (sample_counter % divisor == 0) {
-        // Multiply the samples by the master volume. This is done after the DAC and after the channels have been
-        // mixed, and so the final sample value can be greater than 0x0F.
-        sample_buffer.push_back(left_sample * (((master_volume & 0x70) >> 4) + 1));
-        sample_buffer.push_back(right_sample * ((master_volume & 0x07) + 1));
-    }
+        // We pre-downsample the signal by 7 so the IIR filter can run in real time. So technically aliasing can still
+        // occur, but it's much better than nearest-neighbour downsampling by 44.
+        if (sample_counter % divisor == 0) {
+            // Multiply the samples by the master volume. This is done after the DAC and after the channels have been
+            // mixed, and so the final sample value can be greater than 0x0F.
+            sample_buffer.push_back(left_sample * (((master_volume & 0x70) >> 4) + 1));
+            sample_buffer.push_back(right_sample * ((master_volume & 0x07) + 1));
+        }
 
-    if (sample_buffer.size() == num_samples * 2) {
-        Resample();
-        sample_buffer.clear();
+        if (sample_buffer.size() == num_samples * 2) {
+            Resample();
+            sample_buffer.clear();
+        }
+    } else {
+        sample_counter += 1 % 35112;
+
+        // Take every 44th sample to get 1596 samples per frame. We need 800 samples per channel per frame for 
+        // 48kHz at 60FPS, so take another sample at 1/4 and 3/4 through the frame.
+        if (sample_counter % 44 == 0 || sample_counter == 8778 || sample_counter == 26334) {
+            // Multiply the samples by the master volume. This is done after the DAC and after the channels have been
+            // mixed, and so can be greater than 0x0F.
+            sample_buffer.push_back(left_sample * (((master_volume & 0x70) >> 4) + 1));
+            sample_buffer.push_back(right_sample * ((master_volume & 0x07) + 1));
+        }
+
+        if (sample_buffer.size() == output_buffer.size()) {
+            for (std::size_t i = 0; i < sample_buffer.size(); ++i) {
+                output_buffer[i] = sample_buffer[i] * 64;
+            }
+
+            sample_buffer.clear();
+        }
     }
 }
 

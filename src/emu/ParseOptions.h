@@ -34,6 +34,7 @@ void DisplayHelp();
 Console GetGameBoyType(const std::vector<std::string>& tokens);
 LogLevel GetLogLevel(const std::vector<std::string>& tokens);
 unsigned int GetPixelScale(const std::vector<std::string>& tokens);
+bool GetFilterEnable(const std::vector<std::string>& tokens);
 
 std::string SaveGamePath(const std::string& rom_path);
 std::vector<u8> LoadROM(const std::string& filename);

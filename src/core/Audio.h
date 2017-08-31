@@ -60,7 +60,7 @@ struct Biquad {
 
 class Audio {
 public:
-    Audio();
+    Audio(bool enable_filter);
 
     void UpdateAudio();
 
@@ -191,6 +191,7 @@ private:
     bool prev_frame_seq_inc = false;
 
     // IIR filter
+    const bool enable_iir;
     unsigned int sample_counter = 0;
     static constexpr unsigned int divisor = 7;
     static constexpr unsigned int num_samples = 35112 / divisor;

@@ -43,18 +43,22 @@ std::string GetOptionParam(const std::vector<std::string>& tokens, const std::st
     if (itr != tokens.cend() && ++itr != tokens.cend()) {
         return *itr;
     }
-    return std::string();
+
+    return "";
 }
 
 void DisplayHelp() {
     std::cout << "Usage: chroma [options] <path/to/rom>\n\n";
     std::cout << "Options:\n";
-    std::cout << "  -h\t\t\t\tdisplay help\n";
-    std::cout << "  -m [dmg, cgb]\t\t\tspecify device to emulate\n";
-    std::cout << "  -l [regular, timer, lcd]\tspecify log level (default: none)\n";
-    std::cout << "  -s [1-15]\t\t\tspecify resolution scale (default: 1)\n";
-    std::cout << "  -f \t\t\t\tactivate fullscreen mode\n";
-    std::cout << "  --multicart \t\t\temulate this game using an MBC1M" << std::endl;
+    std::cout << "  -h                       display help\n";
+    std::cout << "  -m [dmg, cgb]            specify device to emulate\n";
+    std::cout << "  -l [regular, timer, lcd] specify log level (default: none)\n";
+    std::cout << "  -s [1-15]                specify resolution scale (default: 1)\n";
+    std::cout << "  -f                       activate fullscreen mode\n";
+    std::cout << "  --filter [iir, nearest]  choose audio filtering method (default: iir)\n";
+    std::cout << "                               IIR (slow, better quality)\n";
+    std::cout << "                               nearest-neighbour (fast, lesser quality)\n";
+    std::cout << "  --multicart              emulate this game using an MBC1M" << std::endl;
 }
 
 Console GetGameBoyType(const std::vector<std::string>& tokens) {
@@ -98,10 +102,27 @@ unsigned int GetPixelScale(const std::vector<std::string>& tokens) {
         if (scale > 15) {
             throw std::invalid_argument("Invalid scale value specified: " + scale_string);
         }
+
         return scale;
     } else {
         // If no resolution scale specified, default to native resolution.
         return 1;
+    }
+}
+
+bool GetFilterEnable(const std::vector<std::string>& tokens) {
+    const std::string filter_string = Emu::GetOptionParam(tokens, "--filter");
+    if (!filter_string.empty()) {
+        if (filter_string == "iir") {
+            return true;
+        } else if (filter_string == "nearest") {
+            return false;
+        } else {
+            throw std::invalid_argument("Invalid filter method specified: " + filter_string);
+        }
+    } else {
+        // If no filter specified, default to using IIR filter.
+        return true;
     }
 }
 
@@ -133,12 +154,15 @@ std::vector<u8> LoadROM(const std::string& filename) {
 
 std::string SaveGamePath(const std::string& rom_path) {
     std::size_t last_dot = rom_path.rfind('.');
+
     if (last_dot == std::string::npos) {
         throw std::runtime_error("No file extension found.");
     }
+
     if (rom_path.substr(last_dot, rom_path.size()) == ".sav") {
         throw std::runtime_error("You tried to run a save file instead of a ROM.");
     }
+
     return rom_path.substr(0, last_dot) + ".sav";
 }
 

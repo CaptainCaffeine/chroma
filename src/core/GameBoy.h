@@ -42,7 +42,7 @@ public:
     Log::Logging& logging;
 
     GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logging& logger, Emu::SDLContext& context,
-            const std::string& save_file, const std::vector<u8>& rom, std::vector<u8>& save_game);
+            const std::string& save_file, const std::vector<u8>& rom, std::vector<u8>& save_game, bool enable_iir);
     ~GameBoy();
 
     void EmulatorLoop();

@@ -30,7 +30,7 @@
 namespace Core {
 
 GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logging& logger, Emu::SDLContext& context,
-                 const std::string& save_file, const std::vector<u8>& rom, std::vector<u8>& save_game)
+                 const std::string& save_file, const std::vector<u8>& rom, std::vector<u8>& save_game, bool enable_iir)
         : logging(logger)
         , sdl_context(context)
         , front_buffer(160*144)
@@ -39,7 +39,7 @@ GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Log::Logg
         , serial(new Serial())
         , lcd(new LCD())
         , joypad(new Joypad())
-        , audio(new Audio())
+        , audio(new Audio(enable_iir))
         , mem(new Memory(gb_type, header, *timer, *serial, *lcd, *joypad, *audio, rom, save_game))
         , cpu(new CPU(*mem)) {
 

@@ -38,12 +38,14 @@ int main(int argc, char** argv) {
     Console gameboy_type;
     LogLevel log_level;
     unsigned int pixel_scale;
+    bool enable_iir;
     bool fullscreen;
     bool multicart;
     try {
         gameboy_type = Emu::GetGameBoyType(tokens);
         log_level = Emu::GetLogLevel(tokens);
         pixel_scale = Emu::GetPixelScale(tokens);
+        enable_iir = Emu::GetFilterEnable(tokens);
         fullscreen = Emu::ContainsOption(tokens, "-f");
         multicart = Emu::ContainsOption(tokens, "--multicart");
     } catch (const std::invalid_argument& e) {
@@ -63,7 +65,8 @@ int main(int argc, char** argv) {
 
         Log::Logging logger{log_level};
         Emu::SDLContext sdl_context{pixel_scale, fullscreen};
-        Core::GameBoy gameboy_core{gameboy_type, cart_header, logger, sdl_context, save_path, rom, save_game};
+        Core::GameBoy gameboy_core{gameboy_type, cart_header, logger, sdl_context, save_path, rom, save_game,
+                                   enable_iir};
 
         gameboy_core.EmulatorLoop();
     } catch (const std::runtime_error& e) {
