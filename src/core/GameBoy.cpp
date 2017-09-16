@@ -93,8 +93,9 @@ std::tuple<bool, bool> GameBoy::PollEvents(bool pause) {
         } else if (e.type == SDL_KEYDOWN) {
             switch (e.key.keysym.sym) {
             case SDLK_q:
-            case SDLK_ESCAPE:
-                quit = true;
+                if (SDL_GetModState() & KMOD_CTRL) {
+                    quit = true;
+                }
                 break;
             case SDLK_p:
                 if (e.key.repeat == 0) {

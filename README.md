@@ -40,7 +40,7 @@ A C++14 compiler is required to build Chroma (at least GCC 5.x or Clang 3.4). Ho
 
 | Command    | Key        |
 | ---------- | ---------- |
-| Quit       | Escape/Q   |
+| Quit       | Ctrl+Q     |
 | Pause      | P          |
 | Fullscreen | V          |
 | Screenshot | T          |
