@@ -16,8 +16,6 @@
 
 #pragma once
 
-#include <array>
-
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
 

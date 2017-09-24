@@ -32,7 +32,6 @@ set(CORE_SOURCES
 set(CORE_HEADERS
     core/GameBoy.h
     core/cpu/CPU.h
-    core/cpu/Flags.h
     core/Audio.h
     core/Channel.h
     core/Joypad.h
