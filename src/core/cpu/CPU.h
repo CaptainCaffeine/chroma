@@ -16,9 +16,10 @@
 
 #pragma once
 
+#include <array>
+
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
-#include "core/cpu/Flags.h"
 
 // Forward declaration for cross-namespace friend declaration.
 namespace Log { class Logging; }
@@ -35,25 +36,32 @@ public:
 
     int RunFor(int cycles);
 
-    // GameBoy core functions
     void LinkToGameBoy(GameBoy* gb) { gameboy = gb; }
     void EnableInterruptsDelayed();
 
     bool IsHalted() const { return cpu_mode == CPUMode::Halted; }
 private:
-    enum class Reg8 {A, B, C, D, E, H, L};
-    enum class Reg16 {AF, BC, DE, HL, SP};
-    enum class CPUMode {Running, Halted, HaltBug, Stopped};
-
     Memory& mem;
     GameBoy* gameboy;
 
     // Registers
-    u8 a, b, c, d, e, h, l;
-    u16 sp = 0xFFFE, pc = 0x0100;
-    Flags f;
+    union Registers {
+        u8 reg8[10];
+        u16 reg16[5];
+    };
+
+    u16 pc = 0x0100;
+    Registers regs;
+    using Reg8Addr = std::size_t;
+    using Reg16Addr = std::size_t;
+    static constexpr Reg8Addr A = 1, F = 0, B = 3, C = 2, D = 5, E = 4, H = 7, L = 6;
+    static constexpr Reg16Addr AF = 0, BC = 1, DE = 2, HL = 3, SP = 4;
+
+    static Reg8Addr ToReg8AddrLo(Reg16Addr r) { return r * 2; }
+    static Reg8Addr ToReg8AddrHi(Reg16Addr r) { return r * 2 + 1; }
 
     // Interpreter execution
+    enum class CPUMode {Running, Halted, HaltBug, Stopped};
     CPUMode cpu_mode = CPUMode::Running;
     unsigned int speed_switch_cycles = 0;
     unsigned int ExecuteNext(const u8 opcode);
@@ -66,67 +74,72 @@ private:
     int HandleInterrupts();
     void ServiceInterrupt(const u16 addr);
 
-    // Register interaction
-    u8 Read8(Reg8 R) const; // Only used twice in ResetBit and SetBit
-    u16 Read16(Reg16 R) const;
-    void Write8(Reg8 R, u8 val);
-    void Write16(Reg16 R, u16 val);
+    // Memory access
+    u8 ReadMemAndTick(const u16 addr);
+    void WriteMemAndTick(const u16 addr, const u8 val);
 
-    u8 ReadMemAtHL();
-    void WriteMemAtHL(const u8 val);
-
-    // Fetching Immediate Values
     u8 GetImmediateByte();
     s8 GetImmediateSignedByte();
     u16 GetImmediateWord();
 
     // Ops
     // 8-bit loads
-    void Load8(Reg8 R, u8 immediate);
-    void Load8FromMem(Reg8 R, u16 addr);
-    void Load8FromMemAtHL(Reg8 R);
-    void Load8IntoMem(Reg16 R, u8 immediate);
-    void LoadAIntoMem(u16 addr);
+    void Load8(Reg8Addr r, u8 val);
+    void Load8FromMem(Reg8Addr r, u16 addr);
+    void Load8IntoMem(u16 addr, u8 val);
 
     // 16-bit loads
-    void Load16(Reg16 R, u16 immediate);
+    void Load16(Reg16Addr r, u16 val);
     void LoadHLIntoSP();
-    void LoadSPnIntoHL(s8 immediate);
+    void LoadSPnIntoHL(s8 val);
     void LoadSPIntoMem(u16 addr);
-    void Push(Reg16 R);
-    void Pop(Reg16 R);
+    void Push(Reg16Addr r);
+    void Pop(Reg16Addr r);
 
     // 8-bit arithmetic
-    void Add(u8 immediate);
+    void AddImmediate(u8 val);
+    void Add(Reg8Addr r);
     void AddFromMemAtHL();
-    void AddWithCarry(u8 immediate);
+
+    void AddImmediateWithCarry(u8 val);
+    void AddWithCarry(Reg8Addr r);
     void AddFromMemAtHLWithCarry();
-    void Sub(u8 immediate);
+
+    void SubImmediate(u8 val);
+    void Sub(Reg8Addr r);
     void SubFromMemAtHL();
-    void SubWithCarry(u8 immediate);
+
+    void SubImmediateWithCarry(u8 val);
+    void SubWithCarry(Reg8Addr r);
     void SubFromMemAtHLWithCarry();
-    void IncReg(Reg8 R);
+
+    void IncReg8(Reg8Addr r);
     void IncMemAtHL();
-    void DecReg(Reg8 R);
+    void DecReg8(Reg8Addr r);
     void DecMemAtHL();
 
     // 8-bit logic
-    void And(u8 immediate);
+    void AndImmediate(u8 val);
+    void And(Reg8Addr r);
     void AndFromMemAtHL();
-    void Or(u8 immediate);
+
+    void OrImmediate(u8 val);
+    void Or(Reg8Addr r);
     void OrFromMemAtHL();
-    void Xor(u8 immediate);
+
+    void XorImmediate(u8 val);
+    void Xor(Reg8Addr r);
     void XorFromMemAtHL();
-    void Compare(u8 immediate);
+
+    void CompareImmediate(u8 val);
+    void Compare(Reg8Addr r);
     void CompareFromMemAtHL();
 
     // 16-bit arithmetic
-    void AddHL(Reg16 R);
-    void AddSP(s8 immediate);
-    void IncHL(); // No hardware tick
-    void IncReg(Reg16 R);
-    void DecHL(); // No hardware tick
-    void DecReg(Reg16 R);
+    void AddHL(Reg16Addr r);
+    void AddSP(s8 val);
+    void IncReg16(Reg16Addr r);
+    void DecReg16(Reg16Addr r);
 
     // Miscellaneous arithmetic
     void DecimalAdjustA();
@@ -135,35 +148,35 @@ private:
     void ComplementCarry();
 
     // Rotates and Shifts
-    void RotateLeft(Reg8 R);
+    void RotateLeft(Reg8Addr r);
     void RotateLeftMemAtHL();
-    void RotateLeftThroughCarry(Reg8 R);
+    void RotateLeftThroughCarry(Reg8Addr r);
     void RotateLeftMemAtHLThroughCarry();
-    void RotateRight(Reg8 R);
+    void RotateRight(Reg8Addr r);
     void RotateRightMemAtHL();
-    void RotateRightThroughCarry(Reg8 R);
+    void RotateRightThroughCarry(Reg8Addr r);
     void RotateRightMemAtHLThroughCarry();
-    void ShiftLeft(Reg8 R);
+    void ShiftLeft(Reg8Addr r);
     void ShiftLeftMemAtHL();
-    void ShiftRightArithmetic(Reg8 R);
+    void ShiftRightArithmetic(Reg8Addr r);
     void ShiftRightArithmeticMemAtHL();
-    void ShiftRightLogical(Reg8 R);
+    void ShiftRightLogical(Reg8Addr r);
     void ShiftRightLogicalMemAtHL();
-    void SwapNybbles(Reg8 R);
+    void SwapNybbles(Reg8Addr r);
     void SwapMemAtHL();
 
     // Bit manipulation
-    void TestBit(unsigned int bit, u8 immediate);
+    void TestBit(unsigned int bit, Reg8Addr r);
     void TestBitOfMemAtHL(unsigned int bit);
-    void ResetBit(unsigned int bit, Reg8 R);
+    void ResetBit(unsigned int bit, Reg8Addr r);
     void ResetBitOfMemAtHL(unsigned int bit);
-    void SetBit(unsigned int bit, Reg8 R);
+    void SetBit(unsigned int bit, Reg8Addr r);
     void SetBitOfMemAtHL(unsigned int bit);
 
     // Jumps
     void Jump(u16 addr);
     void JumpToHL();
-    void RelativeJump(s8 immediate);
+    void RelativeJump(s8 val);
 
     // Calls and Returns
     void Call(u16 addr);
@@ -172,6 +185,20 @@ private:
     // System control
     void Halt();
     void Stop();
+
+    // Flags
+    static constexpr u8 zero = 0x80, sub = 0x40, half = 0x20, carry = 0x10;
+
+    void SetZero(bool val)  { (val) ? (regs.reg8[F] |= zero)  : (regs.reg8[F] &= ~zero);  }
+    void SetSub(bool val)   { (val) ? (regs.reg8[F] |= sub)   : (regs.reg8[F] &= ~sub);   }
+    void SetHalf(bool val)  { (val) ? (regs.reg8[F] |= half)  : (regs.reg8[F] &= ~half);  }
+    void SetCarry(bool val) { (val) ? (regs.reg8[F] |= carry) : (regs.reg8[F] &= ~carry); }
+
+    // Getters
+    u8 Zero()  const { return (regs.reg8[F] & zero)  >> 7; }
+    u8 Sub()   const { return (regs.reg8[F] & sub)   >> 6; }
+    u8 Half()  const { return (regs.reg8[F] & half)  >> 5; }
+    u8 Carry() const { return (regs.reg8[F] & carry) >> 4; }
 };
 
 } // End namespace Core

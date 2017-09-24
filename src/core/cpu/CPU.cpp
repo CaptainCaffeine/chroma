@@ -27,158 +27,51 @@ CPU::CPU(Memory& memory) : mem(memory) {
     // Initial register values
     if (mem.game_mode == GameMode::DMG) {
         if (mem.console == Console::DMG) {
-            a = 0x01; f.bits = 0xB0;
-            b = 0x00; c = 0x13;
-            d = 0x00; e = 0xD8;
-            h = 0x01; l = 0x4D;
+            regs.reg16[AF] = 0x01B0;
+            regs.reg16[BC] = 0x0013;
+            regs.reg16[DE] = 0x00D8;
+            regs.reg16[HL] = 0x014D;
         } else if (mem.console == Console::CGB) {
-            a = 0x11; f.bits = 0x80;
-            b = 0x00; c = 0x00;
-            d = 0x00; e = 0x08;
-            h = 0x00; l = 0x7C;
+            regs.reg16[AF] = 0x1180;
+            regs.reg16[BC] = 0x0000;
+            regs.reg16[DE] = 0x0008;
+            regs.reg16[HL] = 0x007C;
         }
     } else if (mem.game_mode == GameMode::CGB) {
-        a = 0x11; f.bits = 0x80;
-        b = 0x00; c = 0x00;
-        d = 0xFF; e = 0x56;
-        h = 0x00; l = 0x0D;
+        regs.reg16[AF] = 0x1180;
+        regs.reg16[BC] = 0x0000;
+        regs.reg16[DE] = 0xFF56;
+        regs.reg16[HL] = 0x000D;
     }
+
+    regs.reg16[SP] = 0xFFFE;
 }
 
-// Returns the value stored in an 8-bit register.
-u8 CPU::Read8(Reg8 R) const {
-    switch (R) {
-    case (Reg8::A):
-        return a;
-    case (Reg8::B):
-        return b;
-    case (Reg8::C):
-        return c;
-    case (Reg8::D):
-        return d;
-    case (Reg8::E):
-        return e;
-    case (Reg8::H):
-        return h;
-    case (Reg8::L):
-        return l;
-    default:
-        // Unreachable
-        return 0x00;
-    }
-}
-
-// Returns the value stored in a 16-bit register pair.
-u16 CPU::Read16(Reg16 R) const {
-    switch (R) {
-    case (Reg16::AF):
-        return (static_cast<u16>(a) << 8) | static_cast<u16>(f.bits);
-    case (Reg16::BC):
-        return (static_cast<u16>(b) << 8) | static_cast<u16>(c);
-    case (Reg16::DE):
-        return (static_cast<u16>(d) << 8) | static_cast<u16>(e);
-    case (Reg16::HL):
-        return (static_cast<u16>(h) << 8) | static_cast<u16>(l);
-    case (Reg16::SP):
-        return sp;
-    default:
-        // Unreachable
-        return 0x0000;
-    }
-}
-
-// Writes an 8-bit value to an 8-bit register.
-void CPU::Write8(Reg8 R, u8 val) {
-    switch (R) {
-    case (Reg8::A):
-        a = val;
-        break;
-    case (Reg8::B):
-        b = val;
-        break;
-    case (Reg8::C):
-        c = val;
-        break;
-    case (Reg8::D):
-        d = val;
-        break;
-    case (Reg8::E):
-        e = val;
-        break;
-    case (Reg8::H):
-        h = val;
-        break;
-    case (Reg8::L):
-        l = val;
-        break;
-    default:
-        // Unreachable
-        break;
-    }
-}
-
-// Writes a 16-bit value to a 16-bit register pair.
-void CPU::Write16(Reg16 R, u16 val) {
-    switch (R) {
-    case (Reg16::AF):
-        a = static_cast<u8>(val >> 8);
-        // The lower nybble of f is always 0, even if a pop attempts to write a byte with a nonzero lower nybble.
-        f.bits = static_cast<u8>(val) & 0xF0;
-        break;
-    case (Reg16::BC):
-        b = static_cast<u8>(val >> 8);
-        c = static_cast<u8>(val);
-        break;
-    case (Reg16::DE):
-        d = static_cast<u8>(val >> 8);
-        e = static_cast<u8>(val);
-        break;
-    case (Reg16::HL):
-        h = static_cast<u8>(val >> 8);
-        l = static_cast<u8>(val);
-        break;
-    case (Reg16::SP):
-        sp = val;
-        break;
-    default:
-        // Unreachable
-        break;
-    }
-}
-
-// Returns the value from memory at the address stored in the 16-bit register pair HL.
-u8 CPU::ReadMemAtHL() {
-    const u8 data = mem.ReadMem8((static_cast<u16>(h) << 8) | static_cast<u16>(l));
+u8 CPU::ReadMemAndTick(const u16 addr) {
+    const u8 data = mem.ReadMem8(addr);
     gameboy->HardwareTick(4);
     return data;
 }
 
-// Writes a value to memory at the address stored in the 16-bit register pair HL.
-void CPU::WriteMemAtHL(const u8 val) {
-    mem.WriteMem8((static_cast<u16>(h) << 8) | static_cast<u16>(l), val);
+void CPU::WriteMemAndTick(const u16 addr, const u8 val) {
+    mem.WriteMem8(addr, val);
     gameboy->HardwareTick(4);
 }
 
 // Return the byte from memory at the pc and increment the pc.
 u8 CPU::GetImmediateByte() {
-    const u8 imm = mem.ReadMem8(pc++);
-    gameboy->HardwareTick(4);
-    return imm;
+    return ReadMemAndTick(pc++);
 }
 
 // Return the signed byte from memory at the pc and increment the pc.
 s8 CPU::GetImmediateSignedByte() {
-    const s8 imm = static_cast<s8>(mem.ReadMem8(pc++));
-    gameboy->HardwareTick(4);
-    return imm;
+    return ReadMemAndTick(pc++);
 }
 
 // Return the 16-bit word from memory at the pc and increment the pc by 2.
 u16 CPU::GetImmediateWord() {
-    const u8 byte_lo = mem.ReadMem8(pc++);
-    gameboy->HardwareTick(4);
-    const u8 byte_hi = mem.ReadMem8(pc++);
-    gameboy->HardwareTick(4);
+    const u8 byte_lo = ReadMemAndTick(pc++);
+    const u8 byte_hi = ReadMemAndTick(pc++);
 
     return (static_cast<u16>(byte_hi) << 8) | static_cast<u16>(byte_lo);
 }
@@ -266,11 +159,8 @@ int CPU::HandleInterrupts() {
 }
 
 void CPU::ServiceInterrupt(const u16 addr) {
-    mem.WriteMem8(--sp, static_cast<u8>(pc >> 8));
-    gameboy->HardwareTick(4);
-
-    mem.WriteMem8(--sp, static_cast<u8>(pc));
-    gameboy->HardwareTick(4);
+    WriteMemAndTick(--regs.reg16[SP], static_cast<u8>(pc >> 8));
+    WriteMemAndTick(--regs.reg16[SP], static_cast<u8>(pc));
 
     pc = addr;
 }
@@ -314,296 +204,292 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     // ******** 8-bit loads ********
     // LD R, n -- Load immediate value n into register R
     case 0x06:
-        Load8(Reg8::B, GetImmediateByte());
+        Load8(B, GetImmediateByte());
         return 8;
     case 0x0E:
-        Load8(Reg8::C, GetImmediateByte());
+        Load8(C, GetImmediateByte());
         return 8;
     case 0x16:
-        Load8(Reg8::D, GetImmediateByte());
+        Load8(D, GetImmediateByte());
         return 8;
     case 0x1E:
-        Load8(Reg8::E, GetImmediateByte());
+        Load8(E, GetImmediateByte());
         return 8;
     case 0x26:
-        Load8(Reg8::H, GetImmediateByte());
+        Load8(H, GetImmediateByte());
         return 8;
     case 0x2E:
-        Load8(Reg8::L, GetImmediateByte());
+        Load8(L, GetImmediateByte());
         return 8;
     case 0x3E:
-        Load8(Reg8::A, GetImmediateByte());
+        Load8(A, GetImmediateByte());
         return 8;
     // LD A, R2 -- Load value from R2 into A
     case 0x78:
-        Load8(Reg8::A, b);
+        Load8(A, regs.reg8[B]);
         return 4;
     case 0x79:
-        Load8(Reg8::A, c);
+        Load8(A, regs.reg8[C]);
         return 4;
     case 0x7A:
-        Load8(Reg8::A, d);
+        Load8(A, regs.reg8[D]);
         return 4;
     case 0x7B:
-        Load8(Reg8::A, e);
+        Load8(A, regs.reg8[E]);
         return 4;
     case 0x7C:
-        Load8(Reg8::A, h);
+        Load8(A, regs.reg8[H]);
         return 4;
     case 0x7D:
-        Load8(Reg8::A, l);
+        Load8(A, regs.reg8[L]);
         return 4;
     case 0x7E:
-        Load8FromMemAtHL(Reg8::A);
+        Load8FromMem(A, regs.reg16[HL]);
         return 8;
     case 0x7F:
-        Load8(Reg8::A, a);
+        Load8(A, regs.reg8[A]);
         return 4;
     // LD B, R2 -- Load value from R2 into B
     case 0x40:
-        Load8(Reg8::B, b);
+        Load8(B, regs.reg8[B]);
         return 4;
     case 0x41:
-        Load8(Reg8::B, c);
+        Load8(B, regs.reg8[C]);
         return 4;
     case 0x42:
-        Load8(Reg8::B, d);
+        Load8(B, regs.reg8[D]);
         return 4;
     case 0x43:
-        Load8(Reg8::B, e);
+        Load8(B, regs.reg8[E]);
         return 4;
     case 0x44:
-        Load8(Reg8::B, h);
+        Load8(B, regs.reg8[H]);
         return 4;
     case 0x45:
-        Load8(Reg8::B, l);
+        Load8(B, regs.reg8[L]);
         return 4;
     case 0x46:
-        Load8FromMemAtHL(Reg8::B);
+        Load8FromMem(B, regs.reg16[HL]);
         return 8;
     case 0x47:
-        Load8(Reg8::B, a);
+        Load8(B, regs.reg8[A]);
         return 4;
     // LD C, R2 -- Load value from R2 into C
     case 0x48:
-        Load8(Reg8::C, b);
+        Load8(C, regs.reg8[B]);
         return 4;
     case 0x49:
-        Load8(Reg8::C, c);
+        Load8(C, regs.reg8[C]);
         return 4;
     case 0x4A:
-        Load8(Reg8::C, d);
+        Load8(C, regs.reg8[D]);
         return 4;
     case 0x4B:
-        Load8(Reg8::C, e);
+        Load8(C, regs.reg8[E]);
         return 4;
     case 0x4C:
-        Load8(Reg8::C, h);
+        Load8(C, regs.reg8[H]);
         return 4;
     case 0x4D:
-        Load8(Reg8::C, l);
+        Load8(C, regs.reg8[L]);
         return 4;
     case 0x4E:
-        Load8FromMemAtHL(Reg8::C);
+        Load8FromMem(C, regs.reg16[HL]);
         return 8;
     case 0x4F:
-        Load8(Reg8::C, a);
+        Load8(C, regs.reg8[A]);
         return 4;
     // LD D, R2 -- Load value from R2 into D
     case 0x50:
-        Load8(Reg8::D, b);
+        Load8(D, regs.reg8[B]);
         return 4;
     case 0x51:
-        Load8(Reg8::D, c);
+        Load8(D, regs.reg8[C]);
         return 4;
     case 0x52:
-        Load8(Reg8::D, d);
+        Load8(D, regs.reg8[D]);
         return 4;
     case 0x53:
-        Load8(Reg8::D, e);
+        Load8(D, regs.reg8[E]);
         return 4;
     case 0x54:
-        Load8(Reg8::D, h);
+        Load8(D, regs.reg8[H]);
         return 4;
     case 0x55:
-        Load8(Reg8::D, l);
+        Load8(D, regs.reg8[L]);
         return 4;
     case 0x56:
-        Load8FromMemAtHL(Reg8::D);
+        Load8FromMem(D, regs.reg16[HL]);
         return 8;
     case 0x57:
-        Load8(Reg8::D, a);
+        Load8(D, regs.reg8[A]);
         return 4;
     // LD E, R2 -- Load value from R2 into E
     case 0x58:
-        Load8(Reg8::E, b);
+        Load8(E, regs.reg8[B]);
         return 4;
     case 0x59:
-        Load8(Reg8::E, c);
+        Load8(E, regs.reg8[C]);
         return 4;
     case 0x5A:
-        Load8(Reg8::E, d);
+        Load8(E, regs.reg8[D]);
         return 4;
     case 0x5B:
-        Load8(Reg8::E, e);
+        Load8(E, regs.reg8[E]);
         return 4;
     case 0x5C:
-        Load8(Reg8::E, h);
+        Load8(E, regs.reg8[H]);
         return 4;
     case 0x5D:
-        Load8(Reg8::E, l);
+        Load8(E, regs.reg8[L]);
         return 4;
     case 0x5E:
-        Load8FromMemAtHL(Reg8::E);
+        Load8FromMem(E, regs.reg16[HL]);
         return 8;
     case 0x5F:
-        Load8(Reg8::E, a);
+        Load8(E, regs.reg8[A]);
         return 4;
     // LD H, R2 -- Load value from R2 into H
     case 0x60:
-        Load8(Reg8::H, b);
+        Load8(H, regs.reg8[B]);
         return 4;
     case 0x61:
-        Load8(Reg8::H, c);
+        Load8(H, regs.reg8[C]);
         return 4;
     case 0x62:
-        Load8(Reg8::H, d);
+        Load8(H, regs.reg8[D]);
         return 4;
     case 0x63:
-        Load8(Reg8::H, e);
+        Load8(H, regs.reg8[E]);
         return 4;
     case 0x64:
-        Load8(Reg8::H, h);
+        Load8(H, regs.reg8[H]);
         return 4;
     case 0x65:
-        Load8(Reg8::H, l);
+        Load8(H, regs.reg8[L]);
         return 4;
     case 0x66:
-        Load8FromMemAtHL(Reg8::H);
+        Load8FromMem(H, regs.reg16[HL]);
         return 8;
     case 0x67:
-        Load8(Reg8::H, a);
+        Load8(H, regs.reg8[A]);
         return 4;
     // LD L, R2 -- Load value from R2 into L
     case 0x68:
-        Load8(Reg8::L, b);
+        Load8(L, regs.reg8[B]);
         return 4;
     case 0x69:
-        Load8(Reg8::L, c);
+        Load8(L, regs.reg8[C]);
         return 4;
     case 0x6A:
-        Load8(Reg8::L, d);
+        Load8(L, regs.reg8[D]);
         return 4;
     case 0x6B:
-        Load8(Reg8::L, e);
+        Load8(L, regs.reg8[E]);
         return 4;
     case 0x6C:
-        Load8(Reg8::L, h);
+        Load8(L, regs.reg8[H]);
         return 4;
     case 0x6D:
-        Load8(Reg8::L, l);
+        Load8(L, regs.reg8[L]);
         return 4;
     case 0x6E:
-        Load8FromMemAtHL(Reg8::L);
+        Load8FromMem(L, regs.reg16[HL]);
         return 8;
     case 0x6F:
-        Load8(Reg8::L, a);
+        Load8(L, regs.reg8[A]);
         return 4;
     // LD (HL), R2 -- Load value from R2 into memory at (HL)
     case 0x70:
-        Load8IntoMem(Reg16::HL, b);
+        Load8IntoMem(regs.reg16[HL], regs.reg8[B]);
         return 8;
     case 0x71:
-        Load8IntoMem(Reg16::HL, c);
+        Load8IntoMem(regs.reg16[HL], regs.reg8[C]);
         return 8;
     case 0x72:
-        Load8IntoMem(Reg16::HL, d);
+        Load8IntoMem(regs.reg16[HL], regs.reg8[D]);
         return 8;
     case 0x73:
-        Load8IntoMem(Reg16::HL, e);
+        Load8IntoMem(regs.reg16[HL], regs.reg8[E]);
         return 8;
     case 0x74:
-        Load8IntoMem(Reg16::HL, h);
+        Load8IntoMem(regs.reg16[HL], regs.reg8[H]);
         return 8;
     case 0x75:
-        Load8IntoMem(Reg16::HL, l);
+        Load8IntoMem(regs.reg16[HL], regs.reg8[L]);
         return 8;
     case 0x77:
-        Load8IntoMem(Reg16::HL, a);
+        Load8IntoMem(regs.reg16[HL], regs.reg8[A]);
         return 8;
     case 0x36:
-        Load8IntoMem(Reg16::HL, GetImmediateByte());
+        Load8IntoMem(regs.reg16[HL], GetImmediateByte());
         return 12;
     // LD A, (nn) -- Load value from memory at (nn) into A
     case 0x0A:
-        Load8FromMem(Reg8::A, Read16(Reg16::BC));
+        Load8FromMem(A, regs.reg16[BC]);
         return 8;
     case 0x1A:
-        Load8FromMem(Reg8::A, Read16(Reg16::DE));
+        Load8FromMem(A, regs.reg16[DE]);
         return 8;
     case 0xFA:
-        Load8FromMem(Reg8::A, GetImmediateWord());
+        Load8FromMem(A, GetImmediateWord());
         return 16;
     // LD (nn), A -- Load value from A into memory at (nn)
     case 0x02:
-        Load8IntoMem(Reg16::BC, a);
+        Load8IntoMem(regs.reg16[BC], regs.reg8[A]);
         return 8;
     case 0x12:
-        Load8IntoMem(Reg16::DE, a);
+        Load8IntoMem(regs.reg16[DE], regs.reg8[A]);
         return 8;
     case 0xEA:
-        LoadAIntoMem(GetImmediateWord());
+        Load8IntoMem(GetImmediateWord(), regs.reg8[A]);
         return 16;
     // LD (C), A -- Load value from A into memory at (0xFF00 + C)
     case 0xE2:
-        LoadAIntoMem(0xFF00 + c);
+        Load8IntoMem(0xFF00 + regs.reg8[C], regs.reg8[A]);
         return 8;
     // LD A, (C) -- Load value from memory at (0xFF00 + C) into A
     case 0xF2:
-        Load8FromMem(Reg8::A, 0xFF00 + c);
+        Load8FromMem(A, 0xFF00 + regs.reg8[C]);
         return 8;
     // LDI (HL), A -- Load value from A into memory at (HL), then increment HL
     case 0x22:
-        Load8IntoMem(Reg16::HL, a);
-        IncHL();
+        Load8IntoMem(regs.reg16[HL]++, regs.reg8[A]);
         return 8;
     // LDI A, (HL) -- Load value from memory at (HL) into A, then increment HL
     case 0x2A:
-        Load8FromMemAtHL(Reg8::A);
-        IncHL();
+        Load8FromMem(A, regs.reg16[HL]++);
         return 8;
     // LDD (HL), A -- Load value from A into memory at (HL), then decrement HL
     case 0x32:
-        Load8IntoMem(Reg16::HL, a);
-        DecHL();
+        Load8IntoMem(regs.reg16[HL]--, regs.reg8[A]);
         return 8;
     // LDD A, (HL) -- Load value from memory at (HL) into A, then decrement HL
     case 0x3A:
-        Load8FromMemAtHL(Reg8::A);
-        DecHL();
+        Load8FromMem(A, regs.reg16[HL]--);
         return 8;
     // LDH (n), A -- Load value from A into memory at (0xFF00+n), with n as immediate byte value
     case 0xE0:
-        LoadAIntoMem(0xFF00 + GetImmediateByte());
+        Load8IntoMem(0xFF00 + GetImmediateByte(), regs.reg8[A]);
         return 12;
     // LDH A, (n) -- Load value from memory at (0xFF00+n) into A, with n as immediate byte value 
     case 0xF0:
-        Load8FromMem(Reg8::A, 0xFF00 + GetImmediateByte());
+        Load8FromMem(A, 0xFF00 + GetImmediateByte());
         return 12;
 
     // ******** 16-bit loads ********
     // LD R, nn -- Load 16-bit immediate value into 16-bit register R
     case 0x01:
-        Load16(Reg16::BC, GetImmediateWord());
+        Load16(BC, GetImmediateWord());
         return 12;
     case 0x11:
-        Load16(Reg16::DE, GetImmediateWord());
+        Load16(DE, GetImmediateWord());
         return 12;
     case 0x21:
-        Load16(Reg16::HL, GetImmediateWord());
+        Load16(HL, GetImmediateWord());
         return 12;
     case 0x31:
-        Load16(Reg16::SP, GetImmediateWord());
+        Load16(SP, GetImmediateWord());
         return 12;
     // LD SP, HL -- Load value from HL into SP
     case 0xF9:
@@ -624,29 +510,29 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         return 20;
     // PUSH R -- Push 16-bit register R onto the stack and decrement the stack pointer by 2
     case 0xC5:
-        Push(Reg16::BC);
+        Push(BC);
         return 16;
     case 0xD5:
-        Push(Reg16::DE);
+        Push(DE);
         return 16;
     case 0xE5:
-        Push(Reg16::HL);
+        Push(HL);
         return 16;
     case 0xF5:
-        Push(Reg16::AF);
+        Push(AF);
         return 16;
     // POP R -- Pop 2 bytes off the stack into 16-bit register R and increment the stack pointer by 2
     case 0xC1:
-        Pop(Reg16::BC);
+        Pop(BC);
         return 12;
     case 0xD1:
-        Pop(Reg16::DE);
+        Pop(DE);
         return 12;
     case 0xE1:
-        Pop(Reg16::HL);
+        Pop(HL);
         return 12;
     case 0xF1:
-        Pop(Reg16::AF);
+        Pop(AF);
         return 12;
 
     // ******** 8-bit arithmetic and logic ********
@@ -657,33 +543,33 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     H: Set if carry from bit 3
     //     C: Set if carry from bit 7
     case 0x80:
-        Add(b);
+        Add(B);
         return 4;
     case 0x81:
-        Add(c);
+        Add(C);
         return 4;
     case 0x82:
-        Add(d);
+        Add(D);
         return 4;
     case 0x83:
-        Add(e);
+        Add(E);
         return 4;
     case 0x84:
-        Add(h);
+        Add(H);
         return 4;
     case 0x85:
-        Add(l);
+        Add(L);
         return 4;
     case 0x86:
         AddFromMemAtHL();
         return 8;
     case 0x87:
-        Add(a);
+        Add(A);
         return 4;
     // ADD A, n -- Add immediate value n to A
     // Flags: same as ADD A, R
     case 0xC6:
-        Add(GetImmediateByte());
+        AddImmediate(GetImmediateByte());
         return 8;
     // ADC A, R -- Add value in register R + the carry flag to A
     // Flags:
@@ -692,33 +578,33 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     H: Set if carry from bit 3
     //     C: Set if carry from bit 7
     case 0x88:
-        AddWithCarry(b);
+        AddWithCarry(B);
         return 4;
     case 0x89:
-        AddWithCarry(c);
+        AddWithCarry(C);
         return 4;
     case 0x8A:
-        AddWithCarry(d);
+        AddWithCarry(D);
         return 4;
     case 0x8B:
-        AddWithCarry(e);
+        AddWithCarry(E);
         return 4;
     case 0x8C:
-        AddWithCarry(h);
+        AddWithCarry(H);
         return 4;
     case 0x8D:
-        AddWithCarry(l);
+        AddWithCarry(L);
         return 4;
     case 0x8E:
         AddFromMemAtHLWithCarry();
         return 8;
     case 0x8F:
-        AddWithCarry(a);
+        AddWithCarry(A);
         return 4;
     // ADC A, n -- Add immediate value n + the carry flag to A
     // Flags: same as ADC A, R
     case 0xCE:
-        AddWithCarry(GetImmediateByte());
+        AddImmediateWithCarry(GetImmediateByte());
         return 8;
     // SUB R -- Subtract the value in register R from  A
     // Flags:
@@ -727,33 +613,33 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     H: Set if borrow from bit 4
     //     C: Set if borrow
     case 0x90:
-        Sub(b);
+        Sub(B);
         return 4;
     case 0x91:
-        Sub(c);
+        Sub(C);
         return 4;
     case 0x92:
-        Sub(d);
+        Sub(D);
         return 4;
     case 0x93:
-        Sub(e);
+        Sub(E);
         return 4;
     case 0x94:
-        Sub(h);
+        Sub(H);
         return 4;
     case 0x95:
-        Sub(l);
+        Sub(L);
         return 4;
     case 0x96:
         SubFromMemAtHL();
         return 8;
     case 0x97:
-        Sub(a);
+        Sub(A);
         return 4;
     // SUB n -- Subtract immediate value n from  A
     // Flags: same as SUB R
     case 0xD6:
-        Sub(GetImmediateByte());
+        SubImmediate(GetImmediateByte());
         return 8;
     // SBC A, R -- Subtract the value in register R + carry flag from  A
     // Flags:
@@ -762,33 +648,33 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     H: Set if borrow from bit 4
     //     C: Set if borrow
     case 0x98:
-        SubWithCarry(b);
+        SubWithCarry(B);
         return 4;
     case 0x99:
-        SubWithCarry(c);
+        SubWithCarry(C);
         return 4;
     case 0x9A:
-        SubWithCarry(d);
+        SubWithCarry(D);
         return 4;
     case 0x9B:
-        SubWithCarry(e);
+        SubWithCarry(E);
         return 4;
     case 0x9C:
-        SubWithCarry(h);
+        SubWithCarry(H);
         return 4;
     case 0x9D:
-        SubWithCarry(l);
+        SubWithCarry(L);
         return 4;
     case 0x9E:
         SubFromMemAtHLWithCarry();
         return 8;
     case 0x9F:
-        SubWithCarry(a);
+        SubWithCarry(A);
         return 4;
     // SBC A, n -- Subtract immediate value n + carry flag from  A
     // Flags: same as SBC A, R
     case 0xDE:
-        SubWithCarry(GetImmediateByte());
+        SubImmediateWithCarry(GetImmediateByte());
         return 8;
     // AND R -- Bitwise AND the value in register R with A. 
     // Flags:
@@ -797,33 +683,33 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     H: Set
     //     C: Reset
     case 0xA0:
-        And(b);
+        And(B);
         return 4;
     case 0xA1:
-        And(c);
+        And(C);
         return 4;
     case 0xA2:
-        And(d);
+        And(D);
         return 4;
     case 0xA3:
-        And(e);
+        And(E);
         return 4;
     case 0xA4:
-        And(h);
+        And(H);
         return 4;
     case 0xA5:
-        And(l);
+        And(L);
         return 4;
     case 0xA6:
         AndFromMemAtHL();
         return 8;
     case 0xA7:
-        And(a);
+        And(A);
         return 4;
     // AND n -- Bitwise AND the immediate value with A. 
     // Flags: same as AND R
     case 0xE6:
-        And(GetImmediateByte());
+        AndImmediate(GetImmediateByte());
         return 8;
     // OR R -- Bitwise OR the value in register R with A. 
     // Flags:
@@ -832,33 +718,33 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     H: Reset
     //     C: Reset
     case 0xB0:
-        Or(b);
+        Or(B);
         return 4;
     case 0xB1:
-        Or(c);
+        Or(C);
         return 4;
     case 0xB2:
-        Or(d);
+        Or(D);
         return 4;
     case 0xB3:
-        Or(e);
+        Or(E);
         return 4;
     case 0xB4:
-        Or(h);
+        Or(H);
         return 4;
     case 0xB5:
-        Or(l);
+        Or(L);
         return 4;
     case 0xB6:
         OrFromMemAtHL();
         return 8;
     case 0xB7:
-        Or(a);
+        Or(A);
         return 4;
     // OR n -- Bitwise OR the immediate value with A. 
     // Flags: same as OR R
     case 0xF6:
-        Or(GetImmediateByte());
+        OrImmediate(GetImmediateByte());
         return 8;
     // XOR R -- Bitwise XOR the value in register R with A. 
     // Flags:
@@ -867,33 +753,33 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     H: Reset
     //     C: Reset
     case 0xA8:
-        Xor(b);
+        Xor(B);
         return 4;
     case 0xA9:
-        Xor(c);
+        Xor(C);
         return 4;
     case 0xAA:
-        Xor(d);
+        Xor(D);
         return 4;
     case 0xAB:
-        Xor(e);
+        Xor(E);
         return 4;
     case 0xAC:
-        Xor(h);
+        Xor(H);
         return 4;
     case 0xAD:
-        Xor(l);
+        Xor(L);
         return 4;
     case 0xAE:
         XorFromMemAtHL();
         return 8;
     case 0xAF:
-        Xor(a);
+        Xor(A);
         return 4;
     // XOR n -- Bitwise XOR the immediate value with A. 
     // Flags: same as XOR R
     case 0xEE:
-        Xor(GetImmediateByte());
+        XorImmediate(GetImmediateByte());
         return 8;
     // CP R -- Compare A with the value in register R. This performs a subtraction but does not modify A.
     // Flags:
@@ -902,33 +788,33 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     H: Set if borrow from bit 4
     //     C: Set if borrow
     case 0xB8:
-        Compare(b);
+        Compare(B);
         return 4;
     case 0xB9:
-        Compare(c);
+        Compare(C);
         return 4;
     case 0xBA:
-        Compare(d);
+        Compare(D);
         return 4;
     case 0xBB:
-        Compare(e);
+        Compare(E);
         return 4;
     case 0xBC:
-        Compare(h);
+        Compare(H);
         return 4;
     case 0xBD:
-        Compare(l);
+        Compare(L);
         return 4;
     case 0xBE:
         CompareFromMemAtHL();
         return 8;
     case 0xBF:
-        Compare(a);
+        Compare(A);
         return 4;
     // CP n -- Compare A with the immediate value. This performs a subtraction but does not modify A.
     // Flags: same as CP R
     case 0xFE:
-        Compare(GetImmediateByte());
+        CompareImmediate(GetImmediateByte());
         return 8;
     // INC R -- Increment the value in register R.
     // Flags:
@@ -937,28 +823,28 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     H: Set if carry from bit 3
     //     C: Unchanged
     case 0x04:
-        IncReg(Reg8::B);
+        IncReg8(B);
         return 4;
     case 0x0C:
-        IncReg(Reg8::C);
+        IncReg8(C);
         return 4;
     case 0x14:
-        IncReg(Reg8::D);
+        IncReg8(D);
         return 4;
     case 0x1C:
-        IncReg(Reg8::E);
+        IncReg8(E);
         return 4;
     case 0x24:
-        IncReg(Reg8::H);
+        IncReg8(H);
         return 4;
     case 0x2C:
-        IncReg(Reg8::L);
+        IncReg8(L);
         return 4;
     case 0x34:
         IncMemAtHL();
         return 12;
     case 0x3C:
-        IncReg(Reg8::A);
+        IncReg8(A);
         return 4;
     // DEC R -- Decrement the value in register R.
     // Flags:
@@ -967,28 +853,28 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     H: Set if borrow from bit 4
     //     C: Unchanged
     case 0x05:
-        DecReg(Reg8::B);
+        DecReg8(B);
         return 4;
     case 0x0D:
-        DecReg(Reg8::C);
+        DecReg8(C);
         return 4;
     case 0x15:
-        DecReg(Reg8::D);
+        DecReg8(D);
         return 4;
     case 0x1D:
-        DecReg(Reg8::E);
+        DecReg8(E);
         return 4;
     case 0x25:
-        DecReg(Reg8::H);
+        DecReg8(H);
         return 4;
     case 0x2D:
-        DecReg(Reg8::L);
+        DecReg8(L);
         return 4;
     case 0x35:
         DecMemAtHL();
         return 12;
     case 0x3D:
-        DecReg(Reg8::A);
+        DecReg8(A);
         return 4;
 
     // ******** 16-bit arithmetic ********
@@ -999,16 +885,16 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     H: Set if carry from bit 11
     //     C: Set if carry from bit 15
     case 0x09:
-        AddHL(Reg16::BC);
+        AddHL(BC);
         return 8;
     case 0x19:
-        AddHL(Reg16::DE);
+        AddHL(DE);
         return 8;
     case 0x29:
-        AddHL(Reg16::HL);
+        AddHL(HL);
         return 8;
     case 0x39:
-        AddHL(Reg16::SP);
+        AddHL(SP);
         return 8;
     // ADD SP, n -- Add signed immediate byte to SP.
     // Flags:
@@ -1022,30 +908,30 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     // INC R -- Increment the value in the 16-bit register R.
     // Flags unchanged
     case 0x03:
-        IncReg(Reg16::BC);
+        IncReg16(BC);
         return 8;
     case 0x13:
-        IncReg(Reg16::DE);
+        IncReg16(DE);
         return 8;
     case 0x23:
-        IncReg(Reg16::HL);
+        IncReg16(HL);
         return 8;
     case 0x33:
-        IncReg(Reg16::SP);
+        IncReg16(SP);
         return 8;
     // DEC R -- Decrement the value in the 16-bit register R.
     // Flags unchanged
     case 0x0B:
-        DecReg(Reg16::BC);
+        DecReg16(BC);
         return 8;
     case 0x1B:
-        DecReg(Reg16::DE);
+        DecReg16(DE);
         return 8;
     case 0x2B:
-        DecReg(Reg16::HL);
+        DecReg16(HL);
         return 8;
     case 0x3B:
-        DecReg(Reg16::SP);
+        DecReg16(SP);
         return 8;
 
     // ******** Miscellaneous Arithmetic ********
@@ -1094,8 +980,8 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     H: Reset
     //     C: Set to value in bit 7 before the rotate
     case 0x07:
-        RotateLeft(Reg8::A);
-        f.SetZero(false);
+        RotateLeft(A);
+        SetZero(false);
         return 4;
     // RLA -- Left rotate A through the carry flag.
     // Flags:
@@ -1104,8 +990,8 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     H: Reset
     //     C: Set to value in bit 7 before the rotate
     case 0x17:
-        RotateLeftThroughCarry(Reg8::A);
-        f.SetZero(false);
+        RotateLeftThroughCarry(A);
+        SetZero(false);
         return 4;
     // RRCA -- Right rotate A.
     // Flags:
@@ -1114,8 +1000,8 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     H: Reset
     //     C: Set to value in bit 0 before the rotate
     case 0x0F:
-        RotateRight(Reg8::A);
-        f.SetZero(false);
+        RotateRight(A);
+        SetZero(false);
         return 4;
     // RRA -- Right rotate A through the carry flag.
     // Flags:
@@ -1124,8 +1010,8 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     H: Reset
     //     C: Set to value in bit 0 before the rotate
     case 0x1F:
-        RotateRightThroughCarry(Reg8::A);
-        f.SetZero(false);
+        RotateRightThroughCarry(A);
+        SetZero(false);
         return 4;
 
     // ******** Jumps ********
@@ -1140,7 +1026,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     NC: Carry flag reset
     //     Z:  Carry flag set
     case 0xC2:
-        if (!f.Zero()) {
+        if (!Zero()) {
             Jump(GetImmediateWord());
             return 16;
         } else {
@@ -1149,7 +1035,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             return 12;
         }
     case 0xCA:
-        if (f.Zero()) {
+        if (Zero()) {
             Jump(GetImmediateWord());
             return 16;
         } else {
@@ -1158,7 +1044,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             return 12;
         }
     case 0xD2:
-        if (!f.Carry()) {
+        if (!Carry()) {
             Jump(GetImmediateWord());
             return 16;
         } else {
@@ -1167,7 +1053,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             return 12;
         }
     case 0xDA:
-        if (f.Carry()) {
+        if (Carry()) {
             Jump(GetImmediateWord());
             return 16;
         } else {
@@ -1190,7 +1076,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     NC: Carry flag reset
     //     Z:  Carry flag set
     case 0x20:
-        if (!f.Zero()) {
+        if (!Zero()) {
             RelativeJump(GetImmediateSignedByte());
             return 12;
         } else {
@@ -1199,7 +1085,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             return 8;
         }
     case 0x28:
-        if (f.Zero()) {
+        if (Zero()) {
             RelativeJump(GetImmediateSignedByte());
             return 12;
         } else {
@@ -1208,7 +1094,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             return 8;
         }
     case 0x30:
-        if (!f.Carry()) {
+        if (!Carry()) {
             RelativeJump(GetImmediateSignedByte());
             return 12;
         } else {
@@ -1217,7 +1103,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             return 8;
         }
     case 0x38:
-        if (f.Carry()) {
+        if (Carry()) {
             RelativeJump(GetImmediateSignedByte());
             return 12;
         } else {
@@ -1240,7 +1126,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     NC: Carry flag reset
     //     Z:  Carry flag set
     case 0xC4:
-        if (!f.Zero()) {
+        if (!Zero()) {
             Call(GetImmediateWord());
             return 24;
         } else {
@@ -1249,7 +1135,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             return 12;
         }
     case 0xCC:
-        if (f.Zero()) {
+        if (Zero()) {
             Call(GetImmediateWord());
             return 24;
         } else {
@@ -1258,7 +1144,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             return 12;
         }
     case 0xD4:
-        if (!f.Carry()) {
+        if (!Carry()) {
             Call(GetImmediateWord());
             return 24;
         } else {
@@ -1267,7 +1153,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             return 12;
         }
     case 0xDC:
-        if (f.Carry()) {
+        if (Carry()) {
             Call(GetImmediateWord());
             return 24;
         } else {
@@ -1289,7 +1175,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     Z:  Carry flag set
     case 0xC0:
         gameboy->HardwareTick(4); // For the comparison.
-        if (!f.Zero()) {
+        if (!Zero()) {
             Return();
             return 20;
         } else {
@@ -1297,7 +1183,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         }
     case 0xC8:
         gameboy->HardwareTick(4); // For the comparison.
-        if (f.Zero()) {
+        if (Zero()) {
             Return();
             return 20;
         } else {
@@ -1305,7 +1191,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         }
     case 0xD0:
         gameboy->HardwareTick(4); // For the comparison.
-        if (!f.Carry()) {
+        if (!Carry()) {
             Return();
             return 20;
         } else {
@@ -1313,7 +1199,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         }
     case 0xD8:
         gameboy->HardwareTick(4); // For the comparison.
-        if (f.Carry()) {
+        if (Carry()) {
             Return();
             return 20;
         } else {
@@ -1386,28 +1272,28 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         //     H: Reset
         //     C: Set to value in bit 7 before the rotate
         case 0x00:
-            RotateLeft(Reg8::B);
+            RotateLeft(B);
             return 8;
         case 0x01:
-            RotateLeft(Reg8::C);
+            RotateLeft(C);
             return 8;
         case 0x02:
-            RotateLeft(Reg8::D);
+            RotateLeft(D);
             return 8;
         case 0x03:
-            RotateLeft(Reg8::E);
+            RotateLeft(E);
             return 8;
         case 0x04:
-            RotateLeft(Reg8::H);
+            RotateLeft(H);
             return 8;
         case 0x05:
-            RotateLeft(Reg8::L);
+            RotateLeft(L);
             return 8;
         case 0x06:
             RotateLeftMemAtHL();
             return 16;
         case 0x07:
-            RotateLeft(Reg8::A);
+            RotateLeft(A);
             return 8;
         // RL R -- Left rotate the value in register R through the carry flag.
         // Flags:
@@ -1416,28 +1302,28 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         //     H: Reset
         //     C: Set to value in bit 7 before the rotate
         case 0x10:
-            RotateLeftThroughCarry(Reg8::B);
+            RotateLeftThroughCarry(B);
             return 8;
         case 0x11:
-            RotateLeftThroughCarry(Reg8::C);
+            RotateLeftThroughCarry(C);
             return 8;
         case 0x12:
-            RotateLeftThroughCarry(Reg8::D);
+            RotateLeftThroughCarry(D);
             return 8;
         case 0x13:
-            RotateLeftThroughCarry(Reg8::E);
+            RotateLeftThroughCarry(E);
             return 8;
         case 0x14:
-            RotateLeftThroughCarry(Reg8::H);
+            RotateLeftThroughCarry(H);
             return 8;
         case 0x15:
-            RotateLeftThroughCarry(Reg8::L);
+            RotateLeftThroughCarry(L);
             return 8;
         case 0x16:
             RotateLeftMemAtHLThroughCarry();
             return 16;
         case 0x17:
-            RotateLeftThroughCarry(Reg8::A);
+            RotateLeftThroughCarry(A);
             return 8;
         // RRC R -- Right rotate the value in register R.
         // Flags:
@@ -1446,28 +1332,28 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         //     H: Reset
         //     C: Set to value in bit 0 before the rotate
         case 0x08:
-            RotateRight(Reg8::B);
+            RotateRight(B);
             return 8;
         case 0x09:
-            RotateRight(Reg8::C);
+            RotateRight(C);
             return 8;
         case 0x0A:
-            RotateRight(Reg8::D);
+            RotateRight(D);
             return 8;
         case 0x0B:
-            RotateRight(Reg8::E);
+            RotateRight(E);
             return 8;
         case 0x0C:
-            RotateRight(Reg8::H);
+            RotateRight(H);
             return 8;
         case 0x0D:
-            RotateRight(Reg8::L);
+            RotateRight(L);
             return 8;
         case 0x0E:
             RotateRightMemAtHL();
             return 16;
         case 0x0F:
-            RotateRight(Reg8::A);
+            RotateRight(A);
             return 8;
         // RR R -- Right rotate the value in register R through the carry flag.
         // Flags:
@@ -1476,28 +1362,28 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         //     H: Reset
         //     C: Set to value in bit 0 before the rotate
         case 0x18:
-            RotateRightThroughCarry(Reg8::B);
+            RotateRightThroughCarry(B);
             return 8;
         case 0x19:
-            RotateRightThroughCarry(Reg8::C);
+            RotateRightThroughCarry(C);
             return 8;
         case 0x1A:
-            RotateRightThroughCarry(Reg8::D);
+            RotateRightThroughCarry(D);
             return 8;
         case 0x1B:
-            RotateRightThroughCarry(Reg8::E);
+            RotateRightThroughCarry(E);
             return 8;
         case 0x1C:
-            RotateRightThroughCarry(Reg8::H);
+            RotateRightThroughCarry(H);
             return 8;
         case 0x1D:
-            RotateRightThroughCarry(Reg8::L);
+            RotateRightThroughCarry(L);
             return 8;
         case 0x1E:
             RotateRightMemAtHLThroughCarry();
             return 16;
         case 0x1F:
-            RotateRightThroughCarry(Reg8::A);
+            RotateRightThroughCarry(A);
             return 8;
         // SLA R -- Left shift the value in register R into the carry flag.
         // Flags:
@@ -1506,28 +1392,28 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         //     H: Reset
         //     C: Set to value in bit 0 before the rotate
         case 0x20:
-            ShiftLeft(Reg8::B);
+            ShiftLeft(B);
             return 8;
         case 0x21:
-            ShiftLeft(Reg8::C);
+            ShiftLeft(C);
             return 8;
         case 0x22:
-            ShiftLeft(Reg8::D);
+            ShiftLeft(D);
             return 8;
         case 0x23:
-            ShiftLeft(Reg8::E);
+            ShiftLeft(E);
             return 8;
         case 0x24:
-            ShiftLeft(Reg8::H);
+            ShiftLeft(H);
             return 8;
         case 0x25:
-            ShiftLeft(Reg8::L);
+            ShiftLeft(L);
             return 8;
         case 0x26:
             ShiftLeftMemAtHL();
             return 16;
         case 0x27:
-            ShiftLeft(Reg8::A);
+            ShiftLeft(A);
             return 8;
         // SRA R -- Arithmetic right shift the value in register R into the carry flag.
         // Flags:
@@ -1536,28 +1422,28 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         //     H: Reset
         //     C: Set to value in bit 0 before the rotate
         case 0x28:
-            ShiftRightArithmetic(Reg8::B);
+            ShiftRightArithmetic(B);
             return 8;
         case 0x29:
-            ShiftRightArithmetic(Reg8::C);
+            ShiftRightArithmetic(C);
             return 8;
         case 0x2A:
-            ShiftRightArithmetic(Reg8::D);
+            ShiftRightArithmetic(D);
             return 8;
         case 0x2B:
-            ShiftRightArithmetic(Reg8::E);
+            ShiftRightArithmetic(E);
             return 8;
         case 0x2C:
-            ShiftRightArithmetic(Reg8::H);
+            ShiftRightArithmetic(H);
             return 8;
         case 0x2D:
-            ShiftRightArithmetic(Reg8::L);
+            ShiftRightArithmetic(L);
             return 8;
         case 0x2E:
             ShiftRightArithmeticMemAtHL();
             return 16;
         case 0x2F:
-            ShiftRightArithmetic(Reg8::A);
+            ShiftRightArithmetic(A);
             return 8;
         // SWAP R -- Swap upper and lower nybbles of register R (rotate by 4).
         // Flags:
@@ -1566,28 +1452,28 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         //     H: Reset
         //     C: Reset
         case 0x30:
-            SwapNybbles(Reg8::B);
+            SwapNybbles(B);
             return 8;
         case 0x31:
-            SwapNybbles(Reg8::C);
+            SwapNybbles(C);
             return 8;
         case 0x32:
-            SwapNybbles(Reg8::D);
+            SwapNybbles(D);
             return 8;
         case 0x33:
-            SwapNybbles(Reg8::E);
+            SwapNybbles(E);
             return 8;
         case 0x34:
-            SwapNybbles(Reg8::H);
+            SwapNybbles(H);
             return 8;
         case 0x35:
-            SwapNybbles(Reg8::L);
+            SwapNybbles(L);
             return 8;
         case 0x36:
             SwapMemAtHL();
             return 16;
         case 0x37:
-            SwapNybbles(Reg8::A);
+            SwapNybbles(A);
             return 8;
         // SRL R -- Logical right shift the value in register R into the carry flag.
         // Flags:
@@ -1596,28 +1482,28 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         //     H: Reset
         //     C: Set to value in bit 0 before the rotate
         case 0x38:
-            ShiftRightLogical(Reg8::B);
+            ShiftRightLogical(B);
             return 8;
         case 0x39:
-            ShiftRightLogical(Reg8::C);
+            ShiftRightLogical(C);
             return 8;
         case 0x3A:
-            ShiftRightLogical(Reg8::D);
+            ShiftRightLogical(D);
             return 8;
         case 0x3B:
-            ShiftRightLogical(Reg8::E);
+            ShiftRightLogical(E);
             return 8;
         case 0x3C:
-            ShiftRightLogical(Reg8::H);
+            ShiftRightLogical(H);
             return 8;
         case 0x3D:
-            ShiftRightLogical(Reg8::L);
+            ShiftRightLogical(L);
             return 8;
         case 0x3E:
             ShiftRightLogicalMemAtHL();
             return 16;
         case 0x3F:
-            ShiftRightLogical(Reg8::A);
+            ShiftRightLogical(A);
             return 8;
 
         // ******** Bit Manipulation ********
@@ -1628,584 +1514,584 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         //     H: Set
         //     C: Unchanged
         case 0x40:
-            TestBit(0, b);
+            TestBit(0, B);
             return 8;
         case 0x41:
-            TestBit(0, c);
+            TestBit(0, C);
             return 8;
         case 0x42:
-            TestBit(0, d);
+            TestBit(0, D);
             return 8;
         case 0x43:
-            TestBit(0, e);
+            TestBit(0, E);
             return 8;
         case 0x44:
-            TestBit(0, h);
+            TestBit(0, H);
             return 8;
         case 0x45:
-            TestBit(0, l);
+            TestBit(0, L);
             return 8;
         case 0x46:
             TestBitOfMemAtHL(0);
             return 12;
         case 0x47:
-            TestBit(0, a);
+            TestBit(0, A);
             return 8;
         case 0x48:
-            TestBit(1, b);
+            TestBit(1, B);
             return 8;
         case 0x49:
-            TestBit(1, c);
+            TestBit(1, C);
             return 8;
         case 0x4A:
-            TestBit(1, d);
+            TestBit(1, D);
             return 8;
         case 0x4B:
-            TestBit(1, e);
+            TestBit(1, E);
             return 8;
         case 0x4C:
-            TestBit(1, h);
+            TestBit(1, H);
             return 8;
         case 0x4D:
-            TestBit(1, l);
+            TestBit(1, L);
             return 8;
         case 0x4E:
             TestBitOfMemAtHL(1);
             return 12;
         case 0x4F:
-            TestBit(1, a);
+            TestBit(1, A);
             return 8;
         case 0x50:
-            TestBit(2, b);
+            TestBit(2, B);
             return 8;
         case 0x51:
-            TestBit(2, c);
+            TestBit(2, C);
             return 8;
         case 0x52:
-            TestBit(2, d);
+            TestBit(2, D);
             return 8;
         case 0x53:
-            TestBit(2, e);
+            TestBit(2, E);
             return 8;
         case 0x54:
-            TestBit(2, h);
+            TestBit(2, H);
             return 8;
         case 0x55:
-            TestBit(2, l);
+            TestBit(2, L);
             return 8;
         case 0x56:
             TestBitOfMemAtHL(2);
             return 12;
         case 0x57:
-            TestBit(2, a);
+            TestBit(2, A);
             return 8;
         case 0x58:
-            TestBit(3, b);
+            TestBit(3, B);
             return 8;
         case 0x59:
-            TestBit(3, c);
+            TestBit(3, C);
             return 8;
         case 0x5A:
-            TestBit(3, d);
+            TestBit(3, D);
             return 8;
         case 0x5B:
-            TestBit(3, e);
+            TestBit(3, E);
             return 8;
         case 0x5C:
-            TestBit(3, h);
+            TestBit(3, H);
             return 8;
         case 0x5D:
-            TestBit(3, l);
+            TestBit(3, L);
             return 8;
         case 0x5E:
             TestBitOfMemAtHL(3);
             return 12;
         case 0x5F:
-            TestBit(3, a);
+            TestBit(3, A);
             return 8;
         case 0x60:
-            TestBit(4, b);
+            TestBit(4, B);
             return 8;
         case 0x61:
-            TestBit(4, c);
+            TestBit(4, C);
             return 8;
         case 0x62:
-            TestBit(4, d);
+            TestBit(4, D);
             return 8;
         case 0x63:
-            TestBit(4, e);
+            TestBit(4, E);
             return 8;
         case 0x64:
-            TestBit(4, h);
+            TestBit(4, H);
             return 8;
         case 0x65:
-            TestBit(4, l);
+            TestBit(4, L);
             return 8;
         case 0x66:
             TestBitOfMemAtHL(4);
             return 12;
         case 0x67:
-            TestBit(4, a);
+            TestBit(4, A);
             return 8;
         case 0x68:
-            TestBit(5, b);
+            TestBit(5, B);
             return 8;
         case 0x69:
-            TestBit(5, c);
+            TestBit(5, C);
             return 8;
         case 0x6A:
-            TestBit(5, d);
+            TestBit(5, D);
             return 8;
         case 0x6B:
-            TestBit(5, e);
+            TestBit(5, E);
             return 8;
         case 0x6C:
-            TestBit(5, h);
+            TestBit(5, H);
             return 8;
         case 0x6D:
-            TestBit(5, l);
+            TestBit(5, L);
             return 8;
         case 0x6E:
             TestBitOfMemAtHL(5);
             return 12;
         case 0x6F:
-            TestBit(5, a);
+            TestBit(5, A);
             return 8;
         case 0x70:
-            TestBit(6, b);
+            TestBit(6, B);
             return 8;
         case 0x71:
-            TestBit(6, c);
+            TestBit(6, C);
             return 8;
         case 0x72:
-            TestBit(6, d);
+            TestBit(6, D);
             return 8;
         case 0x73:
-            TestBit(6, e);
+            TestBit(6, E);
             return 8;
         case 0x74:
-            TestBit(6, h);
+            TestBit(6, H);
             return 8;
         case 0x75:
-            TestBit(6, l);
+            TestBit(6, L);
             return 8;
         case 0x76:
             TestBitOfMemAtHL(6);
             return 12;
         case 0x77:
-            TestBit(6, a);
+            TestBit(6, A);
             return 8;
         case 0x78:
-            TestBit(7, b);
+            TestBit(7, B);
             return 8;
         case 0x79:
-            TestBit(7, c);
+            TestBit(7, C);
             return 8;
         case 0x7A:
-            TestBit(7, d);
+            TestBit(7, D);
             return 8;
         case 0x7B:
-            TestBit(7, e);
+            TestBit(7, E);
             return 8;
         case 0x7C:
-            TestBit(7, h);
+            TestBit(7, H);
             return 8;
         case 0x7D:
-            TestBit(7, l);
+            TestBit(7, L);
             return 8;
         case 0x7E:
             TestBitOfMemAtHL(7);
             return 12;
         case 0x7F:
-            TestBit(7, a);
+            TestBit(7, A);
             return 8;
         // RES b, R -- reset bit b of the value in register R.
         // Flags unchanged
         case 0x80:
-            ResetBit(0, Reg8::B);
+            ResetBit(0, B);
             return 8;
         case 0x81:
-            ResetBit(0, Reg8::C);
+            ResetBit(0, C);
             return 8;
         case 0x82:
-            ResetBit(0, Reg8::D);
+            ResetBit(0, D);
             return 8;
         case 0x83:
-            ResetBit(0, Reg8::E);
+            ResetBit(0, E);
             return 8;
         case 0x84:
-            ResetBit(0, Reg8::H);
+            ResetBit(0, H);
             return 8;
         case 0x85:
-            ResetBit(0, Reg8::L);
+            ResetBit(0, L);
             return 8;
         case 0x86:
             ResetBitOfMemAtHL(0);
             return 16;
         case 0x87:
-            ResetBit(0, Reg8::A);
+            ResetBit(0, A);
             return 8;
         case 0x88:
-            ResetBit(1, Reg8::B);
+            ResetBit(1, B);
             return 8;
         case 0x89:
-            ResetBit(1, Reg8::C);
+            ResetBit(1, C);
             return 8;
         case 0x8A:
-            ResetBit(1, Reg8::D);
+            ResetBit(1, D);
             return 8;
         case 0x8B:
-            ResetBit(1, Reg8::E);
+            ResetBit(1, E);
             return 8;
         case 0x8C:
-            ResetBit(1, Reg8::H);
+            ResetBit(1, H);
             return 8;
         case 0x8D:
-            ResetBit(1, Reg8::L);
+            ResetBit(1, L);
             return 8;
         case 0x8E:
             ResetBitOfMemAtHL(1);
             return 16;
         case 0x8F:
-            ResetBit(1, Reg8::A);
+            ResetBit(1, A);
             return 8;
         case 0x90:
-            ResetBit(2, Reg8::B);
+            ResetBit(2, B);
             return 8;
         case 0x91:
-            ResetBit(2, Reg8::C);
+            ResetBit(2, C);
             return 8;
         case 0x92:
-            ResetBit(2, Reg8::D);
+            ResetBit(2, D);
             return 8;
         case 0x93:
-            ResetBit(2, Reg8::E);
+            ResetBit(2, E);
             return 8;
         case 0x94:
-            ResetBit(2, Reg8::H);
+            ResetBit(2, H);
             return 8;
         case 0x95:
-            ResetBit(2, Reg8::L);
+            ResetBit(2, L);
             return 8;
         case 0x96:
             ResetBitOfMemAtHL(2);
             return 16;
         case 0x97:
-            ResetBit(2, Reg8::A);
+            ResetBit(2, A);
             return 8;
         case 0x98:
-            ResetBit(3, Reg8::B);
+            ResetBit(3, B);
             return 8;
         case 0x99:
-            ResetBit(3, Reg8::C);
+            ResetBit(3, C);
             return 8;
         case 0x9A:
-            ResetBit(3, Reg8::D);
+            ResetBit(3, D);
             return 8;
         case 0x9B:
-            ResetBit(3, Reg8::E);
+            ResetBit(3, E);
             return 8;
         case 0x9C:
-            ResetBit(3, Reg8::H);
+            ResetBit(3, H);
             return 8;
         case 0x9D:
-            ResetBit(3, Reg8::L);
+            ResetBit(3, L);
             return 8;
         case 0x9E:
             ResetBitOfMemAtHL(3);
             return 16;
         case 0x9F:
-            ResetBit(3, Reg8::A);
+            ResetBit(3, A);
             return 8;
         case 0xA0:
-            ResetBit(4, Reg8::B);
+            ResetBit(4, B);
             return 8;
         case 0xA1:
-            ResetBit(4, Reg8::C);
+            ResetBit(4, C);
             return 8;
         case 0xA2:
-            ResetBit(4, Reg8::D);
+            ResetBit(4, D);
             return 8;
         case 0xA3:
-            ResetBit(4, Reg8::E);
+            ResetBit(4, E);
             return 8;
         case 0xA4:
-            ResetBit(4, Reg8::H);
+            ResetBit(4, H);
             return 8;
         case 0xA5:
-            ResetBit(4, Reg8::L);
+            ResetBit(4, L);
             return 8;
         case 0xA6:
             ResetBitOfMemAtHL(4);
             return 16;
         case 0xA7:
-            ResetBit(4, Reg8::A);
+            ResetBit(4, A);
             return 8;
         case 0xA8:
-            ResetBit(5, Reg8::B);
+            ResetBit(5, B);
             return 8;
         case 0xA9:
-            ResetBit(5, Reg8::C);
+            ResetBit(5, C);
             return 8;
         case 0xAA:
-            ResetBit(5, Reg8::D);
+            ResetBit(5, D);
             return 8;
         case 0xAB:
-            ResetBit(5, Reg8::E);
+            ResetBit(5, E);
             return 8;
         case 0xAC:
-            ResetBit(5, Reg8::H);
+            ResetBit(5, H);
             return 8;
         case 0xAD:
-            ResetBit(5, Reg8::L);
+            ResetBit(5, L);
             return 8;
         case 0xAE:
             ResetBitOfMemAtHL(5);
             return 16;
         case 0xAF:
-            ResetBit(5, Reg8::A);
+            ResetBit(5, A);
             return 8;
         case 0xB0:
-            ResetBit(6, Reg8::B);
+            ResetBit(6, B);
             return 8;
         case 0xB1:
-            ResetBit(6, Reg8::C);
+            ResetBit(6, C);
             return 8;
         case 0xB2:
-            ResetBit(6, Reg8::D);
+            ResetBit(6, D);
             return 8;
         case 0xB3:
-            ResetBit(6, Reg8::E);
+            ResetBit(6, E);
             return 8;
         case 0xB4:
-            ResetBit(6, Reg8::H);
+            ResetBit(6, H);
             return 8;
         case 0xB5:
-            ResetBit(6, Reg8::L);
+            ResetBit(6, L);
             return 8;
         case 0xB6:
             ResetBitOfMemAtHL(6);
             return 16;
         case 0xB7:
-            ResetBit(6, Reg8::A);
+            ResetBit(6, A);
             return 8;
         case 0xB8:
-            ResetBit(7, Reg8::B);
+            ResetBit(7, B);
             return 8;
         case 0xB9:
-            ResetBit(7, Reg8::C);
+            ResetBit(7, C);
             return 8;
         case 0xBA:
-            ResetBit(7, Reg8::D);
+            ResetBit(7, D);
             return 8;
         case 0xBB:
-            ResetBit(7, Reg8::E);
+            ResetBit(7, E);
             return 8;
         case 0xBC:
-            ResetBit(7, Reg8::H);
+            ResetBit(7, H);
             return 8;
         case 0xBD:
-            ResetBit(7, Reg8::L);
+            ResetBit(7, L);
             return 8;
         case 0xBE:
             ResetBitOfMemAtHL(7);
             return 16;
         case 0xBF:
-            ResetBit(7, Reg8::A);
+            ResetBit(7, A);
             return 8;
         // SET b, R -- set bit b of the value in register R.
         // Flags unchanged
         case 0xC0:
-            SetBit(0, Reg8::B);
+            SetBit(0, B);
             return 8;
         case 0xC1:
-            SetBit(0, Reg8::C);
+            SetBit(0, C);
             return 8;
         case 0xC2:
-            SetBit(0, Reg8::D);
+            SetBit(0, D);
             return 8;
         case 0xC3:
-            SetBit(0, Reg8::E);
+            SetBit(0, E);
             return 8;
         case 0xC4:
-            SetBit(0, Reg8::H);
+            SetBit(0, H);
             return 8;
         case 0xC5:
-            SetBit(0, Reg8::L);
+            SetBit(0, L);
             return 8;
         case 0xC6:
             SetBitOfMemAtHL(0);
             return 16;
         case 0xC7:
-            SetBit(0, Reg8::A);
+            SetBit(0, A);
             return 8;
         case 0xC8:
-            SetBit(1, Reg8::B);
+            SetBit(1, B);
             return 8;
         case 0xC9:
-            SetBit(1, Reg8::C);
+            SetBit(1, C);
             return 8;
         case 0xCA:
-            SetBit(1, Reg8::D);
+            SetBit(1, D);
             return 8;
         case 0xCB:
-            SetBit(1, Reg8::E);
+            SetBit(1, E);
             return 8;
         case 0xCC:
-            SetBit(1, Reg8::H);
+            SetBit(1, H);
             return 8;
         case 0xCD:
-            SetBit(1, Reg8::L);
+            SetBit(1, L);
             return 8;
         case 0xCE:
             SetBitOfMemAtHL(1);
             return 16;
         case 0xCF:
-            SetBit(1, Reg8::A);
+            SetBit(1, A);
             return 8;
         case 0xD0:
-            SetBit(2, Reg8::B);
+            SetBit(2, B);
             return 8;
         case 0xD1:
-            SetBit(2, Reg8::C);
+            SetBit(2, C);
             return 8;
         case 0xD2:
-            SetBit(2, Reg8::D);
+            SetBit(2, D);
             return 8;
         case 0xD3:
-            SetBit(2, Reg8::E);
+            SetBit(2, E);
             return 8;
         case 0xD4:
-            SetBit(2, Reg8::H);
+            SetBit(2, H);
             return 8;
         case 0xD5:
-            SetBit(2, Reg8::L);
+            SetBit(2, L);
             return 8;
         case 0xD6:
             SetBitOfMemAtHL(2);
             return 16;
         case 0xD7:
-            SetBit(2, Reg8::A);
+            SetBit(2, A);
             return 8;
         case 0xD8:
-            SetBit(3, Reg8::B);
+            SetBit(3, B);
             return 8;
         case 0xD9:
-            SetBit(3, Reg8::C);
+            SetBit(3, C);
             return 8;
         case 0xDA:
-            SetBit(3, Reg8::D);
+            SetBit(3, D);
             return 8;
         case 0xDB:
-            SetBit(3, Reg8::E);
+            SetBit(3, E);
             return 8;
         case 0xDC:
-            SetBit(3, Reg8::H);
+            SetBit(3, H);
             return 8;
         case 0xDD:
-            SetBit(3, Reg8::L);
+            SetBit(3, L);
             return 8;
         case 0xDE:
             SetBitOfMemAtHL(3);
             return 16;
         case 0xDF:
-            SetBit(3, Reg8::A);
+            SetBit(3, A);
             return 8;
         case 0xE0:
-            SetBit(4, Reg8::B);
+            SetBit(4, B);
             return 8;
         case 0xE1:
-            SetBit(4, Reg8::C);
+            SetBit(4, C);
             return 8;
         case 0xE2:
-            SetBit(4, Reg8::D);
+            SetBit(4, D);
             return 8;
         case 0xE3:
-            SetBit(4, Reg8::E);
+            SetBit(4, E);
             return 8;
         case 0xE4:
-            SetBit(4, Reg8::H);
+            SetBit(4, H);
             return 8;
         case 0xE5:
-            SetBit(4, Reg8::L);
+            SetBit(4, L);
             return 8;
         case 0xE6:
             SetBitOfMemAtHL(4);
             return 16;
         case 0xE7:
-            SetBit(4, Reg8::A);
+            SetBit(4, A);
             return 8;
         case 0xE8:
-            SetBit(5, Reg8::B);
+            SetBit(5, B);
             return 8;
         case 0xE9:
-            SetBit(5, Reg8::C);
+            SetBit(5, C);
             return 8;
         case 0xEA:
-            SetBit(5, Reg8::D);
+            SetBit(5, D);
             return 8;
         case 0xEB:
-            SetBit(5, Reg8::E);
+            SetBit(5, E);
             return 8;
         case 0xEC:
-            SetBit(5, Reg8::H);
+            SetBit(5, H);
             return 8;
         case 0xED:
-            SetBit(5, Reg8::L);
+            SetBit(5, L);
             return 8;
         case 0xEE:
             SetBitOfMemAtHL(5);
             return 16;
         case 0xEF:
-            SetBit(5, Reg8::A);
+            SetBit(5, A);
             return 8;
         case 0xF0:
-            SetBit(6, Reg8::B);
+            SetBit(6, B);
             return 8;
         case 0xF1:
-            SetBit(6, Reg8::C);
+            SetBit(6, C);
             return 8;
         case 0xF2:
-            SetBit(6, Reg8::D);
+            SetBit(6, D);
             return 8;
         case 0xF3:
-            SetBit(6, Reg8::E);
+            SetBit(6, E);
             return 8;
         case 0xF4:
-            SetBit(6, Reg8::H);
+            SetBit(6, H);
             return 8;
         case 0xF5:
-            SetBit(6, Reg8::L);
+            SetBit(6, L);
             return 8;
         case 0xF6:
             SetBitOfMemAtHL(6);
             return 16;
         case 0xF7:
-            SetBit(6, Reg8::A);
+            SetBit(6, A);
             return 8;
         case 0xF8:
-            SetBit(7, Reg8::B);
+            SetBit(7, B);
             return 8;
         case 0xF9:
-            SetBit(7, Reg8::C);
+            SetBit(7, C);
             return 8;
         case 0xFA:
-            SetBit(7, Reg8::D);
+            SetBit(7, D);
             return 8;
         case 0xFB:
-            SetBit(7, Reg8::E);
+            SetBit(7, E);
             return 8;
         case 0xFC:
-            SetBit(7, Reg8::H);
+            SetBit(7, H);
             return 8;
         case 0xFD:
-            SetBit(7, Reg8::L);
+            SetBit(7, L);
             return 8;
         case 0xFE:
             SetBitOfMemAtHL(7);
             return 16;
         case 0xFF:
-            SetBit(7, Reg8::A);
+            SetBit(7, A);
             return 8;
 
         default:

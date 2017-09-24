@@ -48,11 +48,11 @@ void Logging::LogCPURegisterState(const Core::Memory& mem, const Core::CPU& cpu)
     }
 
     log_stream << "PC=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.pc);
-    log_stream << " SP=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.sp);
-    log_stream << " AF=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.Read16(Core::CPU::Reg16::AF));
-    log_stream << " BC=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.Read16(Core::CPU::Reg16::BC));
-    log_stream << " DE=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.Read16(Core::CPU::Reg16::DE));
-    log_stream << " HL=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.Read16(Core::CPU::Reg16::HL));
+    log_stream << " SP=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.regs.reg16[cpu.SP]);
+    log_stream << " AF=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.regs.reg16[cpu.AF]);
+    log_stream << " BC=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.regs.reg16[cpu.BC]);
+    log_stream << " DE=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.regs.reg16[cpu.DE]);
+    log_stream << " HL=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.regs.reg16[cpu.HL]);
     log_stream << " IF=0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF0F));
     log_stream << " IE=0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFFFF));
     log_stream << "\n";

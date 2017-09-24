@@ -15,7 +15,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdexcept>
-#include <cassert>
 
 #include "core/cpu/CPU.h"
 #include "core/memory/Memory.h"
@@ -24,1129 +23,543 @@
 namespace Core {
 
 // 8-bit Load operations
-void CPU::Load8(Reg8 R, u8 immediate) {
-    Write8(R, immediate);
+void CPU::Load8(Reg8Addr r, u8 val) {
+    regs.reg8[r] = val;
 }
 
-void CPU::Load8FromMem(Reg8 R, u16 addr) {
-    Write8(R, mem.ReadMem8(addr));
-    gameboy->HardwareTick(4);
+void CPU::Load8FromMem(Reg8Addr r, u16 addr) {
+    regs.reg8[r] = ReadMemAndTick(addr);
 }
 
-void CPU::Load8FromMemAtHL(Reg8 R) {
-    Write8(R, ReadMemAtHL());
-}
-
-void CPU::Load8IntoMem(Reg16 R, u8 immediate) {
-    mem.WriteMem8(Read16(R), immediate);
-    gameboy->HardwareTick(4);
-}
-
-void CPU::LoadAIntoMem(u16 addr) {
-    mem.WriteMem8(addr, a);
-    gameboy->HardwareTick(4);
+void CPU::Load8IntoMem(u16 addr, u8 val) {
+    WriteMemAndTick(addr, val);
 }
 
 // 16-bit Load operations
-void CPU::Load16(Reg16 R, u16 immediate) {
-    Write16(R, immediate);
+void CPU::Load16(Reg16Addr r, u16 val) {
+    regs.reg16[r] = val;
 }
 
 void CPU::LoadHLIntoSP() {
-    sp = (static_cast<u16>(h) << 8) | static_cast<u16>(l);
+    regs.reg16[SP] = regs.reg16[HL];
     gameboy->HardwareTick(4);
 }
 
-void CPU::LoadSPnIntoHL(s8 immediate) {
-    // The half carry & carry flags for this instruction are set by adding the immediate as an *unsigned* byte to the
-    // lower byte of sp. The addition itself is done with the immediate as a signed byte.
-    f.SetZero(false);
-    f.SetSub(false);
+void CPU::LoadSPnIntoHL(s8 val) {
+    // The half carry & carry flags for this instruction are set by adding the value as an *unsigned* byte to the
+    // lower byte of sp. The addition itself is done with the value as a signed byte.
+    SetZero(false);
+    SetSub(false);
+    SetHalf(((regs.reg16[SP] & 0x000F) + (static_cast<u8>(val) & 0x0F)) & 0x0010);
+    SetCarry(((regs.reg16[SP] & 0x00FF) + static_cast<u8>(val)) & 0x0100);
 
-    f.SetHalf(((sp & 0x000F) + (static_cast<u8>(immediate) & 0x0F)) & 0x0010);
-    f.SetCarry(((sp & 0x00FF) + static_cast<u8>(immediate)) & 0x0100);
-
-    u16 tmp16 = sp + immediate;
-    l = static_cast<u8>(tmp16);
-    h = static_cast<u8>(tmp16 >> 8);
+    // val will be sign-extended.
+    regs.reg16[HL] = regs.reg16[SP] + val;
     
     // Internal delay
     gameboy->HardwareTick(4);
 }
 
 void CPU::LoadSPIntoMem(u16 addr) {
-    mem.WriteMem8(addr, static_cast<u8>(sp));
-    gameboy->HardwareTick(4);
-
-    mem.WriteMem8(addr+1, static_cast<u8>(sp >> 8));
-    gameboy->HardwareTick(4);
+    WriteMemAndTick(addr, regs.reg8[ToReg8AddrLo(SP)]);
+    WriteMemAndTick(addr + 1, regs.reg8[ToReg8AddrHi(SP)]);
 }
 
-void CPU::Push(Reg16 R) {
+void CPU::Push(Reg16Addr r) {
     // Internal delay
     gameboy->HardwareTick(4);
 
-    u16 reg_val = Read16(R); // TODO: clean up this register access mess
-
-    mem.WriteMem8(--sp, static_cast<u8>(reg_val >> 8));
-    gameboy->HardwareTick(4);
-
-    mem.WriteMem8(--sp, static_cast<u8>(reg_val));
-    gameboy->HardwareTick(4);
+    WriteMemAndTick(--regs.reg16[SP], regs.reg8[ToReg8AddrHi(r)]);
+    WriteMemAndTick(--regs.reg16[SP], regs.reg8[ToReg8AddrLo(r)]);
 }
 
-void CPU::Pop(Reg16 R) {
-    u8 byte_lo = mem.ReadMem8(sp++);
-    gameboy->HardwareTick(4);
-    u8 byte_hi = mem.ReadMem8(sp++);
-    gameboy->HardwareTick(4);
+void CPU::Pop(Reg16Addr r) {
+    regs.reg8[ToReg8AddrLo(r)] = ReadMemAndTick(regs.reg16[SP]++);
+    regs.reg8[ToReg8AddrHi(r)] = ReadMemAndTick(regs.reg16[SP]++);
 
-    Write16(R, (static_cast<u16>(byte_hi) << 8) | static_cast<u16>(byte_lo)); // TODO: clean up
+    if (r == AF) {
+        // The low nybble of the flags register is always 0.
+        regs.reg8[F] &= 0xF0;
+    }
 }
 
 // 8-bit Add operations
-void CPU::Add(u8 immediate) {
-    u16 tmp16 = a + immediate;
-    f.SetHalf(((a & 0x0F) + (immediate & 0x0F)) > 0x0F);
-    f.SetCarry(tmp16 > 0x00FF);
-    f.SetZero(!(tmp16 & 0x00FF));
-    f.SetSub(false);
+void CPU::AddImmediate(u8 val) {
+    u16 tmp16 = regs.reg8[A] + val;
+    SetHalf(((regs.reg8[A] & 0x0F) + (val & 0x0F)) & 0x10);
+    SetCarry(tmp16 & 0x0100);
+    SetZero(!(tmp16 & 0x00FF));
+    SetSub(false);
 
-    a = static_cast<u8>(tmp16);
+    regs.reg8[A] = static_cast<u8>(tmp16);
+}
+
+void CPU::Add(Reg8Addr r) {
+    AddImmediate(regs.reg8[r]);
 }
 
 void CPU::AddFromMemAtHL() {
-    u8 val = ReadMemAtHL();
-    u16 tmp16 = a + val;
-    f.SetHalf(((a & 0x0F) + (val & 0x0F)) & 0x10);
-    f.SetCarry(tmp16 & 0x0100);
-    f.SetZero(!(tmp16 & 0x00FF));
-    f.SetSub(false);
-
-    a = static_cast<u8>(tmp16);
+    AddImmediate(ReadMemAndTick(regs.reg16[HL]));
 }
 
-void CPU::AddWithCarry(u8 immediate) {
-    u16 tmp16 = a + immediate + f.Carry();
-    f.SetHalf(((a & 0x0F) + (immediate & 0x0F) + f.Carry()) & 0x10);
-    f.SetCarry(tmp16 & 0x0100);
-    f.SetZero(!(tmp16 & 0x00FF));
-    f.SetSub(false);
+void CPU::AddImmediateWithCarry(u8 val) {
+    u16 tmp16 = regs.reg8[A] + val + Carry();
+    SetHalf(((regs.reg8[A] & 0x0F) + (val & 0x0F) + Carry()) & 0x10);
+    SetCarry(tmp16 & 0x0100);
+    SetZero(!(tmp16 & 0x00FF));
+    SetSub(false);
 
-    a = static_cast<u8>(tmp16);
+    regs.reg8[A] = static_cast<u8>(tmp16);
+}
+
+void CPU::AddWithCarry(Reg8Addr r) {
+    AddImmediateWithCarry(regs.reg8[r]);
 }
 
 void CPU::AddFromMemAtHLWithCarry() {
-    u8 val = ReadMemAtHL();
-    u16 tmp16 = a + val + f.Carry();
-    f.SetHalf(((a & 0x0F) + (val & 0x0F) + f.Carry()) & 0x10);
-    f.SetCarry(tmp16 & 0x0100);
-    f.SetZero(!(tmp16 & 0x00FF));
-    f.SetSub(false);
-
-    a = static_cast<u8>(tmp16);
+    AddImmediateWithCarry(ReadMemAndTick(regs.reg16[HL]));
 }
 
 // 8-bit Subtract operations
-void CPU::Sub(u8 immediate) {
-    f.SetHalf((a & 0x0F) < (immediate & 0x0F));
-    f.SetCarry(a < immediate);
-    f.SetSub(true);
+void CPU::SubImmediate(u8 val) {
+    SetHalf((regs.reg8[A] & 0x0F) < (val & 0x0F));
+    SetCarry(regs.reg8[A] < val);
+    SetSub(true);
 
-    a -= immediate;
-    f.SetZero(!a);
+    regs.reg8[A] -= val;
+    SetZero(!regs.reg8[A]);
+}
+
+void CPU::Sub(Reg8Addr r) {
+    SubImmediate(regs.reg8[r]);
 }
 
 void CPU::SubFromMemAtHL() {
-    u8 val = ReadMemAtHL();
-    f.SetHalf((a & 0x0F) < (val & 0x0F));
-    f.SetCarry(a < val);
-    f.SetSub(true);
-
-    a -= val;
-    f.SetZero(!a);
+    SubImmediate(ReadMemAndTick(regs.reg16[HL]));
 }
 
-void CPU::SubWithCarry(u8 immediate) {
-    u8 carry = f.Carry();
-    f.SetHalf((a & 0x0F) < (immediate & 0x0F) + carry);
-    f.SetCarry(a < immediate + carry);
-    f.SetSub(true);
+void CPU::SubImmediateWithCarry(u8 val) {
+    u8 carry_val = Carry();
+    SetHalf((regs.reg8[A] & 0x0F) < (val & 0x0F) + carry_val);
+    SetCarry(regs.reg8[A] < val + carry_val);
+    SetSub(true);
 
-    a -= immediate + carry;
-    f.SetZero(!a);
+    regs.reg8[A] -= val + carry_val;
+    SetZero(!regs.reg8[A]);
+}
+
+void CPU::SubWithCarry(Reg8Addr r) {
+    SubImmediateWithCarry(regs.reg8[r]);
 }
 
 void CPU::SubFromMemAtHLWithCarry() {
-    u8 val = ReadMemAtHL();
-    u8 carry = f.Carry();
-    f.SetHalf((a & 0x0F) < (val & 0x0F) + carry);
-    f.SetCarry(a < val + carry);
-    f.SetSub(true);
-
-    a -= val + carry;
-    f.SetZero(!a);
+    SubImmediateWithCarry(ReadMemAndTick(regs.reg16[HL]));
 }
 
-// Bitwise And operations
-void CPU::And(u8 immediate) {
-    a &= immediate;
-
-    f.SetZero(!a);
-    f.SetSub(false);
-    f.SetHalf(true);
-    f.SetCarry(false);
-}
-
-void CPU::AndFromMemAtHL() {
-    a &= ReadMemAtHL();
-
-    f.SetZero(!a);
-    f.SetSub(false);
-    f.SetHalf(true);
-    f.SetCarry(false);
-}
-
-// Bitwise Or operations
-void CPU::Or(u8 immediate) {
-    a |= immediate;
-
-    f.SetZero(!a);
-    f.SetSub(false);
-    f.SetHalf(false);
-    f.SetCarry(false);
-}
-
-void CPU::OrFromMemAtHL() {
-    a |= ReadMemAtHL();
-
-    f.SetZero(!a);
-    f.SetSub(false);
-    f.SetHalf(false);
-    f.SetCarry(false);
-}
-
-// Bitwise Xor operations
-void CPU::Xor(u8 immediate) {
-    a ^= immediate;
-
-    f.SetZero(!a);
-    f.SetSub(false);
-    f.SetHalf(false);
-    f.SetCarry(false);
-}
-
-void CPU::XorFromMemAtHL() {
-    a ^= ReadMemAtHL();
-
-    f.SetZero(!a);
-    f.SetSub(false);
-    f.SetHalf(false);
-    f.SetCarry(false);
-}
-
-// Compare operations
-void CPU::Compare(u8 immediate) {
-    f.SetZero(!(a - immediate));
-    f.SetSub(true);
-    f.SetHalf((a & 0x0F) < (immediate & 0x0F));
-    f.SetCarry(a < immediate);
-}
-
-void CPU::CompareFromMemAtHL() {
-    u8 val = ReadMemAtHL();
-    f.SetZero(!(a - val));
-    f.SetSub(true);
-    f.SetHalf((a & 0x0F) < (val & 0x0F));
-    f.SetCarry(a < val);
-}
-
-// Increment operations
-void CPU::IncReg(Reg8 R) {
-    switch (R) {
-    case (Reg8::A):
-        f.SetHalf((a & 0x0F) == 0x0F);
-        ++a;
-        f.SetZero(!a);
-        break;
-    case (Reg8::B):
-        f.SetHalf((b & 0x0F) == 0x0F);
-        ++b;
-        f.SetZero(!b);
-        break;
-    case (Reg8::C):
-        f.SetHalf((c & 0x0F) == 0x0F);
-        ++c;
-        f.SetZero(!c);
-        break;
-    case (Reg8::D):
-        f.SetHalf((d & 0x0F) == 0x0F);
-        ++d;
-        f.SetZero(!d);
-        break;
-    case (Reg8::E):
-        f.SetHalf((e & 0x0F) == 0x0F);
-        ++e;
-        f.SetZero(!e);
-        break;
-    case (Reg8::H):
-        f.SetHalf((h & 0x0F) == 0x0F);
-        ++h;
-        f.SetZero(!h);
-        break;
-    case (Reg8::L):
-        f.SetHalf((l & 0x0F) == 0x0F);
-        ++l;
-        f.SetZero(!l);
-        break;
-    default:
-        // Unreachable
-        break;
-    }
-
-    f.SetSub(false);
-}
-
-void CPU::IncHL() {
-    h += static_cast<u8>(((static_cast<u16>(l) + 1) & 0x0100) >> 8);
-    ++l;
-}
-
-void CPU::IncReg(Reg16 R) {
-    switch (R) {
-    case (Reg16::BC):
-        b += static_cast<u8>(((static_cast<u16>(c) + 1) & 0x0100) >> 8);
-        ++c;
-        break;
-    case (Reg16::DE):
-        d += static_cast<u8>(((static_cast<u16>(e) + 1) & 0x0100) >> 8);
-        ++e;
-        break;
-    case (Reg16::HL):
-        IncHL();
-        break;
-    case (Reg16::SP):
-        ++sp;
-        break;
-    default:
-        assert(false && "Reg16::AF passed to CPU::IncReg.");
-        break;
-    }
-
-    gameboy->HardwareTick(4);
+void CPU::IncReg8(Reg8Addr r) {
+    SetHalf((regs.reg8[r] & 0x0F) == 0x0F);
+    ++regs.reg8[r];
+    SetZero(!regs.reg8[r]);
+    SetSub(false);
 }
 
 void CPU::IncMemAtHL() {
-    u8 val = ReadMemAtHL();
+    u8 val = ReadMemAndTick(regs.reg16[HL]);
 
-    f.SetHalf((val & 0x0F) == 0x0F);
+    SetHalf((val & 0x0F) == 0x0F);
     ++val;
-    f.SetZero(!val);
-    f.SetSub(false);
+    SetZero(!val);
+    SetSub(false);
 
-    WriteMemAtHL(val);
+    WriteMemAndTick(regs.reg16[HL], val);
 }
 
-// Decrement operations
-void CPU::DecReg(Reg8 R) {
-    switch (R) {
-    case (Reg8::A):
-        f.SetHalf((a & 0x0F) == 0x00);
-        --a;
-        f.SetZero(!a);
-        break;
-    case (Reg8::B):
-        f.SetHalf((b & 0x0F) == 0x00);
-        --b;
-        f.SetZero(!b);
-        break;
-    case (Reg8::C):
-        f.SetHalf((c & 0x0F) == 0x00);
-        --c;
-        f.SetZero(!c);
-        break;
-    case (Reg8::D):
-        f.SetHalf((d & 0x0F) == 0x00);
-        --d;
-        f.SetZero(!d);
-        break;
-    case (Reg8::E):
-        f.SetHalf((e & 0x0F) == 0x00);
-        --e;
-        f.SetZero(!e);
-        break;
-    case (Reg8::H):
-        f.SetHalf((h & 0x0F) == 0x00);
-        --h;
-        f.SetZero(!h);
-        break;
-    case (Reg8::L):
-        f.SetHalf((l & 0x0F) == 0x00);
-        --l;
-        f.SetZero(!l);
-        break;
-    default:
-        // Unreachable
-        break;
-    }
-
-    f.SetSub(true);
-}
-
-void CPU::DecHL() {
-    u16 tmp16 = (static_cast<u16>(h) << 8) | static_cast<u16>(l);
-    --tmp16;
-    h = static_cast<u8>(tmp16 >> 8);
-    l = static_cast<u8>(tmp16);
-}
-
-void CPU::DecReg(Reg16 R) {
-    u16 tmp16;
-    switch (R) {
-    case (Reg16::BC):
-        tmp16 = (static_cast<u16>(b) << 8) | static_cast<u16>(c);
-        --tmp16;
-        b = static_cast<u8>(tmp16 >> 8);
-        c = static_cast<u8>(tmp16);
-        break;
-    case (Reg16::DE):
-        tmp16 = (static_cast<u16>(d) << 8) | static_cast<u16>(e);
-        --tmp16;
-        d = static_cast<u8>(tmp16 >> 8);
-        e = static_cast<u8>(tmp16);
-        break;
-    case (Reg16::HL):
-        DecHL();
-        break;
-    case (Reg16::SP):
-        --sp;
-        break;
-    default:
-        assert(false && "Reg16::AF passed to CPU::DecReg.");
-        break;
-    }
-
-    gameboy->HardwareTick(4);
+void CPU::DecReg8(Reg8Addr r) {
+    SetHalf((regs.reg8[r] & 0x0F) == 0x00);
+    --regs.reg8[r];
+    SetZero(!regs.reg8[r]);
+    SetSub(true);
 }
 
 void CPU::DecMemAtHL() {
-    u8 val = ReadMemAtHL();
+    u8 val = ReadMemAndTick(regs.reg16[HL]);
 
-    f.SetHalf((val & 0x0F) == 0x00);
+    SetHalf((val & 0x0F) == 0x00);
     --val;
-    f.SetZero(!val);
-    f.SetSub(true);
+    SetZero(!val);
+    SetSub(true);
 
-    WriteMemAtHL(val);
+    WriteMemAndTick(regs.reg16[HL], val);
 }
 
-// 16-bit add operations
-void CPU::AddHL(Reg16 R) {
-    u16 lo;
-    u16 hi;
-    switch (R) {
-    case (Reg16::BC):
-        lo = c;
-        hi = b;
-        break;
-    case (Reg16::DE):
-        lo = e;
-        hi = d;
-        break;
-    case (Reg16::HL):
-        lo = l;
-        hi = h;
-        break;
-    case (Reg16::SP):
-        lo = sp & 0x00FF;
-        hi = (sp & 0xFF00) >> 8;
-        break;
-    default:
-        assert(false && "Reg16::AF passed to CPU::Add16.");
-        return;
-    }
+// Logical operations
+void CPU::AndImmediate(u8 val) {
+    regs.reg8[A] &= val;
 
-    u16 tmp16 = l + lo;
-    u16 lower_carry = (tmp16 & 0x0100) >> 8;
-    l = static_cast<u8>(tmp16);
+    SetZero(!regs.reg8[A]);
+    SetSub(false);
+    SetHalf(true);
+    SetCarry(false);
+}
 
-    tmp16 = h + hi + lower_carry;
-    f.SetSub(false);
-    f.SetHalf(((h & 0x0F) + (static_cast<u8>(hi) & 0x0F) + static_cast<u8>(lower_carry)) & 0x10);
-    f.SetCarry(tmp16 & 0x0100);
-    h = static_cast<u8>(tmp16);
+void CPU::And(Reg8Addr r) {
+    AndImmediate(regs.reg8[r]);
+}
+
+void CPU::AndFromMemAtHL() {
+    AndImmediate(ReadMemAndTick(regs.reg16[HL]));
+}
+
+// Bitwise Or operations
+void CPU::OrImmediate(u8 val) {
+    regs.reg8[A] |= val;
+
+    SetZero(!regs.reg8[A]);
+    SetSub(false);
+    SetHalf(false);
+    SetCarry(false);
+}
+
+void CPU::Or(Reg8Addr r) {
+    OrImmediate(regs.reg8[r]);
+}
+
+void CPU::OrFromMemAtHL() {
+    OrImmediate(ReadMemAndTick(regs.reg16[HL]));
+}
+
+// Bitwise Xor operations
+void CPU::XorImmediate(u8 val) {
+    regs.reg8[A] ^= val;
+
+    SetZero(!regs.reg8[A]);
+    SetSub(false);
+    SetHalf(false);
+    SetCarry(false);
+}
+
+void CPU::Xor(Reg8Addr r) {
+    XorImmediate(regs.reg8[r]);
+}
+
+void CPU::XorFromMemAtHL() {
+    XorImmediate(ReadMemAndTick(regs.reg16[HL]));
+}
+
+// Compare operations
+void CPU::CompareImmediate(u8 val) {
+    SetZero(!(regs.reg8[A] - val));
+    SetSub(true);
+    SetHalf((regs.reg8[A] & 0x0F) < (val & 0x0F));
+    SetCarry(regs.reg8[A] < val);
+}
+
+void CPU::Compare(Reg8Addr r) {
+    CompareImmediate(regs.reg8[r]);
+}
+
+void CPU::CompareFromMemAtHL() {
+    CompareImmediate(ReadMemAndTick(regs.reg16[HL]));
+}
+
+// 16-bit Arithmetic operations
+void CPU::AddHL(Reg16Addr r) {
+    SetSub(false);
+    SetHalf(((regs.reg16[HL] & 0x0FFF) + (regs.reg16[r] & 0x0FFF)) & 0x1000);
+    SetCarry((regs.reg16[HL] + regs.reg16[r]) & 0x10000);
+    regs.reg16[HL] += regs.reg16[r];
 
     gameboy->HardwareTick(4);
 }
 
-void CPU::AddSP(s8 immediate) {
-    // The half carry & carry flags for this instruction are set by adding the immediate as an *unsigned* byte to the
-    // lower byte of sp. The addition itself is done with the immediate as a signed byte.
-    f.SetZero(false);
-    f.SetSub(false);
+void CPU::AddSP(s8 val) {
+    // The half carry & carry flags for this instruction are set by adding the value as an *unsigned* byte to the
+    // lower byte of sp. The addition itself is done with the value as a signed byte.
+    SetZero(false);
+    SetSub(false);
 
-    f.SetHalf(((sp & 0x000F) + (static_cast<u8>(immediate) & 0x0F)) & 0x0010);
-    f.SetCarry(((sp & 0x00FF) + static_cast<u8>(immediate)) & 0x0100);
+    SetHalf(((regs.reg16[SP] & 0x000F) + (static_cast<u8>(val) & 0x0F)) & 0x0010);
+    SetCarry(((regs.reg16[SP] & 0x00FF) + static_cast<u8>(val)) & 0x0100);
 
-    sp += immediate;
+    regs.reg16[SP] += val;
 
     // Two internal delays.
     gameboy->HardwareTick(8);
 }
 
+void CPU::IncReg16(Reg16Addr r) {
+    ++regs.reg16[r];
+    gameboy->HardwareTick(4);
+}
+
+void CPU::DecReg16(Reg16Addr r) {
+    --regs.reg16[r];
+    gameboy->HardwareTick(4);
+}
+
 // Miscellaneous arithmetic
 void CPU::DecimalAdjustA() {
-    if (f.Sub()) {
-        if (f.Carry()) {
-            a -= 0x60;
+    if (Sub()) {
+        if (Carry()) {
+            regs.reg8[A] -= 0x60;
         }
-        if (f.Half()) {
-            a -= 0x06;
+        if (Half()) {
+            regs.reg8[A] -= 0x06;
         }
     } else {
-        if (f.Carry() || a > 0x99) {
-            a += 0x60;
-            f.SetCarry(true);
+        if (Carry() || regs.reg8[A] > 0x99) {
+            regs.reg8[A] += 0x60;
+            SetCarry(true);
         }
-        if (f.Half() || (a & 0x0F) > 0x09) {
-            a += 0x06;
+        if (Half() || (regs.reg8[A] & 0x0F) > 0x09) {
+            regs.reg8[A] += 0x06;
         }
     }
-    f.SetZero(!a);
-    f.SetHalf(false);
+    SetZero(!regs.reg8[A]);
+    SetHalf(false);
 }
 
 void CPU::ComplementA() {
-    a = ~a;
-    f.SetSub(true);
-    f.SetHalf(true);
+    regs.reg8[A] = ~regs.reg8[A];
+    SetSub(true);
+    SetHalf(true);
 }
 
 void CPU::SetCarry() {
-    f.SetCarry(true);
-    f.SetSub(false);
-    f.SetHalf(false);
+    SetCarry(true);
+    SetSub(false);
+    SetHalf(false);
 }
 
 void CPU::ComplementCarry() {
-    f.SetCarry(!f.Carry());
-    f.SetSub(false);
-    f.SetHalf(false);
+    SetCarry(!Carry());
+    SetSub(false);
+    SetHalf(false);
 }
 
 // Rotates and Shifts
-void CPU::RotateLeft(Reg8 R) {
-    switch (R) {
-    case (Reg8::A):
-        f.SetCarry(a & 0x80);
+void CPU::RotateLeft(Reg8Addr r) {
+    SetCarry(regs.reg8[r] & 0x80);
 
-        a = (a << 1) | (a >> 7);
+    regs.reg8[r] = (regs.reg8[r] << 1) | (regs.reg8[r] >> 7);
 
-        f.SetZero(!a);
-        break;
-    case (Reg8::B):
-        f.SetCarry(b & 0x80);
-
-        b = (b << 1) | (b >> 7);
-
-        f.SetZero(!b);
-        break;
-    case (Reg8::C):
-        f.SetCarry(c & 0x80);
-
-        c = (c << 1) | (c >> 7);
-
-        f.SetZero(!c);
-        break;
-    case (Reg8::D):
-        f.SetCarry(d & 0x80);
-
-        d = (d << 1) | (d >> 7);
-
-        f.SetZero(!d);
-        break;
-    case (Reg8::E):
-        f.SetCarry(e & 0x80);
-
-        e = (e << 1) | (e >> 7);
-
-        f.SetZero(!e);
-        break;
-    case (Reg8::H):
-        f.SetCarry(h & 0x80);
-
-        h = (h << 1) | (h >> 7);
-
-        f.SetZero(!h);
-        break;
-    case (Reg8::L):
-        f.SetCarry(l & 0x80);
-
-        l = (l << 1) | (l >> 7);
-
-        f.SetZero(!l);
-        break;
-    default:
-        // Unreachable
-        break;
-    }
-    f.SetSub(false);
-    f.SetHalf(false);
+    SetZero(!regs.reg8[r]);
+    SetSub(false);
+    SetHalf(false);
 }
 
 void CPU::RotateLeftMemAtHL() {
-    u8 val = ReadMemAtHL();
-    f.SetCarry(val & 0x80);
+    u8 val = ReadMemAndTick(regs.reg16[HL]);
+    SetCarry(val & 0x80);
 
     val = (val << 1) | (val >> 7);
 
-    f.SetZero(!val);
-    f.SetSub(false);
-    f.SetHalf(false);
+    SetZero(!val);
+    SetSub(false);
+    SetHalf(false);
 
-    WriteMemAtHL(val);
+    WriteMemAndTick(regs.reg16[HL], val);
 }
 
-void CPU::RotateLeftThroughCarry(Reg8 R) {
-    u8 carry_val = 0x00;
-    switch (R) {
-    case (Reg8::A):
-        carry_val = a & 0x80;
+void CPU::RotateLeftThroughCarry(Reg8Addr r) {
+    u8 carry_val = regs.reg8[r] & 0x80;
+    regs.reg8[r] = (regs.reg8[r] << 1) | Carry();
 
-        a = (a << 1) | f.Carry();
-
-        f.SetZero(!a);
-        break;
-    case (Reg8::B):
-        carry_val = b & 0x80;
-
-        b = (b << 1) | f.Carry();
-
-        f.SetZero(!b);
-        break;
-    case (Reg8::C):
-        carry_val = c & 0x80;
-
-        c = (c << 1) | f.Carry();
-
-        f.SetZero(!c);
-        break;
-    case (Reg8::D):
-        carry_val = d & 0x80;
-
-        d = (d << 1) | f.Carry();
-
-        f.SetZero(!d);
-        break;
-    case (Reg8::E):
-        carry_val = e & 0x80;
-
-        e = (e << 1) | f.Carry();
-
-        f.SetZero(!e);
-        break;
-    case (Reg8::H):
-        carry_val = h & 0x80;
-
-        h = (h << 1) | f.Carry();
-
-        f.SetZero(!h);
-        break;
-    case (Reg8::L):
-        carry_val = l & 0x80;
-
-        l = (l << 1) | f.Carry();
-
-        f.SetZero(!l);
-        break;
-    default:
-        // Unreachable
-        break;
-    }
-    f.SetSub(false);
-    f.SetHalf(false);
-    f.SetCarry(carry_val);
+    SetZero(!regs.reg8[r]);
+    SetSub(false);
+    SetHalf(false);
+    SetCarry(carry_val);
 }
 
 void CPU::RotateLeftMemAtHLThroughCarry() {
-    u8 val = ReadMemAtHL();
+    u8 val = ReadMemAndTick(regs.reg16[HL]);
     u8 carry_val = val & 0x80;
 
-    val = (val << 1) | f.Carry();
+    val = (val << 1) | Carry();
 
-    f.SetZero(!val);
-    f.SetSub(false);
-    f.SetHalf(false);
-    f.SetCarry(carry_val);
+    SetZero(!val);
+    SetSub(false);
+    SetHalf(false);
+    SetCarry(carry_val);
 
-    WriteMemAtHL(val);
+    WriteMemAndTick(regs.reg16[HL], val);
 }
 
-void CPU::RotateRight(Reg8 R) {
-    switch (R) {
-    case (Reg8::A):
-        f.SetCarry(a & 0x01);
+void CPU::RotateRight(Reg8Addr r) {
+    SetCarry(regs.reg8[r] & 0x01);
 
-        a = (a >> 1) | (a << 7);
+    regs.reg8[r] = (regs.reg8[r] >> 1) | (regs.reg8[r] << 7);
 
-        f.SetZero(!a);
-        break;
-    case (Reg8::B):
-        f.SetCarry(b & 0x01);
-
-        b = (b >> 1) | (b << 7);
-
-        f.SetZero(!b);
-        break;
-    case (Reg8::C):
-        f.SetCarry(c & 0x01);
-
-        c = (c >> 1) | (c << 7);
-
-        f.SetZero(!c);
-        break;
-    case (Reg8::D):
-        f.SetCarry(d & 0x01);
-
-        d = (d >> 1) | (d << 7);
-
-        f.SetZero(!d);
-        break;
-    case (Reg8::E):
-        f.SetCarry(e & 0x01);
-
-        e = (e >> 1) | (e << 7);
-
-        f.SetZero(!e);
-        break;
-    case (Reg8::H):
-        f.SetCarry(h & 0x01);
-
-        h = (h >> 1) | (h << 7);
-
-        f.SetZero(!h);
-        break;
-    case (Reg8::L):
-        f.SetCarry(l & 0x01);
-
-        l = (l >> 1) | (l << 7);
-
-        f.SetZero(!l);
-        break;
-    default:
-        // Unreachable
-        break;
-    }
-    f.SetSub(false);
-    f.SetHalf(false);
+    SetZero(!regs.reg8[r]);
+    SetSub(false);
+    SetHalf(false);
 }
 
 void CPU::RotateRightMemAtHL() {
-    u8 val = ReadMemAtHL();
-    f.SetCarry(val & 0x01);
+    u8 val = ReadMemAndTick(regs.reg16[HL]);
+    SetCarry(val & 0x01);
 
     val = (val >> 1) | (val << 7);
 
-    f.SetZero(!val);
-    f.SetSub(false);
-    f.SetHalf(false);
+    SetZero(!val);
+    SetSub(false);
+    SetHalf(false);
 
-    WriteMemAtHL(val);
+    WriteMemAndTick(regs.reg16[HL], val);
 }
 
-void CPU::RotateRightThroughCarry(Reg8 R) {
-    u8 carry_val = 0x00;
-    switch (R) {
-    case (Reg8::A):
-        carry_val = a & 0x01;
+void CPU::RotateRightThroughCarry(Reg8Addr r) {
+    u8 carry_val = regs.reg8[r] & 0x01;
+    regs.reg8[r] = (regs.reg8[r] >> 1) | (Carry() << 7);
 
-        a = (a >> 1) | (f.Carry() << 7);
-
-        f.SetZero(!a);
-        break;
-    case (Reg8::B):
-        carry_val = b & 0x01;
-
-        b = (b >> 1) | (f.Carry() << 7);
-
-        f.SetZero(!b);
-        break;
-    case (Reg8::C):
-        carry_val = c & 0x01;
-
-        c = (c >> 1) | (f.Carry() << 7);
-
-        f.SetZero(!c);
-        break;
-    case (Reg8::D):
-        carry_val = d & 0x01;
-
-        d = (d >> 1) | (f.Carry() << 7);
-
-        f.SetZero(!d);
-        break;
-    case (Reg8::E):
-        carry_val = e & 0x01;
-
-        e = (e >> 1) | (f.Carry() << 7);
-
-        f.SetZero(!e);
-        break;
-    case (Reg8::H):
-        carry_val = h & 0x01;
-
-        h = (h >> 1) | (f.Carry() << 7);
-
-        f.SetZero(!h);
-        break;
-    case (Reg8::L):
-        carry_val = l & 0x01;
-
-        l = (l >> 1) | (f.Carry() << 7);
-
-        f.SetZero(!l);
-        break;
-    default:
-        // Unreachable
-        break;
-    }
-    f.SetSub(false);
-    f.SetHalf(false);
-    f.SetCarry(carry_val);
+    SetZero(!regs.reg8[r]);
+    SetSub(false);
+    SetHalf(false);
+    SetCarry(carry_val);
 }
 
 void CPU::RotateRightMemAtHLThroughCarry() {
-    u8 val = ReadMemAtHL();
+    u8 val = ReadMemAndTick(regs.reg16[HL]);
     u8 carry_val = val & 0x01;
 
-    val = (val >> 1) | (f.Carry() << 7);
+    val = (val >> 1) | (Carry() << 7);
 
-    f.SetZero(!val);
-    f.SetSub(false);
-    f.SetHalf(false);
-    f.SetCarry(carry_val);
+    SetZero(!val);
+    SetSub(false);
+    SetHalf(false);
+    SetCarry(carry_val);
 
-    WriteMemAtHL(val);
+    WriteMemAndTick(regs.reg16[HL], val);
 }
 
-void CPU::ShiftLeft(Reg8 R) {
-    switch (R) {
-    case (Reg8::A):
-        f.SetCarry(a & 0x80);
+void CPU::ShiftLeft(Reg8Addr r) {
+    SetCarry(regs.reg8[r] & 0x80);
 
-        a <<= 1;
+    regs.reg8[r] <<= 1;
 
-        f.SetZero(!a);
-        break;
-    case (Reg8::B):
-        f.SetCarry(b & 0x80);
-
-        b <<= 1;
-
-        f.SetZero(!b);
-        break;
-    case (Reg8::C):
-        f.SetCarry(c & 0x80);
-
-        c <<= 1;
-
-        f.SetZero(!c);
-        break;
-    case (Reg8::D):
-        f.SetCarry(d & 0x80);
-
-        d <<= 1;
-
-        f.SetZero(!d);
-        break;
-    case (Reg8::E):
-        f.SetCarry(e & 0x80);
-
-        e <<= 1;
-
-        f.SetZero(!e);
-        break;
-    case (Reg8::H):
-        f.SetCarry(h & 0x80);
-
-        h <<= 1;
-
-        f.SetZero(!h);
-        break;
-    case (Reg8::L):
-        f.SetCarry(l & 0x80);
-
-        l <<= 1;
-
-        f.SetZero(!l);
-        break;
-    default:
-        // Unreachable
-        break;
-    }
-    f.SetSub(false);
-    f.SetHalf(false);
+    SetZero(!regs.reg8[r]);
+    SetSub(false);
+    SetHalf(false);
 }
 
 void CPU::ShiftLeftMemAtHL() {
-    u8 val = ReadMemAtHL();
-    f.SetCarry(val & 0x80);
+    u8 val = ReadMemAndTick(regs.reg16[HL]);
+    SetCarry(val & 0x80);
 
     val <<= 1;
 
-    f.SetZero(!val);
-    f.SetSub(false);
-    f.SetHalf(false);
+    SetZero(!val);
+    SetSub(false);
+    SetHalf(false);
 
-    WriteMemAtHL(val);
+    WriteMemAndTick(regs.reg16[HL], val);
 }
 
-void CPU::ShiftRightArithmetic(Reg8 R) {
-    switch (R) {
-    case (Reg8::A):
-        f.SetCarry(a & 0x01);
+void CPU::ShiftRightArithmetic(Reg8Addr r) {
+    SetCarry(regs.reg8[r] & 0x01);
 
-        a >>= 1;
-        a |= (a & 0x40) << 1;
+    regs.reg8[r] >>= 1;
+    regs.reg8[r] |= (regs.reg8[r] & 0x40) << 1;
 
-        f.SetZero(!a);
-        break;
-    case (Reg8::B):
-        f.SetCarry(b & 0x01);
-
-        b >>= 1;
-        b |= (b & 0x40) << 1;
-
-        f.SetZero(!b);
-        break;
-    case (Reg8::C):
-        f.SetCarry(c & 0x01);
-
-        c >>= 1;
-        c |= (c & 0x40) << 1;
-
-        f.SetZero(!c);
-        break;
-    case (Reg8::D):
-        f.SetCarry(d & 0x01);
-
-        d >>= 1;
-        d |= (d & 0x40) << 1;
-
-        f.SetZero(!d);
-        break;
-    case (Reg8::E):
-        f.SetCarry(e & 0x01);
-
-        e >>= 1;
-        e |= (e & 0x40) << 1;
-
-        f.SetZero(!e);
-        break;
-    case (Reg8::H):
-        f.SetCarry(h & 0x01);
-
-        h >>= 1;
-        h |= (h & 0x40) << 1;
-
-        f.SetZero(!h);
-        break;
-    case (Reg8::L):
-        f.SetCarry(l & 0x01);
-
-        l >>= 1;
-        l |= (l & 0x40) << 1;
-
-        f.SetZero(!l);
-        break;
-    default:
-        // Unreachable
-        break;
-    }
-    f.SetSub(false);
-    f.SetHalf(false);
+    SetZero(!regs.reg8[r]);
+    SetSub(false);
+    SetHalf(false);
 }
 
 void CPU::ShiftRightArithmeticMemAtHL() {
-    u8 val = ReadMemAtHL();
-    f.SetCarry(val & 0x01);
+    u8 val = ReadMemAndTick(regs.reg16[HL]);
+    SetCarry(val & 0x01);
 
     val >>= 1;
     val |= (val & 0x40) << 1;
 
-    f.SetZero(!val);
-    f.SetSub(false);
-    f.SetHalf(false);
+    SetZero(!val);
+    SetSub(false);
+    SetHalf(false);
 
-    WriteMemAtHL(val);
+    WriteMemAndTick(regs.reg16[HL], val);
 }
 
-void CPU::ShiftRightLogical(Reg8 R) {
-    switch (R) {
-    case (Reg8::A):
-        f.SetCarry(a & 0x01);
+void CPU::ShiftRightLogical(Reg8Addr r) {
+    SetCarry(regs.reg8[r] & 0x01);
 
-        a >>= 1;
+    regs.reg8[r] >>= 1;
 
-        f.SetZero(!a);
-        break;
-    case (Reg8::B):
-        f.SetCarry(b & 0x01);
-
-        b >>= 1;
-
-        f.SetZero(!b);
-        break;
-    case (Reg8::C):
-        f.SetCarry(c & 0x01);
-
-        c >>= 1;
-
-        f.SetZero(!c);
-        break;
-    case (Reg8::D):
-        f.SetCarry(d & 0x01);
-
-        d >>= 1;
-
-        f.SetZero(!d);
-        break;
-    case (Reg8::E):
-        f.SetCarry(e & 0x01);
-
-        e >>= 1;
-
-        f.SetZero(!e);
-        break;
-    case (Reg8::H):
-        f.SetCarry(h & 0x01);
-
-        h >>= 1;
-
-        f.SetZero(!h);
-        break;
-    case (Reg8::L):
-        f.SetCarry(l & 0x01);
-
-        l >>= 1;
-
-        f.SetZero(!l);
-        break;
-    default:
-        // Unreachable
-        break;
-    }
-    f.SetSub(false);
-    f.SetHalf(false);
+    SetZero(!regs.reg8[r]);
+    SetSub(false);
+    SetHalf(false);
 }
 
 void CPU::ShiftRightLogicalMemAtHL() {
-    u8 val = ReadMemAtHL();
-    f.SetCarry(val & 0x01);
+    u8 val = ReadMemAndTick(regs.reg16[HL]);
+    SetCarry(val & 0x01);
 
     val >>= 1;
 
-    f.SetZero(!val);
-    f.SetSub(false);
-    f.SetHalf(false);
+    SetZero(!val);
+    SetSub(false);
+    SetHalf(false);
 
-    WriteMemAtHL(val);
+    WriteMemAndTick(regs.reg16[HL], val);
 }
 
-void CPU::SwapNybbles(Reg8 R) {
-    switch (R) {
-    case (Reg8::A):
-        a = (a << 4) | (a >> 4);
+void CPU::SwapNybbles(Reg8Addr r) {
+    regs.reg8[r] = (regs.reg8[r] << 4) | (regs.reg8[r] >> 4);
 
-        f.SetZero(!a);
-        break;
-    case (Reg8::B):
-        b = (b << 4) | (b >> 4);
-
-        f.SetZero(!b);
-        break;
-    case (Reg8::C):
-        c = (c << 4) | (c >> 4);
-
-        f.SetZero(!c);
-        break;
-    case (Reg8::D):
-        d = (d << 4) | (d >> 4);
-
-        f.SetZero(!d);
-        break;
-    case (Reg8::E):
-        e = (e << 4) | (e >> 4);
-
-        f.SetZero(!e);
-        break;
-    case (Reg8::H):
-        h = (h << 4) | (h >> 4);
-
-        f.SetZero(!h);
-        break;
-    case (Reg8::L):
-        l = (l << 4) | (l >> 4);
-
-        f.SetZero(!l);
-        break;
-    default:
-        // Unreachable
-        break;
-    }
-    f.SetSub(false);
-    f.SetHalf(false);
-    f.SetCarry(false);
+    SetZero(!regs.reg8[r]);
+    SetSub(false);
+    SetHalf(false);
+    SetCarry(false);
 }
 
 void CPU::SwapMemAtHL() {
-    u8 val = ReadMemAtHL();
+    u8 val = ReadMemAndTick(regs.reg16[HL]);
 
     val = (val << 4) | (val >> 4);
 
-    f.SetZero(!val);
-    f.SetSub(false);
-    f.SetHalf(false);
-    f.SetCarry(false);
+    SetZero(!val);
+    SetSub(false);
+    SetHalf(false);
+    SetCarry(false);
 
-    WriteMemAtHL(val);
+    WriteMemAndTick(regs.reg16[HL], val);
 }
 
 // Bit manipulation
-void CPU::TestBit(unsigned int bit, u8 immediate) {
-    f.SetZero(!(immediate & (0x01 << bit)));
-    f.SetSub(false);
-    f.SetHalf(true);
+void CPU::TestBit(unsigned int bit, Reg8Addr r) {
+    SetZero(!(regs.reg8[r] & (0x01 << bit)));
+    SetSub(false);
+    SetHalf(true);
 }
 
 void CPU::TestBitOfMemAtHL(unsigned int bit) {
-    f.SetZero(!(ReadMemAtHL() & (0x01 << bit)));
-    f.SetSub(false);
-    f.SetHalf(true);
+    SetZero(!(ReadMemAndTick(regs.reg16[HL]) & (0x01 << bit)));
+    SetSub(false);
+    SetHalf(true);
 }
 
-void CPU::ResetBit(unsigned int bit, Reg8 R) {
-    Write8(R, Read8(R) & ~(0x01 << bit)); // TODO: Clean up
+void CPU::ResetBit(unsigned int bit, Reg8Addr r) {
+    regs.reg8[r] &= ~(0x01 << bit);
 }
 
 void CPU::ResetBitOfMemAtHL(unsigned int bit) {
-    u8 val = ReadMemAtHL();
+    u8 val = ReadMemAndTick(regs.reg16[HL]);
 
     val &= ~(0x01 << bit);
 
-    WriteMemAtHL(val);
+    WriteMemAndTick(regs.reg16[HL], val);
 }
 
-void CPU::SetBit(unsigned int bit, Reg8 R) {
-    Write8(R, Read8(R) | (0x01 << bit)); // TODO: Clean up
+void CPU::SetBit(unsigned int bit, Reg8Addr r) {
+    regs.reg8[r] |= (0x01 << bit);
 }
 
 void CPU::SetBitOfMemAtHL(unsigned int bit) {
-    u8 val = ReadMemAtHL();
+    u8 val = ReadMemAndTick(regs.reg16[HL]);
 
     val |= (0x01 << bit);
 
-    WriteMemAtHL(val);
+    WriteMemAndTick(regs.reg16[HL], val);
 }
 
 // Jumps
@@ -1158,14 +571,14 @@ void CPU::Jump(u16 addr) {
 }
 
 void CPU::JumpToHL() {
-    pc = (static_cast<u16>(h) << 8) | static_cast<u16>(l);
+    pc = regs.reg16[HL];
 }
 
-void CPU::RelativeJump(s8 immediate) {
+void CPU::RelativeJump(s8 val) {
     // Internal delay
     gameboy->HardwareTick(4);
 
-    pc += immediate;
+    pc += val;
 }
 
 // Calls and Returns
@@ -1173,20 +586,15 @@ void CPU::Call(u16 addr) {
     // Internal delay
     gameboy->HardwareTick(4);
 
-    mem.WriteMem8(--sp, static_cast<u8>(pc >> 8));
-    gameboy->HardwareTick(4);
-
-    mem.WriteMem8(--sp, static_cast<u8>(pc));
-    gameboy->HardwareTick(4);
+    WriteMemAndTick(--regs.reg16[SP], static_cast<u8>(pc >> 8));
+    WriteMemAndTick(--regs.reg16[SP], static_cast<u8>(pc));
 
     pc = addr;
 }
 
 void CPU::Return() {
-    u8 byte_lo = mem.ReadMem8(sp++);
-    gameboy->HardwareTick(4);
-    u8 byte_hi = mem.ReadMem8(sp++);
-    gameboy->HardwareTick(4);
+    u8 byte_lo = ReadMemAndTick(regs.reg16[SP]++);
+    u8 byte_hi = ReadMemAndTick(regs.reg16[SP]++);
 
     pc = (static_cast<u16>(byte_hi) << 8) | static_cast<u16>(byte_lo);
 
