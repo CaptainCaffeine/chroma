@@ -118,27 +118,33 @@ int CPU::HandleInterrupts() {
                 gameboy->logging.LogInterrupt(mem);
             }
 
-            gameboy->HardwareTick(12);
-
             // Disable interrupts, clear the corresponding bit in IF, and jump to the interrupt routine.
             interrupt_master_enable = false;
 
+            gameboy->HardwareTick(8);
+            WriteMemAndTick(--regs.reg16[SP], static_cast<u8>(pc >> 8));
+            gameboy->HardwareTick(4);
+
+            u16 interrupt_vector = 0x0000;
             if (mem.IsPending(Interrupt::VBLANK)) {
                 mem.ClearInterrupt(Interrupt::VBLANK);
-                ServiceInterrupt(0x40);
+                interrupt_vector = 0x0040;
             } else if (mem.IsPending(Interrupt::STAT)) {
                 mem.ClearInterrupt(Interrupt::STAT);
-                ServiceInterrupt(0x48);
+                interrupt_vector = 0x0048;
             } else if (mem.IsPending(Interrupt::Timer)) {
                 mem.ClearInterrupt(Interrupt::Timer);
-                ServiceInterrupt(0x50);
+                interrupt_vector = 0x0050;
             } else if (mem.IsPending(Interrupt::Serial)) {
                 mem.ClearInterrupt(Interrupt::Serial);
-                ServiceInterrupt(0x58);
+                interrupt_vector = 0x0058;
             } else if (mem.IsPending(Interrupt::Joypad)) {
                 mem.ClearInterrupt(Interrupt::Joypad);
-                ServiceInterrupt(0x60);
+                interrupt_vector = 0x0060;
             }
+
+            WriteMemAndTick(--regs.reg16[SP], static_cast<u8>(pc));
+            pc = interrupt_vector;
 
             if (cpu_mode == CPUMode::Halted) {
                 // Exit halt mode.
@@ -156,13 +162,6 @@ int CPU::HandleInterrupts() {
     }
 
     return 0;
-}
-
-void CPU::ServiceInterrupt(const u16 addr) {
-    WriteMemAndTick(--regs.reg16[SP], static_cast<u8>(pc >> 8));
-    WriteMemAndTick(--regs.reg16[SP], static_cast<u8>(pc));
-
-    pc = addr;
 }
 
 void CPU::EnableInterruptsDelayed() {

@@ -70,7 +70,6 @@ private:
     bool enable_interrupts_delayed = false;
 
     int HandleInterrupts();
-    void ServiceInterrupt(const u16 addr);
 
     // Memory access
     u8 ReadMemAndTick(const u16 addr);
