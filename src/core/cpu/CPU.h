@@ -76,7 +76,6 @@ private:
     void WriteMemAndTick(const u16 addr, const u8 val);
 
     u8 GetImmediateByte();
-    s8 GetImmediateSignedByte();
     u16 GetImmediateWord();
 
     // Ops

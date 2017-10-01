@@ -58,17 +58,10 @@ void CPU::WriteMemAndTick(const u16 addr, const u8 val) {
     gameboy->HardwareTick(4);
 }
 
-// Return the byte from memory at the pc and increment the pc.
 u8 CPU::GetImmediateByte() {
     return ReadMemAndTick(pc++);
 }
 
-// Return the signed byte from memory at the pc and increment the pc.
-s8 CPU::GetImmediateSignedByte() {
-    return ReadMemAndTick(pc++);
-}
-
-// Return the 16-bit word from memory at the pc and increment the pc by 2.
 u16 CPU::GetImmediateWord() {
     const u8 byte_lo = ReadMemAndTick(pc++);
     const u8 byte_hi = ReadMemAndTick(pc++);
@@ -76,8 +69,8 @@ u16 CPU::GetImmediateWord() {
     return (static_cast<u16>(byte_hi) << 8) | static_cast<u16>(byte_lo);
 }
 
-// Execute instructions until the specified number of cycles has passed.
 int CPU::RunFor(int cycles) {
+    // Execute instructions until the specified number of cycles has passed.
     while (cycles > 0) {
         if (cpu_mode == CPUMode::Stopped) {
             StoppedTick();
@@ -118,9 +111,13 @@ int CPU::HandleInterrupts() {
                 gameboy->logging.LogInterrupt(mem);
             }
 
-            // Disable interrupts, clear the corresponding bit in IF, and jump to the interrupt routine.
+            // Disable interrupts.
             interrupt_master_enable = false;
 
+            // The Game Boy reads IF & IE once to check for pending interrupts. Then it pushes the high byte of PC
+            // and waits a total of 4 M-cycles before it reads IF & IE again to see which interrupt to service. As
+            // a result, if a higher priority interrupt occurs before the second IF read, it will be serviced instead
+            // of the one that triggered the interrupt handler.
             gameboy->HardwareTick(8);
             WriteMemAndTick(--regs.reg16[SP], static_cast<u8>(pc >> 8));
             gameboy->HardwareTick(4);
@@ -501,7 +498,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     H: Set appropriately, with immediate as unsigned byte.
     //     C: Set appropriately, with immediate as unsigned byte.
     case 0xF8:
-        LoadSPnIntoHL(GetImmediateSignedByte());
+        LoadSPnIntoHL(GetImmediateByte());
         return 12;
     // LD (nn), SP -- Load value from SP into memory at (nn)
     case 0x08:
@@ -902,7 +899,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     H: Set appropriately, with immediate as unsigned byte.
     //     C: Set appropriately, with immediate as unsigned byte.
     case 0xE8:
-        AddSP(GetImmediateSignedByte());
+        AddSP(GetImmediateByte());
         return 16;
     // INC R -- Increment the value in the 16-bit register R.
     // Flags unchanged
@@ -1066,7 +1063,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         return 4;
     // JR n -- Jump to the current address + immediate signed byte.
     case 0x18:
-        RelativeJump(GetImmediateSignedByte());
+        RelativeJump(GetImmediateByte());
         return 12;
     // JR cc, n -- Jump to the current address + immediate signed byte if the specified condition is true.
     // cc ==
@@ -1076,7 +1073,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     Z:  Carry flag set
     case 0x20:
         if (!Zero()) {
-            RelativeJump(GetImmediateSignedByte());
+            RelativeJump(GetImmediateByte());
             return 12;
         } else {
             gameboy->HardwareTick(4);
@@ -1085,7 +1082,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         }
     case 0x28:
         if (Zero()) {
-            RelativeJump(GetImmediateSignedByte());
+            RelativeJump(GetImmediateByte());
             return 12;
         } else {
             gameboy->HardwareTick(4);
@@ -1094,7 +1091,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         }
     case 0x30:
         if (!Carry()) {
-            RelativeJump(GetImmediateSignedByte());
+            RelativeJump(GetImmediateByte());
             return 12;
         } else {
             gameboy->HardwareTick(4);
@@ -1103,7 +1100,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         }
     case 0x38:
         if (Carry()) {
-            RelativeJump(GetImmediateSignedByte());
+            RelativeJump(GetImmediateByte());
             return 12;
         } else {
             gameboy->HardwareTick(4);
