@@ -80,12 +80,14 @@ private:
 
     // Ops
     // 8-bit loads
-    void Load8(Reg8Addr r, u8 val);
+    void Load8Immediate(Reg8Addr r, u8 val);
+    void Load8(Reg8Addr r1, Reg8Addr r2);
     void Load8FromMem(Reg8Addr r, u16 addr);
-    void Load8IntoMem(u16 addr, u8 val);
+    void Load8IntoMemImmediate(u16 addr, u8 val);
+    void Load8IntoMem(u16 addr, Reg8Addr r);
 
     // 16-bit loads
-    void Load16(Reg16Addr r, u16 val);
+    void Load16Immediate(Reg16Addr r, u16 val);
     void LoadHLIntoSP();
     void LoadSPnIntoHL(s8 val);
     void LoadSPIntoMem(u16 addr);

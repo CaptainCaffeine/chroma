@@ -23,20 +23,28 @@
 namespace Core {
 
 // 8-bit Load operations
-void CPU::Load8(Reg8Addr r, u8 val) {
+void CPU::Load8Immediate(Reg8Addr r, u8 val) {
     regs.reg8[r] = val;
+}
+
+void CPU::Load8(Reg8Addr r1, Reg8Addr r2) {
+    regs.reg8[r1] = regs.reg8[r2];
 }
 
 void CPU::Load8FromMem(Reg8Addr r, u16 addr) {
     regs.reg8[r] = ReadMemAndTick(addr);
 }
 
-void CPU::Load8IntoMem(u16 addr, u8 val) {
+void CPU::Load8IntoMemImmediate(u16 addr, u8 val) {
     WriteMemAndTick(addr, val);
 }
 
+void CPU::Load8IntoMem(u16 addr, Reg8Addr r) {
+    WriteMemAndTick(addr, regs.reg8[r]);
+}
+
 // 16-bit Load operations
-void CPU::Load16(Reg16Addr r, u16 val) {
+void CPU::Load16Immediate(Reg16Addr r, u16 val) {
     regs.reg16[r] = val;
 }
 

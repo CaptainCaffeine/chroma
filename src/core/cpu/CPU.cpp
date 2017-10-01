@@ -200,225 +200,225 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     // ******** 8-bit loads ********
     // LD R, n -- Load immediate value n into register R
     case 0x06:
-        Load8(B, GetImmediateByte());
+        Load8Immediate(B, GetImmediateByte());
         return 8;
     case 0x0E:
-        Load8(C, GetImmediateByte());
+        Load8Immediate(C, GetImmediateByte());
         return 8;
     case 0x16:
-        Load8(D, GetImmediateByte());
+        Load8Immediate(D, GetImmediateByte());
         return 8;
     case 0x1E:
-        Load8(E, GetImmediateByte());
+        Load8Immediate(E, GetImmediateByte());
         return 8;
     case 0x26:
-        Load8(H, GetImmediateByte());
+        Load8Immediate(H, GetImmediateByte());
         return 8;
     case 0x2E:
-        Load8(L, GetImmediateByte());
+        Load8Immediate(L, GetImmediateByte());
         return 8;
     case 0x3E:
-        Load8(A, GetImmediateByte());
+        Load8Immediate(A, GetImmediateByte());
         return 8;
     // LD A, R2 -- Load value from R2 into A
     case 0x78:
-        Load8(A, regs.reg8[B]);
+        Load8(A, B);
         return 4;
     case 0x79:
-        Load8(A, regs.reg8[C]);
+        Load8(A, C);
         return 4;
     case 0x7A:
-        Load8(A, regs.reg8[D]);
+        Load8(A, D);
         return 4;
     case 0x7B:
-        Load8(A, regs.reg8[E]);
+        Load8(A, E);
         return 4;
     case 0x7C:
-        Load8(A, regs.reg8[H]);
+        Load8(A, H);
         return 4;
     case 0x7D:
-        Load8(A, regs.reg8[L]);
+        Load8(A, L);
         return 4;
     case 0x7E:
         Load8FromMem(A, regs.reg16[HL]);
         return 8;
     case 0x7F:
-        Load8(A, regs.reg8[A]);
+        Load8(A, A);
         return 4;
     // LD B, R2 -- Load value from R2 into B
     case 0x40:
-        Load8(B, regs.reg8[B]);
+        Load8(B, B);
         return 4;
     case 0x41:
-        Load8(B, regs.reg8[C]);
+        Load8(B, C);
         return 4;
     case 0x42:
-        Load8(B, regs.reg8[D]);
+        Load8(B, D);
         return 4;
     case 0x43:
-        Load8(B, regs.reg8[E]);
+        Load8(B, E);
         return 4;
     case 0x44:
-        Load8(B, regs.reg8[H]);
+        Load8(B, H);
         return 4;
     case 0x45:
-        Load8(B, regs.reg8[L]);
+        Load8(B, L);
         return 4;
     case 0x46:
         Load8FromMem(B, regs.reg16[HL]);
         return 8;
     case 0x47:
-        Load8(B, regs.reg8[A]);
+        Load8(B, A);
         return 4;
     // LD C, R2 -- Load value from R2 into C
     case 0x48:
-        Load8(C, regs.reg8[B]);
+        Load8(C, B);
         return 4;
     case 0x49:
-        Load8(C, regs.reg8[C]);
+        Load8(C, C);
         return 4;
     case 0x4A:
-        Load8(C, regs.reg8[D]);
+        Load8(C, D);
         return 4;
     case 0x4B:
-        Load8(C, regs.reg8[E]);
+        Load8(C, E);
         return 4;
     case 0x4C:
-        Load8(C, regs.reg8[H]);
+        Load8(C, H);
         return 4;
     case 0x4D:
-        Load8(C, regs.reg8[L]);
+        Load8(C, L);
         return 4;
     case 0x4E:
         Load8FromMem(C, regs.reg16[HL]);
         return 8;
     case 0x4F:
-        Load8(C, regs.reg8[A]);
+        Load8(C, A);
         return 4;
     // LD D, R2 -- Load value from R2 into D
     case 0x50:
-        Load8(D, regs.reg8[B]);
+        Load8(D, B);
         return 4;
     case 0x51:
-        Load8(D, regs.reg8[C]);
+        Load8(D, C);
         return 4;
     case 0x52:
-        Load8(D, regs.reg8[D]);
+        Load8(D, D);
         return 4;
     case 0x53:
-        Load8(D, regs.reg8[E]);
+        Load8(D, E);
         return 4;
     case 0x54:
-        Load8(D, regs.reg8[H]);
+        Load8(D, H);
         return 4;
     case 0x55:
-        Load8(D, regs.reg8[L]);
+        Load8(D, L);
         return 4;
     case 0x56:
         Load8FromMem(D, regs.reg16[HL]);
         return 8;
     case 0x57:
-        Load8(D, regs.reg8[A]);
+        Load8(D, A);
         return 4;
     // LD E, R2 -- Load value from R2 into E
     case 0x58:
-        Load8(E, regs.reg8[B]);
+        Load8(E, B);
         return 4;
     case 0x59:
-        Load8(E, regs.reg8[C]);
+        Load8(E, C);
         return 4;
     case 0x5A:
-        Load8(E, regs.reg8[D]);
+        Load8(E, D);
         return 4;
     case 0x5B:
-        Load8(E, regs.reg8[E]);
+        Load8(E, E);
         return 4;
     case 0x5C:
-        Load8(E, regs.reg8[H]);
+        Load8(E, H);
         return 4;
     case 0x5D:
-        Load8(E, regs.reg8[L]);
+        Load8(E, L);
         return 4;
     case 0x5E:
         Load8FromMem(E, regs.reg16[HL]);
         return 8;
     case 0x5F:
-        Load8(E, regs.reg8[A]);
+        Load8(E, A);
         return 4;
     // LD H, R2 -- Load value from R2 into H
     case 0x60:
-        Load8(H, regs.reg8[B]);
+        Load8(H, B);
         return 4;
     case 0x61:
-        Load8(H, regs.reg8[C]);
+        Load8(H, C);
         return 4;
     case 0x62:
-        Load8(H, regs.reg8[D]);
+        Load8(H, D);
         return 4;
     case 0x63:
-        Load8(H, regs.reg8[E]);
+        Load8(H, E);
         return 4;
     case 0x64:
-        Load8(H, regs.reg8[H]);
+        Load8(H, H);
         return 4;
     case 0x65:
-        Load8(H, regs.reg8[L]);
+        Load8(H, L);
         return 4;
     case 0x66:
         Load8FromMem(H, regs.reg16[HL]);
         return 8;
     case 0x67:
-        Load8(H, regs.reg8[A]);
+        Load8(H, A);
         return 4;
     // LD L, R2 -- Load value from R2 into L
     case 0x68:
-        Load8(L, regs.reg8[B]);
+        Load8(L, B);
         return 4;
     case 0x69:
-        Load8(L, regs.reg8[C]);
+        Load8(L, C);
         return 4;
     case 0x6A:
-        Load8(L, regs.reg8[D]);
+        Load8(L, D);
         return 4;
     case 0x6B:
-        Load8(L, regs.reg8[E]);
+        Load8(L, E);
         return 4;
     case 0x6C:
-        Load8(L, regs.reg8[H]);
+        Load8(L, H);
         return 4;
     case 0x6D:
-        Load8(L, regs.reg8[L]);
+        Load8(L, L);
         return 4;
     case 0x6E:
         Load8FromMem(L, regs.reg16[HL]);
         return 8;
     case 0x6F:
-        Load8(L, regs.reg8[A]);
+        Load8(L, A);
         return 4;
     // LD (HL), R2 -- Load value from R2 into memory at (HL)
     case 0x70:
-        Load8IntoMem(regs.reg16[HL], regs.reg8[B]);
+        Load8IntoMem(regs.reg16[HL], B);
         return 8;
     case 0x71:
-        Load8IntoMem(regs.reg16[HL], regs.reg8[C]);
+        Load8IntoMem(regs.reg16[HL], C);
         return 8;
     case 0x72:
-        Load8IntoMem(regs.reg16[HL], regs.reg8[D]);
+        Load8IntoMem(regs.reg16[HL], D);
         return 8;
     case 0x73:
-        Load8IntoMem(regs.reg16[HL], regs.reg8[E]);
+        Load8IntoMem(regs.reg16[HL], E);
         return 8;
     case 0x74:
-        Load8IntoMem(regs.reg16[HL], regs.reg8[H]);
+        Load8IntoMem(regs.reg16[HL], H);
         return 8;
     case 0x75:
-        Load8IntoMem(regs.reg16[HL], regs.reg8[L]);
+        Load8IntoMem(regs.reg16[HL], L);
         return 8;
     case 0x77:
-        Load8IntoMem(regs.reg16[HL], regs.reg8[A]);
+        Load8IntoMem(regs.reg16[HL], A);
         return 8;
     case 0x36:
-        Load8IntoMem(regs.reg16[HL], GetImmediateByte());
+        Load8IntoMemImmediate(regs.reg16[HL], GetImmediateByte());
         return 12;
     // LD A, (nn) -- Load value from memory at (nn) into A
     case 0x0A:
@@ -432,17 +432,17 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         return 16;
     // LD (nn), A -- Load value from A into memory at (nn)
     case 0x02:
-        Load8IntoMem(regs.reg16[BC], regs.reg8[A]);
+        Load8IntoMem(regs.reg16[BC], A);
         return 8;
     case 0x12:
-        Load8IntoMem(regs.reg16[DE], regs.reg8[A]);
+        Load8IntoMem(regs.reg16[DE], A);
         return 8;
     case 0xEA:
-        Load8IntoMem(GetImmediateWord(), regs.reg8[A]);
+        Load8IntoMem(GetImmediateWord(), A);
         return 16;
     // LD (C), A -- Load value from A into memory at (0xFF00 + C)
     case 0xE2:
-        Load8IntoMem(0xFF00 + regs.reg8[C], regs.reg8[A]);
+        Load8IntoMem(0xFF00 + regs.reg8[C], A);
         return 8;
     // LD A, (C) -- Load value from memory at (0xFF00 + C) into A
     case 0xF2:
@@ -450,7 +450,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         return 8;
     // LDI (HL), A -- Load value from A into memory at (HL), then increment HL
     case 0x22:
-        Load8IntoMem(regs.reg16[HL]++, regs.reg8[A]);
+        Load8IntoMem(regs.reg16[HL]++, A);
         return 8;
     // LDI A, (HL) -- Load value from memory at (HL) into A, then increment HL
     case 0x2A:
@@ -458,7 +458,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         return 8;
     // LDD (HL), A -- Load value from A into memory at (HL), then decrement HL
     case 0x32:
-        Load8IntoMem(regs.reg16[HL]--, regs.reg8[A]);
+        Load8IntoMem(regs.reg16[HL]--, A);
         return 8;
     // LDD A, (HL) -- Load value from memory at (HL) into A, then decrement HL
     case 0x3A:
@@ -466,7 +466,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
         return 8;
     // LDH (n), A -- Load value from A into memory at (0xFF00+n), with n as immediate byte value
     case 0xE0:
-        Load8IntoMem(0xFF00 + GetImmediateByte(), regs.reg8[A]);
+        Load8IntoMem(0xFF00 + GetImmediateByte(), A);
         return 12;
     // LDH A, (n) -- Load value from memory at (0xFF00+n) into A, with n as immediate byte value 
     case 0xF0:
@@ -476,16 +476,16 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     // ******** 16-bit loads ********
     // LD R, nn -- Load 16-bit immediate value into 16-bit register R
     case 0x01:
-        Load16(BC, GetImmediateWord());
+        Load16Immediate(BC, GetImmediateWord());
         return 12;
     case 0x11:
-        Load16(DE, GetImmediateWord());
+        Load16Immediate(DE, GetImmediateWord());
         return 12;
     case 0x21:
-        Load16(HL, GetImmediateWord());
+        Load16Immediate(HL, GetImmediateWord());
         return 12;
     case 0x31:
-        Load16(SP, GetImmediateWord());
+        Load16Immediate(SP, GetImmediateWord());
         return 12;
     // LD SP, HL -- Load value from HL into SP
     case 0xF9:
