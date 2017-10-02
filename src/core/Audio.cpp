@@ -20,9 +20,15 @@
 namespace Core {
 
 Audio::Audio(bool enable_filter)
-    : enable_iir(enable_filter)
-    , left_upsampled((enable_filter) ? interpolated_buffer_size : 0)
-    , right_upsampled((enable_filter) ? interpolated_buffer_size : 0) {}
+        : enable_iir(enable_filter)
+        , left_upsampled((enable_filter) ? interpolated_buffer_size : 0)
+        , right_upsampled((enable_filter) ? interpolated_buffer_size : 0) {
+
+    square1.LinkToAudio(this);
+    square2.LinkToAudio(this);
+    wave.LinkToAudio(this);
+    noise.LinkToAudio(this);
+}
 
 void Audio::UpdateAudio() {
     FrameSequencerTick();
@@ -39,21 +45,21 @@ void Audio::UpdateAudio() {
     wave.CheckTrigger(mem->console);
     noise.CheckTrigger(mem->console);
 
-    square1.SweepTick(frame_seq_counter);
+    square1.SweepTick();
 
     square1.TimerTick();
     square2.TimerTick();
     wave.TimerTick();
     noise.TimerTick();
 
-    square1.LengthCounterTick(frame_seq_counter);
-    square2.LengthCounterTick(frame_seq_counter);
-    wave.LengthCounterTick(frame_seq_counter);
-    noise.LengthCounterTick(frame_seq_counter);
+    square1.LengthCounterTick();
+    square2.LengthCounterTick();
+    wave.LengthCounterTick();
+    noise.LengthCounterTick();
 
-    square1.EnvelopeTick(frame_seq_counter);
-    square2.EnvelopeTick(frame_seq_counter);
-    noise.EnvelopeTick(frame_seq_counter);
+    square1.EnvelopeTick();
+    square2.EnvelopeTick();
+    noise.EnvelopeTick();
 
     u8 left_sample = 0x00;
     u8 right_sample = 0x00;

@@ -71,6 +71,8 @@ public:
 
     std::array<s16, 1600> output_buffer;
 
+    unsigned int frame_seq_counter = 0;
+
     // ******** Audio I/O registers ********
     Channel square1 {Generator::Square1, wave_ram,
     // NR10 register: 0xFF10
@@ -186,8 +188,7 @@ private:
     bool audio_on = true;
 
     // Frame sequencer
-    unsigned int frame_seq_clock = 0x00;
-    unsigned int frame_seq_counter = 0x00;
+    unsigned int frame_seq_clock = 0;
     bool prev_frame_seq_inc = false;
 
     // IIR filter

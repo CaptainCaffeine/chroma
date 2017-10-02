@@ -584,6 +584,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     // NR14 -- Channel 1 Trigger & High Frequency
     case 0xFF14:
         if (audio.IsPoweredOn()) {
+            audio.square1.ExtraLengthClocking(data & 0xC7);
             audio.square1.frequency_hi = data & 0xC7;
         }
         break;
@@ -612,6 +613,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     // NR24 -- Channel 2 Trigger & High Frequency
     case 0xFF19:
         if (audio.IsPoweredOn()) {
+            audio.square2.ExtraLengthClocking(data & 0xC7);
             audio.square2.frequency_hi = data & 0xC7;
         }
         break;
@@ -646,6 +648,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     // NR34 -- Channel 3 Trigger & High Frequency
     case 0xFF1E:
         if (audio.IsPoweredOn()) {
+            audio.wave.ExtraLengthClocking(data & 0xC7);
             audio.wave.frequency_hi = data & 0xC7;
         }
         break;
@@ -674,6 +677,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     // NR44 -- Channel 4 Trigger
     case 0xFF23:
         if (audio.IsPoweredOn()) {
+            audio.noise.ExtraLengthClocking(data & 0xC0);
             audio.noise.frequency_hi = data & 0xC0;
         }
         break;

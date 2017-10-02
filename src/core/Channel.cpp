@@ -15,8 +15,32 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "core/Channel.h"
+#include "core/Audio.h"
 
 namespace Core {
+
+Channel::Channel(Generator gen, std::array<u8, 0x10>& wave_ram_ref, u8 NRx0, u8 NRx1, u8 NRx2, u8 NRx3, u8 NRx4)
+        : sweep(NRx0)
+        , sound_length(NRx1)
+        , volume_envelope(NRx2)
+        , frequency_lo(NRx3)
+        , frequency_hi(NRx4)
+        , channel_enabled(gen == Generator::Square1)
+        , wave_ram(wave_ram_ref)
+        , gen_type(gen)
+        , left_enable_mask(static_cast<u8>(gen_type) << 4)
+        , right_enable_mask(static_cast<u8>(gen_type)) {}
+
+u8 Channel::GenSample() const {
+    if (gen_type == Generator::Wave) {
+        u8 volume_shift = (WaveVolumeShift()) ? WaveVolumeShift() - 1 : 4;
+        return current_sample >> volume_shift;
+    } else if (gen_type == Generator::Noise) {
+        return ((~lfsr) & 0x0001) * volume;
+    } else {
+        return DutyCycle((sound_length & 0xC0) >> 6)[wave_pos] * volume;
+    }
+}
 
 void Channel::CheckTrigger(const Console console) {
     if (frequency_hi & 0x80) {
@@ -55,6 +79,12 @@ void Channel::CheckTrigger(const Console console) {
                 length_counter = 256;
             } else {
                 length_counter = 64;
+            }
+
+            // If we're in the first half of the length counter period and the length counter is enabled, it gets
+            // decremented by one.
+            if (FrameSeqBitIsLow(length_clock_bit) && LengthCounterEnabled()) {
+                length_counter -= 1;
             }
         }
 
@@ -114,10 +144,10 @@ void Channel::TimerTick() {
     }
 }
 
-void Channel::LengthCounterTick(const unsigned int frame_seq_counter) {
-    bool length_counter_dec = frame_seq_counter & 0x01;
+void Channel::LengthCounterTick() {
+    bool length_counter_dec = audio->frame_seq_counter & length_clock_bit;
 
-    if ((frequency_hi & 0x40) && length_counter > 0) {
+    if (LengthCounterEnabled() && length_counter > 0) {
         if (!length_counter_dec && prev_length_counter_dec) {
             length_counter -= 1;
 
@@ -130,8 +160,8 @@ void Channel::LengthCounterTick(const unsigned int frame_seq_counter) {
     prev_length_counter_dec = length_counter_dec;
 }
 
-void Channel::EnvelopeTick(const unsigned int frame_seq_counter) {
-    bool envelope_inc = frame_seq_counter & 0x04;
+void Channel::EnvelopeTick() {
+    bool envelope_inc = audio->frame_seq_counter & envelope_clock_bit;
 
     if (envelope_enabled) {
         if (!envelope_inc && prev_envelope_inc) {
@@ -158,8 +188,8 @@ void Channel::EnvelopeTick(const unsigned int frame_seq_counter) {
     prev_envelope_inc = envelope_inc;
 }
 
-void Channel::SweepTick(const unsigned int frame_seq_counter) {
-    bool sweep_inc = frame_seq_counter & 0x02;
+void Channel::SweepTick() {
+    bool sweep_inc = audio->frame_seq_counter & sweep_clock_bit;
 
     if (sweep_enabled) {
         if (!sweep_inc && prev_sweep_inc) {
@@ -184,6 +214,21 @@ void Channel::SweepTick(const unsigned int frame_seq_counter) {
     prev_sweep_inc = sweep_inc;
 }
 
+void Channel::ReloadPeriod() {
+    if (gen_type == Generator::Wave) {
+        period_timer = (2048 - (frequency_lo | ((frequency_hi & 0x07) << 8)));
+    } else if (gen_type == Generator::Noise) {
+        unsigned int clock_divisor = (frequency_lo & 0x07) << 1;
+        if (clock_divisor == 0) {
+            clock_divisor = 1;
+        }
+
+        period_timer = clock_divisor << (ShiftClock() + 2);
+    } else {
+        period_timer = (2048 - (frequency_lo | ((frequency_hi & 0x07) << 8))) << 1;
+    }
+}
+
 void Channel::ReloadLengthCounter() {
     if (gen_type == Generator::Wave) {
         length_counter = 256 - sound_length;
@@ -195,6 +240,20 @@ void Channel::ReloadLengthCounter() {
 
         // Clear the written length data.
         sound_length &= 0xC0;
+    }
+}
+
+void Channel::ExtraLengthClocking(u8 new_frequency_hi) {
+    if (FrameSeqBitIsLow(length_clock_bit)
+            && !LengthCounterEnabled()
+            && (new_frequency_hi & 0x40)
+            && length_counter > 0) {
+
+        length_counter -= 1;
+
+        if (length_counter == 0 && !(new_frequency_hi & 0x80)) {
+            channel_enabled = false;
+        }
     }
 }
 
@@ -225,15 +284,32 @@ void Channel::SweepWriteHandler() {
 
 void Channel::ClearRegisters(const Console console) {
     sweep = 0x00;
+    sound_length = 0x00;
     volume_envelope = 0x00;
     frequency_lo = 0x00;
     frequency_hi = 0x00;
 
-    if (console == Console::DMG) {
-        // On DMG, the length counters are unaffected by power state.
-        sound_length &= 0x3F;
-    } else {
-        sound_length = 0x00;
+    volume = 0x00;
+    envelope_counter = 0;
+    prev_envelope_inc = false;
+    envelope_enabled = false;
+
+    shadow_frequency = 0x0000;
+    sweep_counter = 0;
+    prev_sweep_inc = false;
+    sweep_enabled = false;
+    performed_negative_calculation = false;
+
+    wave_pos = 0;
+    reading_sample = false;
+    current_sample = 0x00;
+    last_played_sample = 0x00;
+
+    lfsr = 0x0000;
+
+    // On DMG, the length counters are unaffected by power state.
+    if (console == Console::CGB) {
+        length_counter = 0x00;
     }
 
     channel_enabled = false;
@@ -252,6 +328,10 @@ void Channel::CorruptWaveRAM() {
             wave_ram[i] = wave_ram[copy_pos + i];
         }
     }
+}
+
+bool Channel::FrameSeqBitIsLow(unsigned int clock_bit) const {
+    return (audio->frame_seq_counter & clock_bit) == 0;
 }
 
 std::array<unsigned int, 8> Channel::DutyCycle(const u8 cycle) const {
