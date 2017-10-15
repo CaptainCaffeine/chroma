@@ -20,7 +20,7 @@
 #include <stdexcept>
 #include <sys/stat.h>
 
-#include "core/CartridgeHeader.h"
+#include "gb/memory/CartridgeHeader.h"
 #include "emu/ParseOptions.h"
 
 namespace Emu {
@@ -166,7 +166,7 @@ std::string SaveGamePath(const std::string& rom_path) {
     return rom_path.substr(0, last_dot) + ".sav";
 }
 
-std::vector<u8> LoadSaveGame(const Core::CartridgeHeader& cart_header, const std::string& save_path) {
+std::vector<u8> LoadSaveGame(const Gb::CartridgeHeader& cart_header, const std::string& save_path) {
     std::vector<u8> save_game;
     if (cart_header.ext_ram_present) {
         save_game = Emu::ReadSaveFile(save_path);

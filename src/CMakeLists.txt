@@ -1,61 +1,50 @@
 # Specify includes relative to the src directory
 include_directories(.)
 
-set(COMMON_SOURCES
-    common/Util.cpp
-    common/logging/Disassembler.cpp
-    common/logging/Logging.cpp)
-
-set(COMMON_HEADERS
-    common/CommonTypes.h
-    common/CommonEnums.h
-    common/Util.h
-    common/logging/Logging.h)
-
-set(CORE_SOURCES
-    core/GameBoy.cpp
-    core/cpu/CPU.cpp
-    core/cpu/Ops.cpp
-    core/Audio.cpp
-    core/Channel.cpp
-    core/Joypad.cpp
-    core/Serial.cpp
-    core/Timer.cpp
-    core/lcd/LCD.cpp
-    core/lcd/Debug.cpp
-    core/memory/Memory.cpp
-    core/memory/DMA.cpp
-    core/memory/MBC.cpp
-    core/memory/RTC.cpp
-    core/CartridgeHeader.cpp)
-
-set(CORE_HEADERS
-    core/GameBoy.h
-    core/cpu/CPU.h
-    core/Audio.h
-    core/Channel.h
-    core/Joypad.h
-    core/Serial.h
-    core/Timer.h
-    core/lcd/LCD.h
-    core/memory/Memory.h
-    core/memory/RTC.h
-    core/CartridgeHeader.h)
-
-set(EMU_SOURCES
+set(SOURCES
+    gb/core/GameBoy.cpp
+    gb/cpu/CPU.cpp
+    gb/cpu/Ops.cpp
+    gb/audio/Audio.cpp
+    gb/audio/Channel.cpp
+    gb/hardware/Joypad.cpp
+    gb/hardware/Serial.cpp
+    gb/hardware/Timer.cpp
+    gb/lcd/LCD.cpp
+    gb/lcd/Debug.cpp
+    gb/memory/Memory.cpp
+    gb/memory/DMA.cpp
+    gb/memory/MBC.cpp
+    gb/memory/RTC.cpp
+    gb/memory/CartridgeHeader.cpp
+    gb/logging/Disassembler.cpp
+    gb/logging/Logging.cpp
+    common/Screenshot.cpp
     emu/main.cpp
     emu/SDLContext.cpp
-    emu/ParseOptions.cpp)
+    emu/ParseOptions.cpp
+   )
 
-set(EMU_HEADERS
+set(HEADERS
+    gb/core/GameBoy.h
+    gb/core/Enums.h
+    gb/cpu/CPU.h
+    gb/audio/Audio.h
+    gb/audio/Channel.h
+    gb/hardware/Joypad.h
+    gb/hardware/Serial.h
+    gb/hardware/Timer.h
+    gb/lcd/LCD.h
+    gb/memory/Memory.h
+    gb/memory/RTC.h
+    gb/memory/CartridgeHeader.h
+    gb/logging/Logging.h
+    common/CommonTypes.h
+    common/Screenshot.h
     emu/SDLContext.h
-    emu/ParseOptions.h)
+    emu/ParseOptions.h
+   )
 
-add_executable(chroma ${EMU_SOURCES}
-                      ${EMU_HEADERS}
-                      ${CORE_SOURCES}
-                      ${CORE_HEADERS}
-                      ${COMMON_SOURCES}
-                      ${COMMON_HEADERS})
+add_executable(chroma ${SOURCES} ${HEADERS})
 
 target_link_libraries(chroma ${SDL2_LIBRARY})

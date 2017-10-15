@@ -20,10 +20,10 @@
 #include <stdexcept>
 
 #include "common/CommonTypes.h"
-#include "common/CommonEnums.h"
-#include "common/logging/Logging.h"
-#include "core/CartridgeHeader.h"
-#include "core/GameBoy.h"
+#include "gb/core/Enums.h"
+#include "gb/core/GameBoy.h"
+#include "gb/logging/Logging.h"
+#include "gb/memory/CartridgeHeader.h"
 #include "emu/ParseOptions.h"
 #include "emu/SDLContext.h"
 
@@ -58,15 +58,15 @@ int main(int argc, char** argv) {
         const std::string rom_path{tokens.back()};
         const std::vector<u8> rom{Emu::LoadROM(rom_path)};
 
-        const Core::CartridgeHeader cart_header{gameboy_type, rom, multicart};
+        const Gb::CartridgeHeader cart_header{gameboy_type, rom, multicart};
 
         std::string save_path{Emu::SaveGamePath(rom_path)};
         std::vector<u8> save_game{Emu::LoadSaveGame(cart_header, save_path)};
 
-        Log::Logging logger{log_level};
+        Gb::Logging logger{log_level};
         Emu::SDLContext sdl_context{pixel_scale, fullscreen};
-        Core::GameBoy gameboy_core{gameboy_type, cart_header, logger, sdl_context, save_path, rom, save_game,
-                                   enable_iir};
+        Gb::GameBoy gameboy_core{gameboy_type, cart_header, logger, sdl_context, save_path, rom, save_game,
+                                 enable_iir};
 
         gameboy_core.EmulatorLoop();
     } catch (const std::runtime_error& e) {

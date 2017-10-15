@@ -20,9 +20,9 @@
 #include <vector>
 
 #include "common/CommonTypes.h"
-#include "common/CommonEnums.h"
+#include "gb/core/Enums.h"
 
-namespace Core { class CartridgeHeader; }
+namespace Gb { class CartridgeHeader; }
 
 namespace Emu {
 
@@ -38,7 +38,7 @@ bool GetFilterEnable(const std::vector<std::string>& tokens);
 
 std::string SaveGamePath(const std::string& rom_path);
 std::vector<u8> LoadROM(const std::string& filename);
-std::vector<u8> LoadSaveGame(const Core::CartridgeHeader& cart_header, const std::string& save_path);
+std::vector<u8> LoadSaveGame(const Gb::CartridgeHeader& cart_header, const std::string& save_path);
 std::vector<u8> ReadSaveFile(const std::string& filename);
 void CheckPathIsRegularFile(const std::string& filename);
 

@@ -7,8 +7,5 @@
 # Syntastic config file
 .syntastic_cpp_config
 
-# Mooneye-GB tests passes and failures
-mooneye_gb_tests.md
-
 # Test scripts directory
 testing_scripts/
