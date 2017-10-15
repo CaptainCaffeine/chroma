@@ -50,139 +50,139 @@ std::string NextWordAsStr(const Memory& mem, const u16 pc) {
     return hex_str.str();
 }
 
-void LoadString(std::ostringstream& instr, const std::string into, const std::string from) {
+void LoadString(std::ostringstream& instr, const std::string& into, const std::string& from) {
     instr << "LD " << into << ", " << from;
 }
 
-void LoadIncString(std::ostringstream& instr, const std::string into, const std::string from) {
+void LoadIncString(std::ostringstream& instr, const std::string& into, const std::string& from) {
     instr << "LDI " << into << ", " << from;
 }
 
-void LoadDecString(std::ostringstream& instr, const std::string into, const std::string from) {
+void LoadDecString(std::ostringstream& instr, const std::string& into, const std::string& from) {
     instr << "LDD " << into << ", " << from;
 }
 
-void LoadHighString(std::ostringstream& instr, const std::string into, const std::string from) {
+void LoadHighString(std::ostringstream& instr, const std::string& into, const std::string& from) {
     instr << "LDH " << into << ", " << from;
 }
 
-void PushString(std::ostringstream& instr, const std::string reg) {
+void PushString(std::ostringstream& instr, const std::string& reg) {
     instr << "PUSH " << reg;
 }
 
-void PopString(std::ostringstream& instr, const std::string reg) {
+void PopString(std::ostringstream& instr, const std::string& reg) {
     instr << "POP " << reg;
 }
 
-void AddString(std::ostringstream& instr, const std::string from) {
+void AddString(std::ostringstream& instr, const std::string& from) {
     instr << "ADD A, " << from;
 }
 
-void AddString(std::ostringstream& instr, const std::string into, const std::string from) {
+void AddString(std::ostringstream& instr, const std::string& into, const std::string& from) {
     instr << "ADD " << into << ", " << from;
 }
 
-void AdcString(std::ostringstream& instr, const std::string from) {
+void AdcString(std::ostringstream& instr, const std::string& from) {
     instr << "ADC A, " << from;
 }
 
-void SubString(std::ostringstream& instr, const std::string from) {
+void SubString(std::ostringstream& instr, const std::string& from) {
     instr << "SUB A, " << from;
 }
 
-void SbcString(std::ostringstream& instr, const std::string from) {
+void SbcString(std::ostringstream& instr, const std::string& from) {
     instr << "SBC A, " << from;
 }
 
-void AndString(std::ostringstream& instr, const std::string with) {
+void AndString(std::ostringstream& instr, const std::string& with) {
     instr << "AND " << with;
 }
 
-void OrString(std::ostringstream& instr, const std::string with) {
+void OrString(std::ostringstream& instr, const std::string& with) {
     instr << "OR " << with;
 }
 
-void XorString(std::ostringstream& instr, const std::string with) {
+void XorString(std::ostringstream& instr, const std::string& with) {
     instr << "XOR " << with;
 }
 
-void CompareString(std::ostringstream& instr, const std::string with) {
+void CompareString(std::ostringstream& instr, const std::string& with) {
     instr << "CP " << with;
 }
 
-void IncString(std::ostringstream& instr, const std::string reg) {
+void IncString(std::ostringstream& instr, const std::string& reg) {
     instr << "INC " << reg;
 }
 
-void DecString(std::ostringstream& instr, const std::string reg) {
+void DecString(std::ostringstream& instr, const std::string& reg) {
     instr << "DEC " << reg;
 }
 
-void JumpString(std::ostringstream& instr, const std::string addr) {
+void JumpString(std::ostringstream& instr, const std::string& addr) {
     instr << "JP " << addr;
 }
 
-void JumpString(std::ostringstream& instr, const std::string cond, const std::string addr) {
+void JumpString(std::ostringstream& instr, const std::string& cond, const std::string& addr) {
     instr << "JP " << cond << ", " << addr;
 }
 
-void RelJumpString(std::ostringstream& instr, const std::string addr) {
+void RelJumpString(std::ostringstream& instr, const std::string& addr) {
     instr << "JR " << addr;
 }
 
-void RelJumpString(std::ostringstream& instr, const std::string cond, const std::string addr) {
+void RelJumpString(std::ostringstream& instr, const std::string& cond, const std::string& addr) {
     instr << "JR " << cond << ", " << addr;
 }
 
-void CallString(std::ostringstream& instr, const std::string addr) {
+void CallString(std::ostringstream& instr, const std::string& addr) {
     instr << "CALL " << addr;
 }
 
-void CallString(std::ostringstream& instr, const std::string cond, const std::string addr) {
+void CallString(std::ostringstream& instr, const std::string& cond, const std::string& addr) {
     instr << "CALL " << cond << ", " << addr;
 }
 
-void ReturnInterruptString(std::ostringstream& instr, const std::string reti) {
+void ReturnInterruptString(std::ostringstream& instr, const std::string& reti) {
     instr << "RET" << reti;
 }
 
-void ReturnCondString(std::ostringstream& instr, const std::string cond) {
+void ReturnCondString(std::ostringstream& instr, const std::string& cond) {
     instr << "RET " << cond;
 }
 
-void RestartString(std::ostringstream& instr, const std::string addr) {
+void RestartString(std::ostringstream& instr, const std::string& addr) {
     instr << "RST " << addr;
 }
 
-void RotLeftString(std::ostringstream& instr, const std::string carry, const std::string reg) {
+void RotLeftString(std::ostringstream& instr, const std::string& carry, const std::string& reg) {
     instr << "RL" << carry << " " << reg;
 }
 
-void RotRightString(std::ostringstream& instr, const std::string carry, const std::string reg) {
+void RotRightString(std::ostringstream& instr, const std::string& carry, const std::string& reg) {
     instr << "RR" << carry << " " << reg;
 }
 
-void ShiftLeftString(std::ostringstream& instr, const std::string reg) {
+void ShiftLeftString(std::ostringstream& instr, const std::string& reg) {
     instr << "SLA " << reg;
 }
 
-void ShiftRightString(std::ostringstream& instr, const std::string a_or_l, const std::string reg) {
+void ShiftRightString(std::ostringstream& instr, const std::string& a_or_l, const std::string& reg) {
     instr << "SR" << a_or_l << " " << reg;
 }
 
-void SwapString(std::ostringstream& instr, const std::string reg) {
+void SwapString(std::ostringstream& instr, const std::string& reg) {
     instr << "SWAP " << reg;
 }
 
-void TestBitString(std::ostringstream& instr, const std::string bit, const std::string reg) {
+void TestBitString(std::ostringstream& instr, const std::string& bit, const std::string& reg) {
     instr << "BIT " << bit << ", " << reg;
 }
 
-void ResetBitString(std::ostringstream& instr, const std::string bit, const std::string reg) {
+void ResetBitString(std::ostringstream& instr, const std::string& bit, const std::string& reg) {
     instr << "RES " << bit << ", " << reg;
 }
 
-void SetBitString(std::ostringstream& instr, const std::string bit, const std::string reg) {
+void SetBitString(std::ostringstream& instr, const std::string& bit, const std::string& reg) {
     instr << "SET " << bit << ", " << reg;
 }
 
