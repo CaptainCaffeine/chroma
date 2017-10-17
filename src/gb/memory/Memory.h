@@ -54,6 +54,9 @@ public:
         double_speed ^= 1;
     };
 
+    bool IsConsoleDmg() const { return console == Console::DMG; }
+    bool IsConsoleCgb() const { return console == Console::CGB || console == Console::AGB; }
+
     // Interrupt functions
     void RequestInterrupt(Interrupt intr) {
         if (!IF_written_this_cycle) { interrupt_flags |= static_cast<unsigned int>(intr); }

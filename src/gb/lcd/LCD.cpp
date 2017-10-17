@@ -77,12 +77,12 @@ void LCD::UpdateLCD() {
             mem->SignalHDMA();
         }
     } else if (current_scanline == 144) {
-        if (scanline_cycles == 0 && mem->console == Console::CGB) {
+        if (scanline_cycles == 0 && mem->IsConsoleCgb()) {
             stat_interrupt_signal |= Mode2CheckEnabled();
         } else if (scanline_cycles == 4 << mem->double_speed) {
             mem->RequestInterrupt(Interrupt::VBLANK);
             SetSTATMode(1);
-            if (mem->console == Console::DMG) {
+            if (mem->IsConsoleDmg()) {
                 // The OAM STAT interrupt is also triggered on entering Mode 1.
                 stat_interrupt_signal |= Mode2CheckEnabled();
             }
@@ -145,7 +145,7 @@ void LCD::UpdateLY() {
         // LY does not increase at the end of scanline 153, it stays 0 until the end of scanline 0.
         // Otherwise, increment LY.
         if (current_scanline == 153) {
-            if (mem->console == Console::DMG) {
+            if (mem->IsConsoleDmg()) {
                 SetSTATMode(0); // Does this actually happen? Or does DMG spend the first cycle in mode 1?
             }
 
@@ -160,7 +160,7 @@ void LCD::UpdateLY() {
 
 int LCD::Line153Cycles() const {
     // The number of cycles where LY=153 depending on device configuration.
-    if (mem->console == Console::DMG) {
+    if (mem->IsConsoleDmg()) {
         return 4;
     } else if (mem->game_mode == GameMode::DMG) {
         return 8;
@@ -211,7 +211,7 @@ void LCD::StrangeLY() {
 // interrupt can be fired. This will not be interrupted even if LY changes again on the second cycle (which happens 
 // on scanline 153). In that case, the two events caused by an LY change begin on the following cycle.
 void LCD::UpdateLYCompareSignal() {
-    if (mem->console == Console::DMG) {
+    if (mem->IsConsoleDmg()) {
         if (ly_compare_equal_forced_zero) {
             SetLYCompare(ly_compare == ly_last_cycle);
 
@@ -283,7 +283,7 @@ void LCD::RenderScanline() {
     }
 
     // On CGB in DMG mode, disabling the background will also disable the window.
-    if (mem->console == Console::CGB && mem->game_mode == GameMode::DMG) {
+    if (mem->IsConsoleCgb() && mem->game_mode == GameMode::DMG) {
         if (BGEnabled() && WindowEnabled()) {
             RenderWindow(num_bg_pixels);
         }

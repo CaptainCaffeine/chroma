@@ -308,7 +308,7 @@ void Channel::ClearRegisters(const Console console) {
     lfsr = 0x0000;
 
     // On DMG, the length counters are unaffected by power state.
-    if (console == Console::CGB) {
+    if (console != Console::DMG) {
         length_counter = 0x00;
     }
 

@@ -15,9 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
+#include <array>
 #include <iostream>
-#include <fstream>
-#include <stdexcept>
 #include <sys/stat.h>
 
 #include "gb/memory/CartridgeHeader.h"
@@ -51,9 +50,9 @@ void DisplayHelp() {
     std::cout << "Usage: chroma [options] <path/to/rom>\n\n";
     std::cout << "Options:\n";
     std::cout << "  -h                       display help\n";
-    std::cout << "  -m [dmg, cgb]            specify device to emulate\n";
+    std::cout << "  -m [dmg, cgb, agb]       specify device to emulate\n";
     std::cout << "  -l [regular, timer, lcd] specify log level (default: none)\n";
-    std::cout << "  -s [1-15]                specify resolution scale (default: 1)\n";
+    std::cout << "  -s [1-15]                specify resolution scale (default: 2)\n";
     std::cout << "  -f                       activate fullscreen mode\n";
     std::cout << "  --filter [iir, nearest]  choose audio filtering method (default: iir)\n";
     std::cout << "                               IIR (slow, better quality)\n";
@@ -68,6 +67,8 @@ Console GetGameBoyType(const std::vector<std::string>& tokens) {
             return Console::DMG;
         } else if (gb_string == "cgb") {
             return Console::CGB;
+        } else if (gb_string == "agb") {
+            return Console::AGB;
         } else {
             throw std::invalid_argument("Invalid console specified: " + gb_string);
         }
@@ -105,8 +106,8 @@ unsigned int GetPixelScale(const std::vector<std::string>& tokens) {
 
         return scale;
     } else {
-        // If no resolution scale specified, default to native resolution.
-        return 1;
+        // If no resolution scale specified, default to 2x native resolution.
+        return 2;
     }
 }
 
@@ -126,7 +127,33 @@ bool GetFilterEnable(const std::vector<std::string>& tokens) {
     }
 }
 
-std::vector<u8> LoadROM(const std::string& filename) {
+static bool CheckAgbNintendoLogo(const std::vector<u8>& rom_header) {
+    static constexpr std::array<u8, 156> logo{{
+        0x24, 0xFF, 0xAE, 0x51, 0x69, 0x9A, 0xA2, 0x21, 0x3D, 0x84, 0x82, 0x0A, 0x84,
+        0xE4, 0x09, 0xAD, 0x11, 0x24, 0x8B, 0x98, 0xC0, 0x81, 0x7F, 0x21, 0xA3, 0x52,
+        0xBE, 0x19, 0x93, 0x09, 0xCE, 0x20, 0x10, 0x46, 0x4A, 0x4A, 0xF8, 0x27, 0x31,
+        0xEC, 0x58, 0xC7, 0xE8, 0x33, 0x82, 0xE3, 0xCE, 0xBF, 0x85, 0xF4, 0xDF, 0x94,
+        0xCE, 0x4B, 0x09, 0xC1, 0x94, 0x56, 0x8A, 0xC0, 0x13, 0x72, 0xA7, 0xFC, 0x9F,
+        0x84, 0x4D, 0x73, 0xA3, 0xCA, 0x9A, 0x61, 0x58, 0x97, 0xA3, 0x27, 0xFC, 0x03,
+        0x98, 0x76, 0x23, 0x1D, 0xC7, 0x61, 0x03, 0x04, 0xAE, 0x56, 0xBF, 0x38, 0x84,
+        0x00, 0x40, 0xA7, 0x0E, 0xFD, 0xFF, 0x52, 0xFE, 0x03, 0x6F, 0x95, 0x30, 0xF1,
+        0x97, 0xFB, 0xC0, 0x85, 0x60, 0xD6, 0x80, 0x25, 0xA9, 0x63, 0xBE, 0x03, 0x01,
+        0x4E, 0x38, 0xE2, 0xF9, 0xA2, 0x34, 0xFF, 0xBB, 0x3E, 0x03, 0x44, 0x78, 0x00,
+        0x90, 0xCB, 0x88, 0x11, 0x3A, 0x94, 0x65, 0xC0, 0x7C, 0x63, 0x87, 0xF0, 0x3C,
+        0xAF, 0xD6, 0x25, 0xE4, 0x8B, 0x38, 0x0A, 0xAC, 0x72, 0x21, 0xD4, 0xF8, 0x07
+    }};
+
+    auto logo_iter = logo.cbegin();
+    for (std::size_t addr = 4; addr < logo.size() + 4; ++addr) {
+        if (rom_header[addr] != *logo_iter++) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+Console CheckRomFile(const std::string& filename) {
     std::ifstream rom_file(filename);
     if (!rom_file) {
         throw std::runtime_error("Error when attempting to open " + filename);
@@ -139,17 +166,28 @@ std::vector<u8> LoadROM(const std::string& filename) {
     rom_file.seekg(0, std::ios_base::beg);
 
     if (rom_size < 0x8000) {
+        // 32KB is the smallest possible GB game.
         throw std::runtime_error("Rom size of " + std::to_string(rom_size)
-                                 + " bytes is too small to be a Game Boy game.");
-    } else if (rom_size > 0x800000) {
+                                 + " bytes is too small to be a GB or GBA game.");
+    } else if (rom_size > 0x2000000) {
+        // 32MB is the largest possible GBA game.
         throw std::runtime_error("Rom size of " + std::to_string(rom_size)
-                                 + " bytes is too large to be a Game Boy game.");
+                                 + " bytes is too large to be a GB or GBA game.");
     }
 
-    std::vector<u8> rom_contents(rom_size);
-    rom_file.read(reinterpret_cast<char*>(rom_contents.data()), rom_size);
+    // Read the first 0x134 bytes to check for the Nintendo logos.
+    std::vector<u8> rom_header(0x134);
+    rom_file.read(reinterpret_cast<char*>(rom_header.data()), rom_header.size());
 
-    return rom_contents;
+    if (CheckAgbNintendoLogo(rom_header)) {
+        return Console::AGB;
+    } else if (Gb::CartridgeHeader::CheckNintendoLogo(Console::CGB, rom_header)) {
+        return Console::CGB;
+    } else {
+        throw std::runtime_error("Provided ROM is neither a GB or GBA game. No valid Nintendo logo found.");
+    }
+
+    return Console::CGB;
 }
 
 std::string SaveGamePath(const std::string& rom_path) {

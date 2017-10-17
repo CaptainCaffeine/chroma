@@ -58,7 +58,7 @@ Memory::~Memory() = default;
 
 void Memory::IORegisterInit() {
     if (game_mode == GameMode::DMG) {
-        if (console == Console::DMG) {
+        if (IsConsoleDmg()) {
             joypad.p1 = 0xCF; // DMG starts with joypad inputs enabled.
             timer.divider = 0xABCC;
 
@@ -448,7 +448,7 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         return speed_switch | ((game_mode == GameMode::CGB) ? 0x7E : 0xFF);
     // VBK -- VRAM bank number
     case 0xFF4F:
-        if (console == Console::CGB) {
+        if (IsConsoleCgb()) {
             // CGB in DMG mode always has bank 0 selected.
             return ((game_mode == GameMode::CGB) ? (static_cast<u8>(vram_bank_num) | 0xFE) : 0xFE);
         } else {
@@ -462,7 +462,7 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         return ((game_mode == GameMode::CGB) ? (infrared | 0x3C) : 0xFF);
     // BGPI -- BG Palette Index (CGB only)
     case 0xFF68:
-        if (console == Console::CGB) {
+        if (IsConsoleCgb()) {
             return lcd.bg_palette_index | 0x40;
         } else {
             return 0xFF;
@@ -477,7 +477,7 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         }
     // OBPI -- Sprite Palette Index (CGB only)
     case 0xFF6A:
-        if (console == Console::CGB) {
+        if (IsConsoleCgb()) {
             return lcd.obj_palette_index | 0x40;
         } else {
             return 0xFF;
@@ -497,16 +497,16 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
     case 0xFF6C:
         return ((game_mode == GameMode::CGB) ? (undocumented[1] | 0xFE) : 0xFF);
     case 0xFF72:
-        return ((console == Console::CGB) ? undocumented[2] : 0xFF);
+        return ((IsConsoleCgb()) ? undocumented[2] : 0xFF);
     case 0xFF73:
-        return ((console == Console::CGB) ? undocumented[3] : 0xFF);
+        return ((IsConsoleCgb()) ? undocumented[3] : 0xFF);
     case 0xFF74:
         return ((game_mode == GameMode::CGB) ? undocumented[4] : 0xFF);
     case 0xFF75:
-        return ((console == Console::CGB) ? (undocumented[5] | 0x8F) : 0xFF);
+        return ((IsConsoleCgb()) ? (undocumented[5] | 0x8F) : 0xFF);
     case 0xFF76:
     case 0xFF77:
-        return ((console == Console::CGB) ? 0x00 : 0xFF);
+        return ((IsConsoleCgb()) ? 0x00 : 0xFF);
 
     // Unused/unusable I/O registers all return 0xFF when read.
     default:
@@ -561,7 +561,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // NR11 -- Channel 1 Wave Pattern & Sound Length
     case 0xFF11:
-        if (audio.IsPoweredOn() || console == Console::DMG) {
+        if (audio.IsPoweredOn() || IsConsoleDmg()) {
             audio.square1.sound_length = data;
             audio.square1.ReloadLengthCounter();
         }
@@ -590,7 +590,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // NR21 --  Channel 2 Wave Pattern & Sound Length
     case 0xFF16:
-        if (audio.IsPoweredOn() || console == Console::DMG) {
+        if (audio.IsPoweredOn() || IsConsoleDmg()) {
             audio.square2.sound_length = data;
             audio.square2.ReloadLengthCounter();
         }
@@ -628,7 +628,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // NR31 -- Channel 3 Sound Length
     case 0xFF1B:
-        if (audio.IsPoweredOn() || console == Console::DMG) {
+        if (audio.IsPoweredOn() || IsConsoleDmg()) {
             audio.wave.sound_length = data;
             audio.wave.ReloadLengthCounter();
         }
@@ -654,7 +654,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // NR41 -- Channel 4 Sound Length
     case 0xFF20:
-        if (audio.IsPoweredOn() || console == Console::DMG) {
+        if (audio.IsPoweredOn() || IsConsoleDmg()) {
             audio.noise.sound_length = data & 0x3F;
             audio.noise.ReloadLengthCounter();
         }
@@ -721,7 +721,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         lcd.stat = (data & 0x78) | (lcd.stat & 0x07);
         // On DMG, if the STAT register is written during mode 1 or 0 while the LCD is on, bit 1 of the IF register
         // is set. This causes a STAT interrupt if it's enabled in IE.
-        if (console == Console::DMG && (lcd.lcdc & 0x80) && !(lcd.stat & 0x02)) {
+        if (IsConsoleDmg() && (lcd.lcdc & 0x80) && !(lcd.stat & 0x02)) {
             lcd.SetSTATSignal();
         }
         break;
@@ -852,12 +852,12 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         }
         break;
     case 0xFF72:
-        if (console == Console::CGB) {
+        if (IsConsoleCgb()) {
             undocumented[2] = data;
         }
         break;
     case 0xFF73:
-        if (console == Console::CGB) {
+        if (IsConsoleCgb()) {
             undocumented[3] = data;
         }
         break;
@@ -867,7 +867,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         }
         break;
     case 0xFF75:
-        if (console == Console::CGB) {
+        if (IsConsoleCgb()) {
             undocumented[5] = data & 0x70;
         }
         break;

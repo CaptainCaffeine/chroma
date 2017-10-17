@@ -27,6 +27,8 @@ class CartridgeHeader {
 public:
     CartridgeHeader(Console& console, const std::vector<u8>& rom, bool multicart_requested);
 
+    static bool CheckNintendoLogo(const Console console, const std::vector<u8>& rom);
+
     GameMode game_mode;
     MBC mbc_mode;
     bool ext_ram_present;
@@ -38,7 +40,6 @@ private:
     void GetRAMSize(const std::vector<u8>& rom);
     void GetMBCType(const std::vector<u8>& rom);
     void HeaderChecksum(const std::vector<u8>& rom) const;
-    void CheckNintendoLogo(const Console console, const std::vector<u8>& rom) const;
 };
 
 } // End namespace Gb

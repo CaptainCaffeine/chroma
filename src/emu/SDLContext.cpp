@@ -20,7 +20,10 @@
 
 namespace Emu {
 
-SDLContext::SDLContext(unsigned int scale, bool fullscreen) {
+SDLContext::SDLContext(int _width, int _height, unsigned int scale, bool fullscreen)
+        : width(_width)
+        , height(_height) {
+
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
         throw std::runtime_error(GetSDLErrorString("Init"));
     }
@@ -28,8 +31,8 @@ SDLContext::SDLContext(unsigned int scale, bool fullscreen) {
     window = SDL_CreateWindow("Chroma",
                               SDL_WINDOWPOS_UNDEFINED,
                               SDL_WINDOWPOS_UNDEFINED,
-                              160 * scale,
-                              144 * scale,
+                              width * scale,
+                              height * scale,
                               SDL_WINDOW_OPENGL);
     if (window == nullptr) {
         SDL_Quit();
@@ -43,14 +46,14 @@ SDLContext::SDLContext(unsigned int scale, bool fullscreen) {
         throw std::runtime_error(GetSDLErrorString("CreateRenderer"));
     }
 
-    SDL_RenderSetLogicalSize(renderer, 160, 144);
+    SDL_RenderSetLogicalSize(renderer, width, height);
     SDL_RenderSetIntegerScale(renderer, SDL_TRUE);
 
     texture = SDL_CreateTexture(renderer,
                                 SDL_PIXELFORMAT_ABGR1555,
                                 SDL_TEXTUREACCESS_STREAMING,
-                                160,
-                                144);
+                                width,
+                                height);
     if (texture == nullptr) {
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
@@ -92,7 +95,7 @@ SDLContext::~SDLContext() {
 
 void SDLContext::RenderFrame(const u16* fb_ptr) {
     SDL_LockTexture(texture, nullptr, &texture_pixels, &texture_pitch);
-    memcpy(texture_pixels, fb_ptr, 160 * 144 * sizeof(u16));
+    memcpy(texture_pixels, fb_ptr, width * height * sizeof(u16));
     SDL_UnlockTexture(texture);
 
     SDL_RenderClear(renderer);

@@ -26,7 +26,7 @@ namespace Emu {
 
 class SDLContext {
 public:
-    SDLContext(unsigned int scale, bool fullscreen);
+    SDLContext(int _width, int _height, unsigned int scale, bool fullscreen);
     ~SDLContext();
 
     void RenderFrame(const u16* fb_ptr);
@@ -42,10 +42,13 @@ private:
     SDL_Texture* texture;
     SDL_AudioDeviceID audio_device;
 
+    const int width;
+    const int height;
+
     int texture_pitch;
     void* texture_pixels;
 
-    const std::string GetSDLErrorString(const std::string& error_function) const {
+    static const std::string GetSDLErrorString(const std::string& error_function) {
         return {"SDL_" + error_function + " Error: " + SDL_GetError()};
     }
 };

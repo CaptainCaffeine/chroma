@@ -36,12 +36,24 @@ CPU::CPU(Memory& memory) : mem(memory) {
             regs.reg16[BC] = 0x0000;
             regs.reg16[DE] = 0x0008;
             regs.reg16[HL] = 0x007C;
+        } else if (mem.console == Console::AGB) {
+            regs.reg16[AF] = 0x1100;
+            regs.reg16[BC] = 0x0100;
+            regs.reg16[DE] = 0x0008;
+            regs.reg16[HL] = 0x007C;
         }
     } else if (mem.game_mode == GameMode::CGB) {
-        regs.reg16[AF] = 0x1180;
-        regs.reg16[BC] = 0x0000;
-        regs.reg16[DE] = 0xFF56;
-        regs.reg16[HL] = 0x000D;
+        if (mem.console == Console::CGB) {
+            regs.reg16[AF] = 0x1180;
+            regs.reg16[BC] = 0x0000;
+            regs.reg16[DE] = 0xFF56;
+            regs.reg16[HL] = 0x000D;
+        } else if (mem.console == Console::AGB) {
+            regs.reg16[AF] = 0x1100;
+            regs.reg16[BC] = 0x0100;
+            regs.reg16[DE] = 0xFF56;
+            regs.reg16[HL] = 0x000D;
+        }
     }
 
     regs.reg16[SP] = 0xFFFE;

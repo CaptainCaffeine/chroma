@@ -28,7 +28,7 @@
 #include "emu/SDLContext.h"
 
 int main(int argc, char** argv) {
-    std::vector<std::string> tokens = Emu::GetTokens(argv, argv+argc);
+    std::vector<std::string> tokens = Emu::GetTokens(argv, argv + argc);
 
     if (tokens.size() == 1 || Emu::ContainsOption(tokens, "-h")) {
         Emu::DisplayHelp();
@@ -56,19 +56,24 @@ int main(int argc, char** argv) {
 
     try {
         const std::string rom_path{tokens.back()};
-        const std::vector<u8> rom{Emu::LoadROM(rom_path)};
 
-        const Gb::CartridgeHeader cart_header{gameboy_type, rom, multicart};
+        if (Emu::CheckRomFile(rom_path) == Console::AGB) {
+            const std::vector<u16> rom{Emu::LoadRom<u16>(rom_path)};
+            Emu::SDLContext sdl_context{240, 160, pixel_scale, fullscreen};
+        } else {
+            const std::vector<u8> rom{Emu::LoadRom<u8>(rom_path)};
+            const Gb::CartridgeHeader cart_header{gameboy_type, rom, multicart};
 
-        std::string save_path{Emu::SaveGamePath(rom_path)};
-        std::vector<u8> save_game{Emu::LoadSaveGame(cart_header, save_path)};
+            const std::string save_path{Emu::SaveGamePath(rom_path)};
+            std::vector<u8> save_game{Emu::LoadSaveGame(cart_header, save_path)};
 
-        Gb::Logging logger{log_level};
-        Emu::SDLContext sdl_context{pixel_scale, fullscreen};
-        Gb::GameBoy gameboy_core{gameboy_type, cart_header, logger, sdl_context, save_path, rom, save_game,
-                                 enable_iir};
+            Gb::Logging logger{log_level};
+            Emu::SDLContext sdl_context{160, 144, pixel_scale, fullscreen};
+            Gb::GameBoy gameboy_core{gameboy_type, cart_header, logger, sdl_context, save_path, rom, save_game,
+                                     enable_iir};
 
-        gameboy_core.EmulatorLoop();
+            gameboy_core.EmulatorLoop();
+        }
     } catch (const std::runtime_error& e) {
         std::cerr << e.what() << "\n";
         return 1;

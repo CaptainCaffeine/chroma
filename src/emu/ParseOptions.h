@@ -18,6 +18,8 @@
 
 #include <string>
 #include <vector>
+#include <fstream>
+#include <stdexcept>
 
 #include "common/CommonTypes.h"
 #include "gb/core/Enums.h"
@@ -36,10 +38,27 @@ LogLevel GetLogLevel(const std::vector<std::string>& tokens);
 unsigned int GetPixelScale(const std::vector<std::string>& tokens);
 bool GetFilterEnable(const std::vector<std::string>& tokens);
 
+Console CheckRomFile(const std::string& filename);
 std::string SaveGamePath(const std::string& rom_path);
-std::vector<u8> LoadROM(const std::string& filename);
 std::vector<u8> LoadSaveGame(const Gb::CartridgeHeader& cart_header, const std::string& save_path);
 std::vector<u8> ReadSaveFile(const std::string& filename);
 void CheckPathIsRegularFile(const std::string& filename);
+
+template<typename T>
+std::vector<T> LoadRom(const std::string& filename) {
+    std::ifstream rom_file(filename);
+    if (!rom_file) {
+        throw std::runtime_error("Error when attempting to open " + filename);
+    }
+
+    rom_file.seekg(0, std::ios_base::end);
+    const auto rom_size = rom_file.tellg();
+    rom_file.seekg(0, std::ios_base::beg);
+
+    std::vector<T> rom_contents(rom_size / sizeof(T));
+    rom_file.read(reinterpret_cast<char*>(rom_contents.data()), rom_size);
+
+    return rom_contents;
+}
 
 } // End namespace Emu
