@@ -51,7 +51,9 @@ CartridgeHeader::CartridgeHeader(Console& console, const std::vector<u8>& rom, b
 
     GetRAMSize(rom);
     GetMBCType(rom);
-    CheckNintendoLogo(console, rom);
+    if (console == Console::DMG) {
+        CheckNintendoLogo(console, rom);
+    }
     HeaderChecksum(rom);
 
     // If the user gave the multicart option and this game reports itself as using an MBC1, emulate an MBC1M instead.
@@ -245,9 +247,11 @@ bool CartridgeHeader::CheckNintendoLogo(const Console console, const std::vector
     }};
 
     // DMG boot ROM checks all 48 bytes, but the CGB boot ROM only checks the first 24 bytes.
-    std::size_t end_addr = 0x0104 + ((console == Console::DMG) ? 48 : 24);
-    auto logo_iter = logo.cbegin();
-    for (std::size_t addr = 0x0104; addr < end_addr; ++addr) {
+    // Since we always check the first 24 bytes during cart detection, check only the last 24 bytes on DMG.
+    const std::size_t start_addr = 0x0104 + ((console == Console::DMG) ? 24 : 0);
+    const std::size_t end_addr = start_addr + 24;
+    auto logo_iter = logo.cbegin() + ((console == Console::DMG) ? 24 : 0);
+    for (std::size_t addr = start_addr; addr < end_addr; ++addr) {
         if (rom[addr] != *logo_iter++) {
             return false;
         }
