@@ -35,8 +35,8 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    Console gameboy_type;
-    LogLevel log_level;
+    Gb::Console gameboy_type;
+    Gb::LogLevel log_level;
     unsigned int pixel_scale;
     bool enable_iir;
     bool fullscreen;
@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
     try {
         const std::string rom_path{tokens.back()};
 
-        if (Emu::CheckRomFile(rom_path) == Console::AGB) {
+        if (Emu::CheckRomFile(rom_path) == Gb::Console::AGB) {
             const std::vector<u16> rom{Emu::LoadRom<u16>(rom_path)};
             Emu::SDLContext sdl_context{240, 160, pixel_scale, fullscreen};
         } else {

@@ -33,12 +33,12 @@ bool ContainsOption(const std::vector<std::string>& tokens, const std::string& o
 std::string GetOptionParam(const std::vector<std::string>& tokens, const std::string& option);
 
 void DisplayHelp();
-Console GetGameBoyType(const std::vector<std::string>& tokens);
-LogLevel GetLogLevel(const std::vector<std::string>& tokens);
+Gb::Console GetGameBoyType(const std::vector<std::string>& tokens);
+Gb::LogLevel GetLogLevel(const std::vector<std::string>& tokens);
 unsigned int GetPixelScale(const std::vector<std::string>& tokens);
 bool GetFilterEnable(const std::vector<std::string>& tokens);
 
-Console CheckRomFile(const std::string& filename);
+Gb::Console CheckRomFile(const std::string& filename);
 std::string SaveGamePath(const std::string& rom_path);
 std::vector<u8> LoadSaveGame(const Gb::CartridgeHeader& cart_header, const std::string& save_path);
 std::vector<u8> ReadSaveFile(const std::string& filename);

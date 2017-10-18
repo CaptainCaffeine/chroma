@@ -60,39 +60,39 @@ void DisplayHelp() {
     std::cout << "  --multicart              emulate this game using an MBC1M" << std::endl;
 }
 
-Console GetGameBoyType(const std::vector<std::string>& tokens) {
+Gb::Console GetGameBoyType(const std::vector<std::string>& tokens) {
     const std::string gb_string = Emu::GetOptionParam(tokens, "-m");
     if (!gb_string.empty()) {
         if (gb_string == "dmg") {
-            return Console::DMG;
+            return Gb::Console::DMG;
         } else if (gb_string == "cgb") {
-            return Console::CGB;
+            return Gb::Console::CGB;
         } else if (gb_string == "agb") {
-            return Console::AGB;
+            return Gb::Console::AGB;
         } else {
             throw std::invalid_argument("Invalid console specified: " + gb_string);
         }
     } else {
         // If no console specified, the console type will default to the cart type.
-        return Console::Default;
+        return Gb::Console::Default;
     }
 }
 
-LogLevel GetLogLevel(const std::vector<std::string>& tokens) {
+Gb::LogLevel GetLogLevel(const std::vector<std::string>& tokens) {
     const std::string log_string = Emu::GetOptionParam(tokens, "-l");
     if (!log_string.empty()) {
         if (log_string == "regular") {
-            return LogLevel::Regular;
+            return Gb::LogLevel::Regular;
         } else if (log_string == "timer") {
-            return LogLevel::Timer;
+            return Gb::LogLevel::Timer;
         } else if (log_string == "lcd") {
-            return LogLevel::LCD;
+            return Gb::LogLevel::LCD;
         } else {
             throw std::invalid_argument("Invalid log level specified: " + log_string);
         }
     } else {
         // If no log level specified, then no logging by default.
-        return LogLevel::None;
+        return Gb::LogLevel::None;
     }
 }
 
@@ -153,7 +153,7 @@ static bool CheckAgbNintendoLogo(const std::vector<u8>& rom_header) {
     return true;
 }
 
-Console CheckRomFile(const std::string& filename) {
+Gb::Console CheckRomFile(const std::string& filename) {
     std::ifstream rom_file(filename);
     if (!rom_file) {
         throw std::runtime_error("Error when attempting to open " + filename);
@@ -180,14 +180,14 @@ Console CheckRomFile(const std::string& filename) {
     rom_file.read(reinterpret_cast<char*>(rom_header.data()), rom_header.size());
 
     if (CheckAgbNintendoLogo(rom_header)) {
-        return Console::AGB;
-    } else if (Gb::CartridgeHeader::CheckNintendoLogo(Console::CGB, rom_header)) {
-        return Console::CGB;
+        return Gb::Console::AGB;
+    } else if (Gb::CartridgeHeader::CheckNintendoLogo(Gb::Console::CGB, rom_header)) {
+        return Gb::Console::CGB;
     } else {
         throw std::runtime_error("Provided ROM is neither a GB or GBA game. No valid Nintendo logo found.");
     }
 
-    return Console::CGB;
+    return Gb::Console::CGB;
 }
 
 std::string SaveGamePath(const std::string& rom_path) {
