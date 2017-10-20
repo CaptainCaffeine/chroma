@@ -35,13 +35,13 @@ GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Logging& 
         , sdl_context(context)
         , front_buffer(160*144)
         , save_path(save_file)
-        , timer(new Timer())
-        , serial(new Serial())
-        , lcd(new LCD())
-        , joypad(new Joypad())
-        , audio(new Audio(enable_iir))
-        , mem(new Memory(gb_type, header, *timer, *serial, *lcd, *joypad, *audio, rom, save_game))
-        , cpu(new CPU(*mem)) {
+        , timer(std::make_unique<Timer>())
+        , serial(std::make_unique<Serial>())
+        , lcd(std::make_unique<LCD>())
+        , joypad(std::make_unique<Joypad>())
+        , audio(std::make_unique<Audio>(enable_iir))
+        , mem(std::make_unique<Memory>(gb_type, header, *timer, *serial, *lcd, *joypad, *audio, rom, save_game))
+        , cpu(std::make_unique<CPU>(*mem)) {
 
     // Link together circular dependencies after all components are constructed.
     lcd->LinkToGameBoy(this);

@@ -47,7 +47,7 @@ Memory::Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima
         , wram((game_mode == GameMode::DMG) ? 0x2000 : 0x8000)
         , hram(0x7F)
         , ext_ram(save_game)
-        , rtc((rtc_present) ? new RTC(ext_ram) : nullptr) {
+        , rtc((rtc_present) ? std::make_unique<RTC>(ext_ram) : nullptr) {
 
     IORegisterInit();
     VRAMInit();
