@@ -29,12 +29,12 @@ public:
     SDLContext(int _width, int _height, unsigned int scale, bool fullscreen);
     ~SDLContext();
 
-    void RenderFrame(const u16* fb_ptr);
-    void ToggleFullscreen();
+    void RenderFrame(const u16* fb_ptr) noexcept;
+    void ToggleFullscreen() noexcept;
 
-    void PushBackAudio(const std::array<s16, 1600>& sample_buffer);
-    void UnpauseAudio();
-    void PauseAudio();
+    void PushBackAudio(const std::array<s16, 1600>& sample_buffer) noexcept;
+    void UnpauseAudio() noexcept;
+    void PauseAudio() noexcept;
 
 private:
     SDL_Window* window;

@@ -27,7 +27,7 @@ class CartridgeHeader {
 public:
     CartridgeHeader(Console& console, const std::vector<u8>& rom, bool multicart_requested);
 
-    static bool CheckNintendoLogo(const Console console, const std::vector<u8>& rom);
+    static bool CheckNintendoLogo(const Console console, const std::vector<u8>& rom) noexcept;
 
     GameMode game_mode;
     MBC mbc_mode;

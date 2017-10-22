@@ -17,6 +17,6 @@
 #pragma once
 
 template <typename T>
-constexpr T RotateRight(T value, unsigned int rotation) {
+constexpr T RotateRight(T value, unsigned int rotation) noexcept {
     return (value >> rotation) | (value << (-rotation & (sizeof(T) * 8 - 1)));
 }

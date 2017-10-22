@@ -93,7 +93,7 @@ SDLContext::~SDLContext() {
     SDL_Quit();
 }
 
-void SDLContext::RenderFrame(const u16* fb_ptr) {
+void SDLContext::RenderFrame(const u16* fb_ptr) noexcept {
     SDL_LockTexture(texture, nullptr, &texture_pixels, &texture_pitch);
     memcpy(texture_pixels, fb_ptr, width * height * sizeof(u16));
     SDL_UnlockTexture(texture);
@@ -103,20 +103,20 @@ void SDLContext::RenderFrame(const u16* fb_ptr) {
     SDL_RenderPresent(renderer);
 }
 
-void SDLContext::ToggleFullscreen() {
+void SDLContext::ToggleFullscreen() noexcept {
     u32 fullscreen = SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP;
     SDL_SetWindowFullscreen(window, fullscreen ^ SDL_WINDOW_FULLSCREEN_DESKTOP);
 }
 
-void SDLContext::PushBackAudio(const std::array<s16, 1600>& sample_buffer) {
+void SDLContext::PushBackAudio(const std::array<s16, 1600>& sample_buffer) noexcept {
     SDL_QueueAudio(audio_device, sample_buffer.data(), sample_buffer.size() * sizeof(s16));
 }
 
-void SDLContext::UnpauseAudio() {
+void SDLContext::UnpauseAudio() noexcept {
     SDL_PauseAudioDevice(audio_device, 0);
 }
 
-void SDLContext::PauseAudio() {
+void SDLContext::PauseAudio() noexcept {
     SDL_PauseAudioDevice(audio_device, 1);
 }
 
