@@ -60,13 +60,13 @@ CPU::CPU(Memory& memory) : mem(memory) {
 }
 
 u8 CPU::ReadMemAndTick(const u16 addr) {
-    const u8 data = mem.ReadMem8(addr);
+    const u8 data = mem.ReadMem(addr);
     gameboy->HardwareTick(4);
     return data;
 }
 
 void CPU::WriteMemAndTick(const u16 addr, const u8 val) {
-    mem.WriteMem8(addr, val);
+    mem.WriteMem(addr, val);
     gameboy->HardwareTick(4);
 }
 
@@ -102,9 +102,9 @@ int CPU::RunFor(int cycles) {
         }
 
         if (cpu_mode == CPUMode::Running) {
-            cycles -= ExecuteNext(mem.ReadMem8(pc++));
+            cycles -= ExecuteNext(mem.ReadMem(pc++));
         } else if (cpu_mode == CPUMode::HaltBug) {
-            cycles -= ExecuteNext(mem.ReadMem8(pc));
+            cycles -= ExecuteNext(mem.ReadMem(pc));
             cpu_mode = CPUMode::Running;
         } else if (cpu_mode == CPUMode::Halted) {
             gameboy->HaltedTick(4);

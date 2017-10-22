@@ -25,14 +25,14 @@ namespace Gb {
 std::string NextByteAsStr(const Memory& mem, const u16 pc) {
     std::ostringstream hex_str;
     hex_str << std::hex << std::uppercase;
-    hex_str << "0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(pc+1));
+    hex_str << "0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem(pc+1));
     return hex_str.str();
 }
 
 std::string NextSignedByteAsStr(const Memory& mem, const u16 pc) {
     std::ostringstream hex_str;
     hex_str << std::hex << std::uppercase;
-    s8 sbyte = mem.ReadMem8(pc+1);
+    s8 sbyte = mem.ReadMem(pc+1);
     if (sbyte < 0) {
         hex_str << "-0x" << std::setfill('0') << std::setw(2) << (~sbyte)+1;
     } else {
@@ -45,8 +45,8 @@ std::string NextWordAsStr(const Memory& mem, const u16 pc) {
     std::ostringstream hex_str;
     hex_str << std::hex << std::uppercase;
     hex_str << "0x";
-    hex_str << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(pc+2));
-    hex_str << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(pc+1));
+    hex_str << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem(pc+2));
+    hex_str << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem(pc+1));
     return hex_str.str();
 }
 
@@ -189,13 +189,13 @@ void SetBitString(std::ostringstream& instr, const std::string& bit, const std::
 void UnknownOpcodeString(std::ostringstream& instr, const Memory& mem, const u16 pc) {
     instr << "Unknown Opcode: ";
     instr << std::hex << std::setfill('0') << std::setw(2) << std::uppercase;
-    instr << "0x" << static_cast<unsigned int>(mem.ReadMem8(pc));
+    instr << "0x" << static_cast<unsigned int>(mem.ReadMem(pc));
 }
 
 std::string Logging::Disassemble(const Memory& mem, const u16 pc) const {
     std::ostringstream instr_stream;
 
-    switch (mem.ReadMem8(pc)) {
+    switch (mem.ReadMem(pc)) {
     // ******** 8-bit loads ********
     // LD R, n -- Load immediate value n into register R
     case 0x06:
@@ -1164,7 +1164,7 @@ std::string Logging::Disassemble(const Memory& mem, const u16 pc) const {
     // ******** CB prefix opcodes ********
     case 0xCB:
         // Get opcode suffix from next byte.
-        switch (mem.ReadMem8(pc+1)) {
+        switch (mem.ReadMem(pc+1)) {
         // ******** Rotates and Shifts ********
         // RLC R -- Left rotate the value in register R.
         // Flags:

@@ -53,8 +53,8 @@ void Logging::LogCPURegisterState(const Memory& mem, const CPU& cpu) {
     log_stream << " BC=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.regs.reg16[cpu.BC]);
     log_stream << " DE=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.regs.reg16[cpu.DE]);
     log_stream << " HL=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.regs.reg16[cpu.HL]);
-    log_stream << " IF=0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFF0F));
-    log_stream << " IE=0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem8(0xFFFF));
+    log_stream << " IF=0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem(0xFF0F));
+    log_stream << " IE=0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem(0xFFFF));
     log_stream << "\n";
 }
 

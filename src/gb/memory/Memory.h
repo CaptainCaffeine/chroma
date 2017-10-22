@@ -46,8 +46,8 @@ public:
     const GameMode game_mode;
     unsigned int double_speed = 0;
 
-    u8 ReadMem8(const u16 addr) const;
-    void WriteMem8(const u16 addr, const u8 data);
+    u8 ReadMem(const u16 addr) const;
+    void WriteMem(const u16 addr, const u8 data);
 
     void ToggleCPUSpeed() {
         speed_switch = (speed_switch ^ 0x80) & 0x80;

@@ -635,10 +635,10 @@ void CPU::Stop() {
     // if the corresponding input lines in the P1 register are enabled.
 
     // Check if we should begin a speed switch.
-    if (mem.game_mode == GameMode::CGB && mem.ReadMem8(0xFF4D) & 0x01) {
+    if (mem.game_mode == GameMode::CGB && mem.ReadMem(0xFF4D) & 0x01) {
         // A speed switch takes 128*1024-80=130992 cycles to complete, plus 4 cycles to decode the STOP instruction.
         speed_switch_cycles = 130992;
-    } else if ((mem.ReadMem8(0xFF00) & 0x30) == 0x30) {
+    } else if ((mem.ReadMem(0xFF00) & 0x30) == 0x30) {
         throw std::runtime_error("The CPU has hung. Reason: STOP mode was entered with all joypad inputs disabled.");
     }
 

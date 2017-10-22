@@ -148,7 +148,7 @@ void Memory::VRAMInit() {
     }
 }
 
-u8 Memory::ReadMem8(const u16 addr) const {
+u8 Memory::ReadMem(const u16 addr) const {
     if (addr < 0x8000) {
         // ROM
         if (dma_bus_block != Bus::External) {
@@ -235,7 +235,7 @@ u8 Memory::ReadMem8(const u16 addr) const {
     }
 }
 
-void Memory::WriteMem8(const u16 addr, const u8 data) {
+void Memory::WriteMem(const u16 addr, const u8 data) {
     if (addr < 0x8000) {
         // MBC control registers -- writes to this region do not write the ROM.
         // If OAM DMA is currently transferring from the external bus, the write is ignored.
