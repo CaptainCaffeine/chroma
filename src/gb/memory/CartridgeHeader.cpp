@@ -51,8 +51,8 @@ CartridgeHeader::CartridgeHeader(Console& console, const std::vector<u8>& rom, b
 
     GetRAMSize(rom);
     GetMBCType(rom);
-    if (console == Console::DMG) {
-        CheckNintendoLogo(console, rom);
+    if (console == Console::DMG && !CheckNintendoLogo(console, rom)) {
+        std::cerr << "WARNING: Nintendo logo does not match. This ROM would not run on a DMG!" << std::endl;
     }
     HeaderChecksum(rom);
 

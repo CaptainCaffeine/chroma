@@ -19,7 +19,13 @@ set(SOURCES
     gb/memory/CartridgeHeader.cpp
     gb/logging/Disassembler.cpp
     gb/logging/Logging.cpp
+
+    gba/core/Core.cpp
+    gba/memory/Memory.cpp
+    gba/memory/CartridgeHeader.cpp
+
     common/Screenshot.cpp
+
     emu/main.cpp
     emu/SDLContext.cpp
     emu/ParseOptions.cpp
@@ -39,8 +45,14 @@ set(HEADERS
     gb/memory/RTC.h
     gb/memory/CartridgeHeader.h
     gb/logging/Logging.h
+
+    gba/core/Core.h
+    gba/memory/Memory.h
+
     common/CommonTypes.h
+    common/CommonFuncs.h
     common/Screenshot.h
+
     emu/SDLContext.h
     emu/ParseOptions.h
    )

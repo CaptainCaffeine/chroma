@@ -24,6 +24,8 @@
 #include "gb/core/GameBoy.h"
 #include "gb/logging/Logging.h"
 #include "gb/memory/CartridgeHeader.h"
+#include "gba/core/Core.h"
+#include "gba/memory/Memory.h"
 #include "emu/ParseOptions.h"
 #include "emu/SDLContext.h"
 
@@ -59,7 +61,12 @@ int main(int argc, char** argv) {
 
         if (Emu::CheckRomFile(rom_path) == Gb::Console::AGB) {
             const std::vector<u16> rom{Emu::LoadRom<u16>(rom_path)};
+            Gba::Memory::CheckHeader(rom);
+
             Emu::SDLContext sdl_context{240, 160, pixel_scale, fullscreen};
+            Gba::Core gba_core{sdl_context, rom};
+
+            gba_core.EmulatorLoop();
         } else {
             const std::vector<u8> rom{Emu::LoadRom<u8>(rom_path)};
             const Gb::CartridgeHeader cart_header{gameboy_type, rom, multicart};
