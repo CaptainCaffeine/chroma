@@ -64,6 +64,7 @@ public:
     void EnvelopeTick();
     void SweepTick();
     void ReloadLengthCounter();
+    void SetDutyCycle();
     void ClearRegisters(const Console console);
 private:
     const Audio* audio;
@@ -103,8 +104,10 @@ private:
     // Noise
     u16 lfsr = 0x0001;
 
+    // Duty Cycle
+    std::array<unsigned int, 8> duty_cycle;
+
     void ReloadPeriod();
-    std::array<unsigned int, 8> DutyCycle(const u8 cycle) const;
 
     u8 LengthCounterEnabled() const { return frequency_hi & 0x40; }
 

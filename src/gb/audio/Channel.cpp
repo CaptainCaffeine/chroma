@@ -29,7 +29,10 @@ Channel::Channel(Generator gen, std::array<u8, 0x10>& wave_ram_ref, u8 NRx0, u8 
         , wave_ram(wave_ram_ref)
         , gen_type(gen)
         , left_enable_mask(static_cast<u8>(gen_type) << 4)
-        , right_enable_mask(static_cast<u8>(gen_type)) {}
+        , right_enable_mask(static_cast<u8>(gen_type)) {
+
+    SetDutyCycle();
+}
 
 u8 Channel::GenSample() const {
     if (gen_type == Generator::Wave) {
@@ -38,7 +41,7 @@ u8 Channel::GenSample() const {
     } else if (gen_type == Generator::Noise) {
         return ((~lfsr) & 0x0001) * volume;
     } else {
-        return DutyCycle((sound_length & 0xC0) >> 6)[wave_pos] * volume;
+        return duty_cycle[wave_pos] * volume;
     }
 }
 
@@ -334,18 +337,22 @@ bool Channel::FrameSeqBitIsLow(unsigned int clock_bit) const {
     return (audio->frame_seq_counter & clock_bit) == 0;
 }
 
-std::array<unsigned int, 8> Channel::DutyCycle(const u8 cycle) const {
-    switch(cycle) {
+void Channel::SetDutyCycle() {
+    switch((sound_length & 0xC0) >> 6) {
     case 0x00:
-        return {{0, 0, 0, 0, 0, 0, 0, 1}};
+        duty_cycle = {{0, 0, 0, 0, 0, 0, 0, 1}};
+        break;
     case 0x01:
-        return {{1, 0, 0, 0, 0, 0, 0, 1}};
+        duty_cycle = {{1, 0, 0, 0, 0, 0, 0, 1}};
+        break;
     case 0x02:
-        return {{1, 0, 0, 0, 0, 1, 1, 1}};
+        duty_cycle = {{1, 0, 0, 0, 0, 1, 1, 1}};
+        break;
     case 0x03:
-        return {{0, 1, 1, 1, 1, 1, 1, 0}};
+        duty_cycle = {{0, 1, 1, 1, 1, 1, 1, 0}};
+        break;
     default:
-        return {{0, 0, 0, 0, 0, 0, 0, 0}};
+        break;
     }
 }
 

@@ -564,6 +564,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         if (audio.IsPoweredOn() || IsConsoleDmg()) {
             audio.square1.sound_length = data;
             audio.square1.ReloadLengthCounter();
+            audio.square1.SetDutyCycle();
         }
         break;
     // NR12 -- Channel 1 Volume Envelope
@@ -593,6 +594,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         if (audio.IsPoweredOn() || IsConsoleDmg()) {
             audio.square2.sound_length = data;
             audio.square2.ReloadLengthCounter();
+            audio.square2.SetDutyCycle();
         }
         break;
     // NR22 --  Channel 2 Volume Envelope
