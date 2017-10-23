@@ -37,6 +37,11 @@ private:
     Emu::SDLContext& sdl_context;
 
     std::unique_ptr<Memory> mem;
+
+    bool quit = false;
+    bool pause = false;
+
+    void RegisterCallbacks();
 };
 
 } // End namespace Gba

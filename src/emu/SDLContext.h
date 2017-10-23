@@ -18,11 +18,31 @@
 
 #include <string>
 #include <array>
+#include <unordered_map>
+#include <functional>
 #include <SDL.h>
 
 #include "common/CommonTypes.h"
 
 namespace Emu {
+
+enum class InputEvent {Quit,
+                       Pause,
+                       LogLevel,
+                       Fullscreen,
+                       Screenshot,
+                       LcdDebug,
+                       Up,
+                       Left,
+                       Down,
+                       Right,
+                       A,
+                       B,
+                       L,
+                       R,
+                       Start,
+                       Select,
+                       None};
 
 class SDLContext {
 public:
@@ -36,6 +56,9 @@ public:
     void UnpauseAudio() noexcept;
     void PauseAudio() noexcept;
 
+    void RegisterCallback(InputEvent event, std::function<void(bool)> callback);
+    void PollEvents();
+
 private:
     SDL_Window* window;
     SDL_Renderer* renderer;
@@ -47,6 +70,8 @@ private:
 
     int texture_pitch;
     void* texture_pixels;
+
+    std::unordered_map<InputEvent, std::function<void(bool)>> input_callbacks {{ InputEvent::None, [](bool) {} }};
 
     static const std::string GetSDLErrorString(const std::string& error_function) {
         return {"SDL_" + error_function + " Error: " + SDL_GetError()};

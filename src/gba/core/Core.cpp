@@ -16,18 +16,47 @@
 
 #include "gba/core/Core.h"
 #include "gba/memory/Memory.h"
+#include "emu/SDLContext.h"
 
 namespace Gba {
 
 Core::Core(Emu::SDLContext& context, const std::vector<u16>& rom)
         : sdl_context(context)
-        , mem(std::make_unique<Memory>(rom)) {}
+        , mem(std::make_unique<Memory>(rom)) {
+
+    RegisterCallbacks();
+}
 
 // Needed to use forward declarations as template parameters in Core.h.
 Core::~Core() = default;
 
 void Core::EmulatorLoop() {
-    return;
+    while (!quit) {
+        sdl_context.PollEvents();
+
+        SDL_Delay(40);
+    }
+}
+
+void Core::RegisterCallbacks() {
+    using Emu::InputEvent;
+
+    sdl_context.RegisterCallback(InputEvent::Quit,       [this](bool) { quit = true; });
+    sdl_context.RegisterCallback(InputEvent::Pause,      [this](bool) { pause = !pause; });
+    sdl_context.RegisterCallback(InputEvent::LogLevel,   [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::Fullscreen, [this](bool) { sdl_context.ToggleFullscreen(); });
+    sdl_context.RegisterCallback(InputEvent::Screenshot, [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::LcdDebug,   [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::Up,         [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::Left,       [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::Down,       [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::Right,      [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::A,          [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::B,          [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::L,          [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::R,          [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::Start,      [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::Select,     [](bool) { });
 }
 
 } // End namespace Gba

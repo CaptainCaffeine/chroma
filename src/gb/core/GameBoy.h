@@ -18,7 +18,6 @@
 
 #include <memory>
 #include <vector>
-#include <tuple>
 
 #include "common/CommonTypes.h"
 #include "gb/core/Enums.h"
@@ -71,9 +70,12 @@ private:
     std::unique_ptr<Memory> mem;
     std::unique_ptr<CPU> cpu;
 
-    std::tuple<bool, bool> PollEvents(bool pause);
+    bool quit = false;
+    bool pause = false;
 
     u8 lcd_on_when_stopped = 0x00;
+
+    void RegisterCallbacks();
 };
 
 } // End namespace Gb

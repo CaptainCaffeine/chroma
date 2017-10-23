@@ -120,4 +120,122 @@ void SDLContext::PauseAudio() noexcept {
     SDL_PauseAudioDevice(audio_device, 1);
 }
 
+void SDLContext::RegisterCallback(InputEvent event, std::function<void(bool)> callback) {
+    input_callbacks.insert({event, callback});
+}
+
+void SDLContext::PollEvents() {
+    SDL_Event e;
+    while (SDL_PollEvent(&e)) {
+        if (e.type == SDL_QUIT) {
+            input_callbacks[InputEvent::Quit](true);
+        } else if (e.type == SDL_KEYDOWN) {
+            if (e.key.repeat != 0) {
+                continue;
+            }
+
+            switch (e.key.keysym.sym) {
+            case SDLK_q:
+                if (SDL_GetModState() & KMOD_CTRL) {
+                    input_callbacks[InputEvent::Quit](true);
+                }
+                break;
+            case SDLK_p:
+                input_callbacks[InputEvent::Pause](true);
+                break;
+            case SDLK_b:
+                input_callbacks[InputEvent::LogLevel](true);
+                break;
+            case SDLK_v:
+                input_callbacks[InputEvent::Fullscreen](true);
+                break;
+            case SDLK_t:
+                input_callbacks[InputEvent::Screenshot](true);
+                break;
+            case SDLK_y:
+                input_callbacks[InputEvent::LcdDebug](true);
+                break;
+
+            case SDLK_w:
+                input_callbacks[InputEvent::Up](true);
+                break;
+            case SDLK_a:
+                input_callbacks[InputEvent::Left](true);
+                break;
+            case SDLK_s:
+                input_callbacks[InputEvent::Down](true);
+                break;
+            case SDLK_d:
+                input_callbacks[InputEvent::Right](true);
+                break;
+
+            case SDLK_k:
+                input_callbacks[InputEvent::A](true);
+                break;
+            case SDLK_j:
+                input_callbacks[InputEvent::B](true);
+                break;
+            case SDLK_h:
+                input_callbacks[InputEvent::L](true);
+                break;
+            case SDLK_l:
+                input_callbacks[InputEvent::R](true);
+                break;
+
+            case SDLK_RETURN:
+            case SDLK_i:
+                input_callbacks[InputEvent::Start](true);
+                break;
+            case SDLK_u:
+                input_callbacks[InputEvent::Select](true);
+                break;
+            default:
+                break;
+            }
+        } else if (e.type == SDL_KEYUP) {
+            if (e.key.repeat != 0) {
+                continue;
+            }
+
+            switch (e.key.keysym.sym) {
+            case SDLK_w:
+                input_callbacks[InputEvent::Up](false);
+                break;
+            case SDLK_a:
+                input_callbacks[InputEvent::Left](false);
+                break;
+            case SDLK_s:
+                input_callbacks[InputEvent::Down](false);
+                break;
+            case SDLK_d:
+                input_callbacks[InputEvent::Right](false);
+                break;
+
+            case SDLK_k:
+                input_callbacks[InputEvent::A](false);
+                break;
+            case SDLK_j:
+                input_callbacks[InputEvent::B](false);
+                break;
+            case SDLK_h:
+                input_callbacks[InputEvent::L](false);
+                break;
+            case SDLK_l:
+                input_callbacks[InputEvent::R](false);
+                break;
+
+            case SDLK_RETURN:
+            case SDLK_i:
+                input_callbacks[InputEvent::Start](false);
+                break;
+            case SDLK_u:
+                input_callbacks[InputEvent::Select](false);
+                break;
+            default:
+                break;
+            }
+        }
+    }
+}
+
 } // End namespace Emu

@@ -51,6 +51,8 @@ GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Logging& 
     lcd->LinkToMemory(mem.get());
     joypad->LinkToMemory(mem.get());
     audio->LinkToMemory(mem.get());
+
+    RegisterCallbacks();
 }
 
 GameBoy::~GameBoy() {
@@ -61,12 +63,10 @@ void GameBoy::EmulatorLoop() {
     constexpr int cycles_per_frame = 70224;
     int overspent_cycles = 0;
 
-    bool quit = false, pause = false;
-
     sdl_context.UnpauseAudio();
 
     while (!quit) {
-        std::tie(quit, pause) = PollEvents(pause);
+        sdl_context.PollEvents();
 
         if (pause) {
             SDL_Delay(40);
@@ -84,111 +84,25 @@ void GameBoy::EmulatorLoop() {
     sdl_context.PauseAudio();
 }
 
-std::tuple<bool, bool> GameBoy::PollEvents(bool pause) {
-    SDL_Event e;
-    bool quit = false;
-    while (SDL_PollEvent(&e)) {
-        if (e.type == SDL_QUIT) {
-            quit = true;
-        } else if (e.type == SDL_KEYDOWN) {
-            switch (e.key.keysym.sym) {
-            case SDLK_q:
-                if (SDL_GetModState() & KMOD_CTRL) {
-                    quit = true;
-                }
-                break;
-            case SDLK_p:
-                if (e.key.repeat == 0) {
-                    pause = !pause;
-                }
-                break;
-            case SDLK_b:
-                if (e.key.repeat == 0) {
-                    logging.SwitchLogLevel();
-                }
-                break;
-            case SDLK_v:
-                if (e.key.repeat == 0) {
-                    sdl_context.ToggleFullscreen();
-                }
-                break;
-            case SDLK_t:
-                if (e.key.repeat == 0) {
-                    Screenshot();
-                }
-                break;
-            case SDLK_y:
-                if (e.key.repeat == 0) {
-                    lcd->DumpEverything();
-                }
-                break;
+void GameBoy::RegisterCallbacks() {
+    using Emu::InputEvent;
 
-            case SDLK_w:
-                joypad->UpPressed(true);
-                break;
-            case SDLK_a:
-                joypad->LeftPressed(true);
-                break;
-            case SDLK_s:
-                joypad->DownPressed(true);
-                break;
-            case SDLK_d:
-                joypad->RightPressed(true);
-                break;
-
-            case SDLK_k:
-                joypad->APressed(true);
-                break;
-            case SDLK_j:
-                joypad->BPressed(true);
-                break;
-
-            case SDLK_RETURN:
-            case SDLK_i:
-                joypad->StartPressed(true);
-                break;
-            case SDLK_u:
-                joypad->SelectPressed(true);
-                break;
-            default:
-                break;
-            }
-        } else if (e.type == SDL_KEYUP) {
-            switch (e.key.keysym.sym) {
-            case SDLK_w:
-                joypad->UpPressed(false);
-                break;
-            case SDLK_a:
-                joypad->LeftPressed(false);
-                break;
-            case SDLK_s:
-                joypad->DownPressed(false);
-                break;
-            case SDLK_d:
-                joypad->RightPressed(false);
-                break;
-
-            case SDLK_k:
-                joypad->APressed(false);
-                break;
-            case SDLK_j:
-                joypad->BPressed(false);
-                break;
-
-            case SDLK_RETURN:
-            case SDLK_i:
-                joypad->StartPressed(false);
-                break;
-            case SDLK_u:
-                joypad->SelectPressed(false);
-                break;
-            default:
-                break;
-            }
-        }
-    }
-
-    return std::make_tuple(quit, pause);
+    sdl_context.RegisterCallback(InputEvent::Quit,       [this](bool) { quit = true; });
+    sdl_context.RegisterCallback(InputEvent::Pause,      [this](bool) { pause = !pause; });
+    sdl_context.RegisterCallback(InputEvent::LogLevel,   [this](bool) { logging.SwitchLogLevel(); });
+    sdl_context.RegisterCallback(InputEvent::Fullscreen, [this](bool) { sdl_context.ToggleFullscreen(); });
+    sdl_context.RegisterCallback(InputEvent::Screenshot, [this](bool) { Screenshot(); });
+    sdl_context.RegisterCallback(InputEvent::LcdDebug,   [this](bool) { lcd->DumpEverything(); });
+    sdl_context.RegisterCallback(InputEvent::Up,         [this](bool press) { joypad->UpPressed(press); });
+    sdl_context.RegisterCallback(InputEvent::Left,       [this](bool press) { joypad->LeftPressed(press); });
+    sdl_context.RegisterCallback(InputEvent::Down,       [this](bool press) { joypad->DownPressed(press); });
+    sdl_context.RegisterCallback(InputEvent::Right,      [this](bool press) { joypad->RightPressed(press); });
+    sdl_context.RegisterCallback(InputEvent::A,          [this](bool press) { joypad->APressed(press); });
+    sdl_context.RegisterCallback(InputEvent::B,          [this](bool press) { joypad->BPressed(press); });
+    sdl_context.RegisterCallback(InputEvent::L,          [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::R,          [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::Start,      [this](bool press) { joypad->StartPressed(press); });
+    sdl_context.RegisterCallback(InputEvent::Select,     [this](bool press) { joypad->SelectPressed(press); });
 }
 
 void GameBoy::SwapBuffers(std::vector<u16>& back_buffer) {
