@@ -16,7 +16,14 @@
 
 #pragma once
 
+#include <bitset>
+
 template <typename T>
 constexpr T RotateRight(T value, unsigned int rotation) noexcept {
     return (value >> rotation) | (value << (-rotation & (sizeof(T) * 8 - 1)));
+}
+
+template <typename T>
+T Popcount(T value) noexcept {
+    return std::bitset<sizeof(T) * 8>(value).count();
 }

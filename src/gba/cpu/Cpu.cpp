@@ -14,36 +14,35 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#pragma once
-
-#include <memory>
-#include <vector>
-
-#include "common/CommonTypes.h"
-
-namespace Emu { class SDLContext; }
+#include "gba/cpu/Cpu.h"
+#include "gba/cpu/Decoder.h"
+#include "gba/memory/Memory.h"
 
 namespace Gba {
 
-class Memory;
-class Cpu;
+Cpu::Cpu(Memory& memory)
+        : mem(memory)
+        , decoder(std::make_unique<Decoder>()) { regs[pc] = 0x80000B8; }
 
-class Core {
-public:
-    Core(Emu::SDLContext& context, const std::vector<u16>& rom);
-    ~Core();
+// Needed to declare unique_ptrs with forward declarations in the header file.
+Cpu::~Cpu() = default;
 
-    void EmulatorLoop();
-private:
-    Emu::SDLContext& sdl_context;
+void Cpu::Execute(int cycles) {
+    while (cycles > 0) {
+        if (cpsr & thumb_mode) {
+            Thumb opcode = mem.ReadMem<Thumb>(regs[pc]);
+            regs[pc] += 2;
 
-    std::unique_ptr<Memory> mem;
-    std::unique_ptr<Cpu> cpu;
+            decoder->DecodeThumb(opcode);
+        } else {
+            Arm opcode = mem.ReadMem<Arm>(regs[pc]);
+            regs[pc] += 4;
 
-    bool quit = false;
-    bool pause = false;
+            decoder->DecodeArm(opcode);
+        }
 
-    void RegisterCallbacks();
-};
+        --cycles;
+    }
+}
 
 } // End namespace Gba

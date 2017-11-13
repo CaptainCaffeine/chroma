@@ -23,6 +23,7 @@ set(SOURCES
     gba/core/Core.cpp
     gba/memory/Memory.cpp
     gba/memory/CartridgeHeader.cpp
+    gba/cpu/Cpu.cpp
 
     common/Screenshot.cpp
 
@@ -48,6 +49,9 @@ set(HEADERS
 
     gba/core/Core.h
     gba/memory/Memory.h
+    gba/cpu/Cpu.h
+    gba/cpu/Decoder.h
+    gba/cpu/Instruction.h
 
     common/CommonTypes.h
     common/CommonFuncs.h

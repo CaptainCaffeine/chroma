@@ -16,26 +16,29 @@
 
 #include "gba/core/Core.h"
 #include "gba/memory/Memory.h"
+#include "gba/cpu/Cpu.h"
 #include "emu/SDLContext.h"
 
 namespace Gba {
 
 Core::Core(Emu::SDLContext& context, const std::vector<u16>& rom)
         : sdl_context(context)
-        , mem(std::make_unique<Memory>(rom)) {
+        , mem(std::make_unique<Memory>(rom))
+        , cpu(std::make_unique<Cpu>(*mem)) {
 
     RegisterCallbacks();
 }
 
-// Needed to use forward declarations as template parameters in Core.h.
+// Needed to declare unique_ptrs with forward declarations in the header file.
 Core::~Core() = default;
 
 void Core::EmulatorLoop() {
-    while (!quit) {
-        sdl_context.PollEvents();
+    cpu->Execute(20);
+    //while (!quit) {
+    //    sdl_context.PollEvents();
 
-        SDL_Delay(40);
-    }
+    //    SDL_Delay(40);
+    //}
 }
 
 void Core::RegisterCallbacks() {

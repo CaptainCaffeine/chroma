@@ -48,31 +48,31 @@ private:
     enum class Region {Bios = 0x0,
                        XRam = 0x2,
                        IRam = 0x3,
-                       IO = 0x4,
+                       IO   = 0x4,
                        PRam = 0x5,
                        VRam = 0x6,
-                       Oam = 0x7,
+                       Oam  = 0x7,
                        Rom0 = 0x8,
                        Rom1 = 0xA,
                        Rom2 = 0xC,
                        SRam = 0xE};
 
-    enum RegionSize {rom_size = 32 * mbyte,
+    enum RegionSize {rom_size  = 32 * mbyte,
                      xram_size = 256 * kbyte,
                      iram_size = 32 * kbyte,
-                     io_size = kbyte,
+                     io_size   = kbyte,
                      pram_size = kbyte,
                      vram_size = 96 * kbyte,
-                     oam_size = kbyte};
+                     oam_size  = kbyte};
 
-    enum AddressMask : u32 {rom_addr_mask = rom_size - 1,
-                            xram_addr_mask = xram_size - 1,
-                            iram_addr_mask = iram_size - 1,
-                            io_addr_mask = io_size - 1,
-                            pram_addr_mask = pram_size - 1,
+    enum AddressMask : u32 {rom_addr_mask   = rom_size - 1,
+                            xram_addr_mask  = xram_size - 1,
+                            iram_addr_mask  = iram_size - 1,
+                            io_addr_mask    = io_size - 1,
+                            pram_addr_mask  = pram_size - 1,
                             vram_addr_mask1 = 0x0000FFFF,
                             vram_addr_mask2 = 0x00017FFF,
-                            oam_addr_mask = oam_size - 1};
+                            oam_addr_mask   = oam_size - 1};
 
     static constexpr u32 region_offset = 24;
     static constexpr Region GetRegion(const u32 addr) {

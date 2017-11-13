@@ -53,8 +53,8 @@ private:
     static constexpr Reg8Addr A = 1, F = 0, B = 3, C = 2, D = 5, E = 4, H = 7, L = 6;
     static constexpr Reg16Addr AF = 0, BC = 1, DE = 2, HL = 3, SP = 4;
 
-    static Reg8Addr ToReg8AddrLo(Reg16Addr r) { return r * 2; }
-    static Reg8Addr ToReg8AddrHi(Reg16Addr r) { return r * 2 + 1; }
+    static constexpr Reg8Addr ToReg8AddrLo(Reg16Addr r) { return r * 2; }
+    static constexpr Reg8Addr ToReg8AddrHi(Reg16Addr r) { return r * 2 + 1; }
 
     // Interpreter execution
     enum class CPUMode {Running, Halted, HaltBug, Stopped};

@@ -53,7 +53,7 @@ Memory::Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima
     VRAMInit();
 }
 
-// Needed to use forward declarations as template parameters in Memory.h.
+// Needed to declare unique_ptrs with forward declarations in the header file.
 Memory::~Memory() = default;
 
 void Memory::IORegisterInit() {
