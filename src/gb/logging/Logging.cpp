@@ -16,7 +16,6 @@
 
 #include <algorithm>
 #include <iostream>
-#include <iomanip>
 #include <stdexcept>
 
 #include "gb/logging/Logging.h"
@@ -39,61 +38,73 @@ Logging::Logging(LogLevel log_lvl) : log_level(log_lvl) {
 }
 
 void Logging::LogCPURegisterState(const Memory& mem, const CPU& cpu) {
-    log_stream << std::hex << std::uppercase;
+    fmt::MemoryWriter cpu_log;
 
     if (cpu.IsHalted()) {
-        log_stream << "\nHalted\n";
+        cpu_log.write("\nHalted\n");
     } else {
-        log_stream << "\n" << Disassemble(mem, cpu.pc) << "\n";
+        Disassemble(cpu_log, mem, cpu.pc);
     }
 
-    log_stream << "PC=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.pc);
-    log_stream << " SP=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.regs.reg16[cpu.SP]);
-    log_stream << " AF=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.regs.reg16[cpu.AF]);
-    log_stream << " BC=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.regs.reg16[cpu.BC]);
-    log_stream << " DE=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.regs.reg16[cpu.DE]);
-    log_stream << " HL=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(cpu.regs.reg16[cpu.HL]);
-    log_stream << " IF=0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem(0xFF0F));
-    log_stream << " IE=0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem(0xFFFF));
-    log_stream << "\n";
+    cpu_log.write( "PC=0x{0:0>4X}", cpu.pc);
+    cpu_log.write(" SP=0x{0:0>4X}", cpu.regs.reg16[CPU::SP]);
+    cpu_log.write(" AF=0x{0:0>4X}", cpu.regs.reg16[CPU::AF]);
+    cpu_log.write(" BC=0x{0:0>4X}", cpu.regs.reg16[CPU::BC]);
+    cpu_log.write(" DE=0x{0:0>4X}", cpu.regs.reg16[CPU::DE]);
+    cpu_log.write(" HL=0x{0:0>4X}", cpu.regs.reg16[CPU::HL]);
+    cpu_log.write(" IF=0x{0:0>4X}", mem.ReadMem(0xFF0F));
+    cpu_log.write(" IE=0x{0:0>4X}", mem.ReadMem(0xFFFF));
+    cpu_log.write("\n");
+
+    log_stream << cpu_log.c_str();
 }
 
 void Logging::LogInterrupt(const Memory& mem) {
-    log_stream << "\n";
-    if (mem.IsPending(Interrupt::VBLANK)) {
-        log_stream << "VBLANK";
-    } else if (mem.IsPending(Interrupt::STAT)) {
-        log_stream << "STAT";
-    } else if (mem.IsPending(Interrupt::Timer)) {
-        log_stream << "Timer";
-    } else if (mem.IsPending(Interrupt::Serial)) {
-        log_stream << "Serial";
-    } else if (mem.IsPending(Interrupt::Joypad)) {
-        log_stream << "Joypad";
-    }
-    log_stream << " Interrupt\n";
+    auto InterruptString = [&mem]() {
+        if (mem.IsPending(Interrupt::VBLANK)) {
+            return "VBLANK";
+        } else if (mem.IsPending(Interrupt::STAT)) {
+            return "STAT";
+        } else if (mem.IsPending(Interrupt::Timer)) {
+            return "Timer";
+        } else if (mem.IsPending(Interrupt::Serial)) {
+            return "Serial";
+        } else if (mem.IsPending(Interrupt::Joypad)) {
+            return "Joypad";
+        }
+
+        return "";
+    };
+
+    log_stream << fmt::format("\n{} Interrupt\n", InterruptString());
 }
 
 void Logging::LogTimerRegisterState(const Timer& timer) {
-    log_stream << std::hex << std::uppercase;
-    log_stream << "DIV=0x" << std::setfill('0') << std::setw(4) << static_cast<unsigned int>(timer.divider);
-    log_stream << " TIMA=0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(timer.tima);
-    log_stream << " TMA=0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(timer.tma);
-    log_stream << " TAC=0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(timer.tac);
-    log_stream << " p_inc=" << std::setw(1) << timer.prev_tima_inc;
-    log_stream << " p_val=" << std::setw(2) << static_cast<unsigned int>(timer.prev_tima_val);
-    log_stream << " of=" << std::setw(1) << timer.tima_overflow;
-    log_stream << " of_ni=" << std::setw(1) << timer.tima_overflow_not_interrupted << "\n";
+    fmt::MemoryWriter timer_log;
+
+    timer_log.write("DIV=0x{0:0>4X}", timer.divider);
+    timer_log.write(" TIMA=0x{0:0>2X}", timer.tima);
+    timer_log.write(" TMA=0x{0:0>2X}", timer.tma);
+    timer_log.write(" TAC=0x{0:0>2X}", timer.tac);
+    timer_log.write(" p_inc={0:X}", timer.prev_tima_inc);
+    timer_log.write(" p_val={0:0>2X}", timer.prev_tima_val);
+    timer_log.write(" of={0:X}", timer.tima_overflow);
+    timer_log.write(" of_ni={0:X}\n", timer.tima_overflow_not_interrupted);
+
+    log_stream << timer_log.c_str();
 }
 
 void Logging::LogLCDRegisterState(const LCD& lcd) {
-    log_stream << std::hex << std::uppercase;
-    log_stream << "LCDC=0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(lcd.lcdc);
-    log_stream << " STAT=0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(lcd.stat);
-    log_stream << " LY=0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(lcd.ly);
-    log_stream << " LYC=0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(lcd.ly_compare);
-    log_stream << " cycles=" << std::dec << std::setw(3) << lcd.scanline_cycles;
-    log_stream << " stat_sig=" << std::setw(1) << lcd.stat_interrupt_signal << "\n";
+    fmt::MemoryWriter lcd_log;
+
+    lcd_log.write("LCDC=0x{0:0>2X}", lcd.lcdc);
+    lcd_log.write(" STAT=0x{0:0>2X}", lcd.stat);
+    lcd_log.write(" LY=0x{0:0>2X}", lcd.ly);
+    lcd_log.write(" LYC=0x{0:0>2X}", lcd.ly_compare);
+    lcd_log.write(" cycles={0:0>3d}", lcd.scanline_cycles);
+    lcd_log.write(" stat_sig={0:X}\n", lcd.stat_interrupt_signal);
+
+    log_stream << lcd_log.c_str();
 }
 
 void Logging::SwitchLogLevel() {
@@ -104,24 +115,24 @@ void Logging::SwitchLogLevel() {
 
     std::swap(log_level, alt_level);
 
-    std::string switch_str = "Log level changed to ";
-    switch (log_level) {
-    case LogLevel::None:
-        switch_str += "None";
-        break;
-    case LogLevel::Regular:
-        switch_str += "Regular";
-        break;
-    case LogLevel::LCD:
-        switch_str += "LCD";
-        break;
-    case LogLevel::Timer:
-        switch_str += "Timer";
-        break;
-    }
-    switch_str += "\n";
+    auto LogLevelString = [log_level = this->log_level]() {
+        switch (log_level) {
+        case LogLevel::None:
+            return "None";
+        case LogLevel::Regular:
+            return "Regular";
+        case LogLevel::LCD:
+            return "LCD";
+        case LogLevel::Timer:
+            return "Timer";
+        default:
+            return "";
+        }
+    };
 
-    log_stream << "\n" << switch_str;
+    const std::string switch_str{fmt::format("\nLog level changed to {}\n", LogLevelString())};
+
+    log_stream << switch_str;
     std::cout << switch_str;
 }
 

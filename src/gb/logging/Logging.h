@@ -16,8 +16,8 @@
 
 #pragma once
 
-#include <string>
 #include <fstream>
+#include <fmt/format.h>
 
 #include "common/CommonTypes.h"
 #include "gb/core/Enums.h"
@@ -40,7 +40,7 @@ public:
     void LogTimerRegisterState(const Timer& timer);
     void LogLCDRegisterState(const LCD& lcd);
 
-    std::string Disassemble(const Memory& mem, const u16 pc) const;
+    void Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, const u16 pc) const;
 
     void SwitchLogLevel();
 private:

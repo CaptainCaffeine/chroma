@@ -14,186 +14,170 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <iomanip>
-#include <sstream>
-
 #include "gb/logging/Logging.h"
 #include "gb/memory/Memory.h"
 
 namespace Gb {
 
 std::string NextByteAsStr(const Memory& mem, const u16 pc) {
-    std::ostringstream hex_str;
-    hex_str << std::hex << std::uppercase;
-    hex_str << "0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem(pc+1));
-    return hex_str.str();
+    return fmt::format("0x{0:0>2X}", mem.ReadMem(pc + 1));
 }
 
 std::string NextSignedByteAsStr(const Memory& mem, const u16 pc) {
-    std::ostringstream hex_str;
-    hex_str << std::hex << std::uppercase;
-    s8 sbyte = mem.ReadMem(pc+1);
+    const s8 sbyte = mem.ReadMem(pc + 1);
     if (sbyte < 0) {
-        hex_str << "-0x" << std::setfill('0') << std::setw(2) << (~sbyte)+1;
+        return fmt::format("-0x{0:0>2X}", (~sbyte) + 1);
     } else {
-        hex_str << "+0x" << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(sbyte);
+        return fmt::format("+0x{0:0>2X}", sbyte);
     }
-    return hex_str.str();
 }
 
 std::string NextWordAsStr(const Memory& mem, const u16 pc) {
-    std::ostringstream hex_str;
-    hex_str << std::hex << std::uppercase;
-    hex_str << "0x";
-    hex_str << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem(pc+2));
-    hex_str << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(mem.ReadMem(pc+1));
-    return hex_str.str();
+    return fmt::format("0x{0:0>4X}", (mem.ReadMem(pc + 2) << 8) | mem.ReadMem(pc + 1));
 }
 
-void LoadString(std::ostringstream& instr, const std::string& into, const std::string& from) {
+void LoadString(fmt::MemoryWriter& instr, const std::string& into, const std::string& from) {
     instr << "LD " << into << ", " << from;
 }
 
-void LoadIncString(std::ostringstream& instr, const std::string& into, const std::string& from) {
+void LoadIncString(fmt::MemoryWriter& instr, const std::string& into, const std::string& from) {
     instr << "LDI " << into << ", " << from;
 }
 
-void LoadDecString(std::ostringstream& instr, const std::string& into, const std::string& from) {
+void LoadDecString(fmt::MemoryWriter& instr, const std::string& into, const std::string& from) {
     instr << "LDD " << into << ", " << from;
 }
 
-void LoadHighString(std::ostringstream& instr, const std::string& into, const std::string& from) {
+void LoadHighString(fmt::MemoryWriter& instr, const std::string& into, const std::string& from) {
     instr << "LDH " << into << ", " << from;
 }
 
-void PushString(std::ostringstream& instr, const std::string& reg) {
+void PushString(fmt::MemoryWriter& instr, const std::string& reg) {
     instr << "PUSH " << reg;
 }
 
-void PopString(std::ostringstream& instr, const std::string& reg) {
+void PopString(fmt::MemoryWriter& instr, const std::string& reg) {
     instr << "POP " << reg;
 }
 
-void AddString(std::ostringstream& instr, const std::string& from) {
+void AddString(fmt::MemoryWriter& instr, const std::string& from) {
     instr << "ADD A, " << from;
 }
 
-void AddString(std::ostringstream& instr, const std::string& into, const std::string& from) {
+void AddString(fmt::MemoryWriter& instr, const std::string& into, const std::string& from) {
     instr << "ADD " << into << ", " << from;
 }
 
-void AdcString(std::ostringstream& instr, const std::string& from) {
+void AdcString(fmt::MemoryWriter& instr, const std::string& from) {
     instr << "ADC A, " << from;
 }
 
-void SubString(std::ostringstream& instr, const std::string& from) {
+void SubString(fmt::MemoryWriter& instr, const std::string& from) {
     instr << "SUB A, " << from;
 }
 
-void SbcString(std::ostringstream& instr, const std::string& from) {
+void SbcString(fmt::MemoryWriter& instr, const std::string& from) {
     instr << "SBC A, " << from;
 }
 
-void AndString(std::ostringstream& instr, const std::string& with) {
+void AndString(fmt::MemoryWriter& instr, const std::string& with) {
     instr << "AND " << with;
 }
 
-void OrString(std::ostringstream& instr, const std::string& with) {
+void OrString(fmt::MemoryWriter& instr, const std::string& with) {
     instr << "OR " << with;
 }
 
-void XorString(std::ostringstream& instr, const std::string& with) {
+void XorString(fmt::MemoryWriter& instr, const std::string& with) {
     instr << "XOR " << with;
 }
 
-void CompareString(std::ostringstream& instr, const std::string& with) {
+void CompareString(fmt::MemoryWriter& instr, const std::string& with) {
     instr << "CP " << with;
 }
 
-void IncString(std::ostringstream& instr, const std::string& reg) {
+void IncString(fmt::MemoryWriter& instr, const std::string& reg) {
     instr << "INC " << reg;
 }
 
-void DecString(std::ostringstream& instr, const std::string& reg) {
+void DecString(fmt::MemoryWriter& instr, const std::string& reg) {
     instr << "DEC " << reg;
 }
 
-void JumpString(std::ostringstream& instr, const std::string& addr) {
+void JumpString(fmt::MemoryWriter& instr, const std::string& addr) {
     instr << "JP " << addr;
 }
 
-void JumpString(std::ostringstream& instr, const std::string& cond, const std::string& addr) {
+void JumpString(fmt::MemoryWriter& instr, const std::string& cond, const std::string& addr) {
     instr << "JP " << cond << ", " << addr;
 }
 
-void RelJumpString(std::ostringstream& instr, const std::string& addr) {
+void RelJumpString(fmt::MemoryWriter& instr, const std::string& addr) {
     instr << "JR " << addr;
 }
 
-void RelJumpString(std::ostringstream& instr, const std::string& cond, const std::string& addr) {
+void RelJumpString(fmt::MemoryWriter& instr, const std::string& cond, const std::string& addr) {
     instr << "JR " << cond << ", " << addr;
 }
 
-void CallString(std::ostringstream& instr, const std::string& addr) {
+void CallString(fmt::MemoryWriter& instr, const std::string& addr) {
     instr << "CALL " << addr;
 }
 
-void CallString(std::ostringstream& instr, const std::string& cond, const std::string& addr) {
+void CallString(fmt::MemoryWriter& instr, const std::string& cond, const std::string& addr) {
     instr << "CALL " << cond << ", " << addr;
 }
 
-void ReturnInterruptString(std::ostringstream& instr, const std::string& reti) {
+void ReturnInterruptString(fmt::MemoryWriter& instr, const std::string& reti) {
     instr << "RET" << reti;
 }
 
-void ReturnCondString(std::ostringstream& instr, const std::string& cond) {
+void ReturnCondString(fmt::MemoryWriter& instr, const std::string& cond) {
     instr << "RET " << cond;
 }
 
-void RestartString(std::ostringstream& instr, const std::string& addr) {
+void RestartString(fmt::MemoryWriter& instr, const std::string& addr) {
     instr << "RST " << addr;
 }
 
-void RotLeftString(std::ostringstream& instr, const std::string& carry, const std::string& reg) {
+void RotLeftString(fmt::MemoryWriter& instr, const std::string& carry, const std::string& reg) {
     instr << "RL" << carry << " " << reg;
 }
 
-void RotRightString(std::ostringstream& instr, const std::string& carry, const std::string& reg) {
+void RotRightString(fmt::MemoryWriter& instr, const std::string& carry, const std::string& reg) {
     instr << "RR" << carry << " " << reg;
 }
 
-void ShiftLeftString(std::ostringstream& instr, const std::string& reg) {
+void ShiftLeftString(fmt::MemoryWriter& instr, const std::string& reg) {
     instr << "SLA " << reg;
 }
 
-void ShiftRightString(std::ostringstream& instr, const std::string& a_or_l, const std::string& reg) {
+void ShiftRightString(fmt::MemoryWriter& instr, const std::string& a_or_l, const std::string& reg) {
     instr << "SR" << a_or_l << " " << reg;
 }
 
-void SwapString(std::ostringstream& instr, const std::string& reg) {
+void SwapString(fmt::MemoryWriter& instr, const std::string& reg) {
     instr << "SWAP " << reg;
 }
 
-void TestBitString(std::ostringstream& instr, const std::string& bit, const std::string& reg) {
+void TestBitString(fmt::MemoryWriter& instr, const std::string& bit, const std::string& reg) {
     instr << "BIT " << bit << ", " << reg;
 }
 
-void ResetBitString(std::ostringstream& instr, const std::string& bit, const std::string& reg) {
+void ResetBitString(fmt::MemoryWriter& instr, const std::string& bit, const std::string& reg) {
     instr << "RES " << bit << ", " << reg;
 }
 
-void SetBitString(std::ostringstream& instr, const std::string& bit, const std::string& reg) {
+void SetBitString(fmt::MemoryWriter& instr, const std::string& bit, const std::string& reg) {
     instr << "SET " << bit << ", " << reg;
 }
 
-void UnknownOpcodeString(std::ostringstream& instr, const Memory& mem, const u16 pc) {
-    instr << "Unknown Opcode: ";
-    instr << std::hex << std::setfill('0') << std::setw(2) << std::uppercase;
-    instr << "0x" << static_cast<unsigned int>(mem.ReadMem(pc));
+void UnknownOpcodeString(fmt::MemoryWriter& instr, const Memory& mem, const u16 pc) {
+    instr.write("Unknown Opcode: 0x{0:0>2X}", mem.ReadMem(pc));
 }
 
-std::string Logging::Disassemble(const Memory& mem, const u16 pc) const {
-    std::ostringstream instr_stream;
+void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, const u16 pc) const {
+    instr_stream.write("\n");
 
     switch (mem.ReadMem(pc)) {
     // ******** 8-bit loads ********
@@ -2005,7 +1989,8 @@ std::string Logging::Disassemble(const Memory& mem, const u16 pc) const {
         UnknownOpcodeString(instr_stream, mem, pc);
         break;
     }
-    return instr_stream.str();
+
+    instr_stream.write("\n");
 }
 
 } // End namespace Gb
