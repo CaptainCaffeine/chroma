@@ -59,4 +59,4 @@ set(HEADERS
 
 add_executable(chroma ${SOURCES} ${HEADERS})
 
-target_link_libraries(chroma ${SDL2_LIBRARY})
+target_link_libraries(chroma PRIVATE ${SDL2_LIBRARY} fmt::fmt)
