@@ -17,6 +17,10 @@
 #pragma once
 
 #include <bitset>
+#include <type_traits>
+#include <array>
+
+#include "common/CommonTypes.h"
 
 template <typename T>
 constexpr T RotateRight(T value, unsigned int rotation) noexcept {
@@ -24,6 +28,23 @@ constexpr T RotateRight(T value, unsigned int rotation) noexcept {
 }
 
 template <typename T>
-T Popcount(T value) noexcept {
+std::size_t Popcount(T value) noexcept {
     return std::bitset<sizeof(T) * 8>(value).count();
+}
+
+template <typename T>
+constexpr std::make_signed_t<T> SignExtend(T value, unsigned int num_source_bits) noexcept {
+    static_assert(std::is_unsigned<T>(), "Non-arithmetic or signed type passed to SignExtend.");
+
+    const int shift_amount = sizeof(T) * 8 - num_source_bits;
+    return static_cast<std::make_signed_t<T>>(value << shift_amount) >> shift_amount;
+}
+
+constexpr unsigned int LowestSetBit(u32 value) noexcept {
+    constexpr std::array<unsigned int, 32> DeBruijnHashTable{{
+        0,  1,  28, 2,  29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4,  8,
+        31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6,  11, 5,  10, 9
+    }};
+
+    return DeBruijnHashTable[((value & -value) * 0x077CB531) >> 27];
 }

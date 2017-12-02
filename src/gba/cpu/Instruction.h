@@ -18,68 +18,48 @@
 
 #include <vector>
 #include <string>
-#include <unordered_map>
-
-#include <iostream>
-#include <iomanip>
+#include <functional>
+#include <utility>
 
 #include "common/CommonTypes.h"
 #include "common/CommonFuncs.h"
 
 namespace Gba {
 
-using Arm = u32;
-using Thumb = u16;
+class Cpu;
 
 template<typename T>
 class Instruction {
 public:
-    Instruction(const char* _disasm, const char* instr_layout)
+    template<typename ReturnType, typename... Args>
+    Instruction(const char* _disasm, const char* instr_layout, ReturnType(Cpu::* impl)(Args...))
             : disasm(_disasm) {
 
         CreateMasks(instr_layout);
+
+        impl_func = GetImplFunction(impl, std::index_sequence_for<Args...>{});
     }
 
     bool Match(T opcode) const {
         return (opcode & fixed_mask) == instr_mask;
     }
 
-    void GetFieldValues(T opcode) const {
-        std::unordered_map<char, int> values;
+    static std::vector<Instruction<T>> GetInstructionTable();
 
-        for (const auto& field : fields) {
-            int field_value = (opcode & field.mask) >> field.shift;
-            auto retval = values.emplace(field.name, field_value);
-
-            if (!retval.second) {
-                // If there's already a value for this field, it means this field's bits aren't consecutive,
-                // i.e. "01000110dmmmmddd". So we shift the value of the first half by the number of bits in
-                // the second half, and combine them.
-                int second_half_length = Popcount(field.mask);
-                int first_half = values[field.name];
-                values[field.name] = (first_half << second_half_length) | field_value;
-            }
-        }
-
-        //std::cout << disasm << "\n";
-        //for (const auto& value : values) {
-        //    std::cout << (value.first) << ": " << std::hex << std::uppercase << (value.second) << "\n";
-        //}
-        //std::cout << "\n";
-    }
+    std::function<int(Cpu& cpu, T opcode)> impl_func;
 private:
     static constexpr auto num_bits = sizeof(T) * 8;
 
-    const std::string disasm;
+    std::string disasm;
 
     T fixed_mask = 0;
     T instr_mask = 0;
 
     struct FieldMask {
-        FieldMask(T _mask, int _shift, char _name) : mask(_mask), shift(_shift), name(_name) {}
+        FieldMask(T _mask, int _shift) : mask(_mask), shift(_shift) {}
+
         T mask;
         int shift;
-        char name;
     };
 
     std::vector<FieldMask> fields;
@@ -94,7 +74,7 @@ private:
             const T bit_mask = 1 << shift;
 
             if (bit != last_bit && last_bit != '0' && last_bit != '1') {
-                fields.emplace_back(current_mask, shift + 1, last_bit);
+                fields.emplace_back(current_mask, shift + 1);
                 current_mask = 0;
             }
 
@@ -111,7 +91,14 @@ private:
             last_bit = bit;
         }
 
-        fields.emplace_back(current_mask, 0, last_bit);
+        fields.emplace_back(current_mask, 0);
+    }
+
+    template<typename ReturnType, typename... Args, std::size_t... Is>
+    auto GetImplFunction(ReturnType(Cpu::* impl)(Args...), std::index_sequence<Is...>) {
+        return [impl, fields = this->fields](Cpu& cpu, T opcode) -> ReturnType {
+            return (cpu.*impl)(static_cast<Args>((opcode & fields[Is].mask) >> fields[Is].shift)...);
+        };
     }
 };
 

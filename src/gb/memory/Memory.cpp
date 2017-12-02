@@ -53,7 +53,7 @@ Memory::Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima
     VRAMInit();
 }
 
-// Needed to declare unique_ptrs with forward declarations in the header file.
+// Needed to declare std::unique_ptr with forward-declared type in the header file.
 Memory::~Memory() = default;
 
 void Memory::IORegisterInit() {

@@ -24,6 +24,9 @@ set(SOURCES
     gba/memory/Memory.cpp
     gba/memory/CartridgeHeader.cpp
     gba/cpu/Cpu.cpp
+    gba/cpu/Instruction.cpp
+    gba/cpu/ArmOps.cpp
+    gba/cpu/ThumbOps.cpp
 
     common/Screenshot.cpp
 
@@ -50,7 +53,6 @@ set(HEADERS
     gba/core/Core.h
     gba/memory/Memory.h
     gba/cpu/Cpu.h
-    gba/cpu/Decoder.h
     gba/cpu/Instruction.h
 
     common/CommonTypes.h

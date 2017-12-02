@@ -29,7 +29,7 @@ Core::Core(Emu::SDLContext& context, const std::vector<u16>& rom)
     RegisterCallbacks();
 }
 
-// Needed to declare unique_ptrs with forward declarations in the header file.
+// Needed to declare std::unique_ptr with forward-declared type in the header file.
 Core::~Core() = default;
 
 void Core::EmulatorLoop() {
