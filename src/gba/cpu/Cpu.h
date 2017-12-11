@@ -41,7 +41,12 @@ private:
     Memory& mem;
 
     std::array<u32, 16> regs{};
-    u32 cpsr = irq_disable | fiq_disable | svc;
+    u32 cpsr = irq_disable | fiq_disable | static_cast<u32>(CpuMode::Svc);
+
+    std::array<u32, 16> spsr{};
+    std::array<u32, 16> sp_banked{};
+    std::array<u32, 16> lr_banked{};
+    std::array<u32, 5> fiq_regs{};
 
     const std::vector<Instruction<Thumb>> thumb_instructions;
     const std::vector<Instruction<Arm>> arm_instructions;
@@ -58,15 +63,15 @@ private:
                           irq_disable = 0x0000'0080,
                           fiq_disable = 0x0000'0040,
                           thumb_mode  = 0x0000'0020,
-                          mode        = 0x0000'001F};
+                          cpu_mode    = 0x0000'001F};
 
-    enum CpuMode : u32 {user   = 0x10,
-                        fiq    = 0x11,
-                        irq    = 0x12,
-                        svc    = 0x13,
-                        abort  = 0x17,
-                        undef  = 0x1B,
-                        system = 0x1F};
+    enum class CpuMode : u32 {User   = 0x10,
+                              Fiq    = 0x11,
+                              Irq    = 0x12,
+                              Svc    = 0x13,
+                              Abort  = 0x17,
+                              Undef  = 0x1B,
+                              System = 0x1F};
 
     enum class Condition {Equal         = 0b0000,
                           NotEqual      = 0b0001,
@@ -104,6 +109,13 @@ private:
     // Functions
     bool ThumbMode() const { return cpsr & thumb_mode; }
     bool ArmMode() const { return !(cpsr & thumb_mode); }
+
+    CpuMode CurrentCpuMode() const { return static_cast<CpuMode>(cpsr & cpu_mode); }
+    bool ValidCpuMode(u32 new_mode) const;
+    void CpuModeSwitch(CpuMode old_cpu_mode);
+    // Since bit 4 is 1 for all valid CPU modes, we ignore it when indexing banked registers.
+    std::size_t CurrentCpuModeIndex() const { return cpsr & 0xF; }
+    std::size_t CpuModeIndex(CpuMode mode) const { return static_cast<u32>(mode) & 0xF; }
 
     void SetSign(bool val)     { (val) ? (cpsr |= sign)     : (cpsr &= ~sign); }
     void SetZero(bool val)     { (val) ? (cpsr |= zero)     : (cpsr &= ~zero); }
@@ -373,9 +385,7 @@ public:
 
     // Branches
     int Arm_B(Condition cond, u32 imm24);
-
     int Arm_Bl(Condition cond, u32 imm24);
-
     int Arm_Bx(Condition cond, Reg m);
 
     // Moves
@@ -437,8 +447,8 @@ public:
 
     int Arm_Mrs(Condition cond, bool read_spsr, Reg d);
 
-    int Arm_MsrImm(Condition cond, bool read_spsr, u32 mask, u32 imm);
-    int Arm_MsrReg(Condition cond, bool read_spsr, u32 mask, Reg n);
+    int Arm_MsrImm(Condition cond, bool write_spsr, u32 mask, u32 imm);
+    int Arm_MsrReg(Condition cond, bool write_spsr, u32 mask, Reg n);
 
     int Arm_Swi(Condition cond, u32 imm);
 

@@ -1860,27 +1860,30 @@ int Cpu::Arm_Mcr(Condition cond, u32, Reg, Reg, u32 coproc, u32, Reg) {
     return 1;
 }
 
-int Cpu::Arm_Mrs(Condition cond, bool spsr, Reg d) {
+int Cpu::Arm_Mrs(Condition cond, bool read_spsr, Reg d) {
     assert(d != pc); // Unpredictable
+    assert(!read_spsr || (CurrentCpuMode() != CpuMode::User && CurrentCpuMode() != CpuMode::System)); // Unpredictable
 
     if (!ConditionPassed(cond)) {
         return 1;
     }
 
-    if (spsr) {
-        assert((cpsr & mode) != user && (cpsr & mode) != system); // Unpredictable
-        // CPU modes not yet implemented.
-        // regs[d] = spsr;
+    if (read_spsr) {
+        regs[d] = spsr[CurrentCpuModeIndex()];
     } else {
-        regs[d] = cpsr;
+        // The CPSR is read with the thumb bit masked out.
+        regs[d] = cpsr & ~thumb_mode;
     }
 
     return 1;
 }
 
-int Cpu::Arm_MsrImm(Condition cond, bool spsr, u32 mask, u32 imm) {
+int Cpu::Arm_MsrImm(Condition cond, bool write_spsr, u32 mask, u32 imm) {
+    const bool write_control_field = mask & 0x1;
+
     assert(mask != 0x0); // Unpredictable
-    assert(!((cpsr & mode) == user && (mask & 0x1))); // Cannot write the first byte of the CPSR in user mode.
+    assert(CurrentCpuMode() != CpuMode::User || !write_control_field); // Cannot write the control byte in user mode.
+    assert(!write_spsr || (CurrentCpuMode() != CpuMode::User && CurrentCpuMode() != CpuMode::System)); // Unpredictable
 
     if (!ConditionPassed(cond)) {
         return 1;
@@ -1888,26 +1891,36 @@ int Cpu::Arm_MsrImm(Condition cond, bool spsr, u32 mask, u32 imm) {
 
     imm = ArmExpandImmediate(imm);
 
+    assert(!write_control_field || ValidCpuMode(imm)); // Probably hangs the CPU.
+
     // The 4 bits of the "mask" field specify which bytes of the PSR to write.
     // On the ARM7TDMI, only the first and last bytes of the PSRs are used, so we only check the first and last bits.
     // We shift bit 4 by 25 instead of 21 so the last byte mask becomes 0xF0 instead of 0xFF.
     u32 psr_mask = ((mask & 0x1) | ((mask & 0x8) << 25)) * 0xFF;
 
-    if (spsr) {
-        assert((cpsr & mode) != user && (cpsr & mode) != system); // Unpredictable
-        // CPU modes not yet implemented.
-        // spsr = imm;
+    if (write_spsr) {
+        spsr[CurrentCpuModeIndex()] = imm & psr_mask;
     } else {
-        // The thumb bit is masked out when writing CPSR.
+        CpuMode old_cpu_mode = CurrentCpuMode();
+
+        // The thumb bit is masked out when writing the CPSR.
         cpsr = imm & psr_mask & ~thumb_mode;
+
+        if (CurrentCpuMode() != old_cpu_mode) {
+            CpuModeSwitch(old_cpu_mode);
+        }
     }
 
     return 1;
 }
 
-int Cpu::Arm_MsrReg(Condition cond, bool spsr, u32 mask, Reg n) {
-    assert(n != pc && mask != 0x0); // Unpredictable
-    assert(!((cpsr & mode) == user && (mask & 0x1))); // Cannot write the first byte of the CPSR in user mode.
+int Cpu::Arm_MsrReg(Condition cond, bool write_spsr, u32 mask, Reg n) {
+    const bool write_control_field = mask & 0x1;
+
+    assert(mask != 0x0); // Unpredictable
+    assert(CurrentCpuMode() != CpuMode::User || !write_control_field); // Cannot write the control byte in user mode.
+    assert(!write_spsr || (CurrentCpuMode() != CpuMode::User && CurrentCpuMode() != CpuMode::System)); // Unpredictable
+    assert(!write_control_field || ValidCpuMode(regs[n])); // Probably hangs the CPU.
 
     if (!ConditionPassed(cond)) {
         return 1;
@@ -1918,13 +1931,17 @@ int Cpu::Arm_MsrReg(Condition cond, bool spsr, u32 mask, Reg n) {
     // We shift bit 4 by 25 instead of 21 so the last byte mask becomes 0xF0 instead of 0xFF.
     u32 psr_mask = ((mask & 0x1) | ((mask & 0x8) << 25)) * 0xFF;
 
-    if (spsr) {
-        assert((cpsr & mode) != user && (cpsr & mode) != system); // Unpredictable
-        // CPU modes not yet implemented.
-        // spsr = imm;
+    if (write_spsr) {
+        spsr[CurrentCpuModeIndex()] = regs[n] & psr_mask;
     } else {
-        // The thumb bit is masked out when writing CPSR.
+        CpuMode old_cpu_mode = CurrentCpuMode();
+
+        // The thumb bit is masked out when writing the CPSR.
         cpsr = regs[n] & psr_mask & ~thumb_mode;
+
+        if (CurrentCpuMode() != old_cpu_mode) {
+            CpuModeSwitch(old_cpu_mode);
+        }
     }
 
     return 1;

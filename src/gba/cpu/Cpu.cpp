@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <algorithm>
+
 #include "gba/cpu/Cpu.h"
 #include "gba/cpu/Instruction.h"
 #include "gba/memory/Memory.h"
@@ -69,6 +71,35 @@ std::function<int(Cpu& cpu, Arm opcode)> Cpu::DecodeArm(Arm opcode) const {
     }
 
     return arm_instructions.back().impl_func;
+}
+
+bool Cpu::ValidCpuMode(u32 new_mode) const {
+    switch(static_cast<CpuMode>(new_mode & cpu_mode)) {
+    case CpuMode::User:
+    case CpuMode::Fiq:
+    case CpuMode::Irq:
+    case CpuMode::Svc:
+    case CpuMode::Abort:
+    case CpuMode::Undef:
+    case CpuMode::System:
+        return true;
+    default:
+        return false;
+    }
+}
+
+void Cpu::CpuModeSwitch(CpuMode old_cpu_mode) {
+    assert(old_cpu_mode != CurrentCpuMode());
+
+    sp_banked[CpuModeIndex(old_cpu_mode)] = regs[sp];
+    lr_banked[CpuModeIndex(old_cpu_mode)] = regs[lr];
+
+    regs[sp] = sp_banked[CurrentCpuModeIndex()];
+    regs[lr] = lr_banked[CurrentCpuModeIndex()];
+
+    if (old_cpu_mode == CpuMode::Fiq || CurrentCpuMode() == CpuMode::Fiq) {
+        std::swap_ranges(regs.begin() + 8, regs.begin() + 13, fiq_regs.begin());
+    }
 }
 
 Cpu::ImmediateShift Cpu::DecodeImmShift(ShiftType type, u32 imm5) {
