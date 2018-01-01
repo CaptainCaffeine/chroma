@@ -1828,7 +1828,7 @@ int Cpu::Arm_Cdp(Condition cond, u32, Reg, Reg, u32 coproc, u32, Reg) {
 
     // Access to any coprocessor besides CP14 generates an undefined instruction exception.
     if (coproc != 14) {
-        assert(false); // Undefined
+        TakeException(CpuMode::Undef);
     }
 
     return 1;
@@ -1841,7 +1841,7 @@ int Cpu::Arm_Ldc(Condition cond, bool p, bool u, bool d, bool w, Reg, Reg, u32 c
 
     // Access to any coprocessor besides CP14 generates an undefined instruction exception.
     if (coproc != 14 || (!p && !u && !d && !w)) {
-        assert(false); // Undefined
+        TakeException(CpuMode::Undef);
     }
 
     return 1;
@@ -1854,7 +1854,7 @@ int Cpu::Arm_Mcr(Condition cond, u32, Reg, Reg, u32 coproc, u32, Reg) {
 
     // Access to any coprocessor besides CP14 generates an undefined instruction exception.
     if (coproc != 14) {
-        assert(false); // Undefined
+        TakeException(CpuMode::Undef);
     }
 
     return 1;
@@ -1901,14 +1901,12 @@ int Cpu::Arm_MsrImm(Condition cond, bool write_spsr, u32 mask, u32 imm) {
     if (write_spsr) {
         spsr[CurrentCpuModeIndex()] = imm & psr_mask;
     } else {
-        CpuMode old_cpu_mode = CurrentCpuMode();
+        if (write_control_field) {
+            CpuModeSwitch(static_cast<CpuMode>(imm & cpu_mode));
+        }
 
         // The thumb bit is masked out when writing the CPSR.
         cpsr = imm & psr_mask & ~thumb_mode;
-
-        if (CurrentCpuMode() != old_cpu_mode) {
-            CpuModeSwitch(old_cpu_mode);
-        }
     }
 
     return 1;
@@ -1934,31 +1932,29 @@ int Cpu::Arm_MsrReg(Condition cond, bool write_spsr, u32 mask, Reg n) {
     if (write_spsr) {
         spsr[CurrentCpuModeIndex()] = regs[n] & psr_mask;
     } else {
-        CpuMode old_cpu_mode = CurrentCpuMode();
+        if (write_control_field) {
+            CpuModeSwitch(static_cast<CpuMode>(regs[n] & cpu_mode));
+        }
 
         // The thumb bit is masked out when writing the CPSR.
         cpsr = regs[n] & psr_mask & ~thumb_mode;
-
-        if (CurrentCpuMode() != old_cpu_mode) {
-            CpuModeSwitch(old_cpu_mode);
-        }
     }
 
     return 1;
 }
 
 int Cpu::Arm_Swi(Condition cond, u32) {
-    assert(false && "Exceptions unimplemented");
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    TakeException(CpuMode::Svc);
 
     return 1;
 }
 
 int Cpu::Arm_Undefined(u32) {
-    assert(false && "Exceptions unimplemented");
+    TakeException(CpuMode::Undef);
 
     return 1;
 }

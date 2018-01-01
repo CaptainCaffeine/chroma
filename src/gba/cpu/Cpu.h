@@ -46,7 +46,7 @@ private:
     std::array<u32, 16> spsr{};
     std::array<u32, 16> sp_banked{};
     std::array<u32, 16> lr_banked{};
-    std::array<u32, 5> fiq_regs{};
+    std::array<u32, 5> fiq_banked_regs{};
 
     const std::vector<Instruction<Thumb>> thumb_instructions;
     const std::vector<Instruction<Arm>> arm_instructions;
@@ -111,11 +111,14 @@ private:
     bool ArmMode() const { return !(cpsr & thumb_mode); }
 
     CpuMode CurrentCpuMode() const { return static_cast<CpuMode>(cpsr & cpu_mode); }
-    bool ValidCpuMode(u32 new_mode) const;
-    void CpuModeSwitch(CpuMode old_cpu_mode);
     // Since bit 4 is 1 for all valid CPU modes, we ignore it when indexing banked registers.
     std::size_t CurrentCpuModeIndex() const { return cpsr & 0xF; }
     std::size_t CpuModeIndex(CpuMode mode) const { return static_cast<u32>(mode) & 0xF; }
+
+    bool ValidCpuMode(u32 new_mode) const;
+    void CpuModeSwitch(CpuMode new_cpu_mode);
+
+    void TakeException(CpuMode exception_type);
 
     void SetSign(bool val)     { (val) ? (cpsr |= sign)     : (cpsr &= ~sign); }
     void SetZero(bool val)     { (val) ? (cpsr |= zero)     : (cpsr &= ~zero); }

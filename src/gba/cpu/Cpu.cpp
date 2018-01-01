@@ -88,18 +88,61 @@ bool Cpu::ValidCpuMode(u32 new_mode) const {
     }
 }
 
-void Cpu::CpuModeSwitch(CpuMode old_cpu_mode) {
-    assert(old_cpu_mode != CurrentCpuMode());
+void Cpu::CpuModeSwitch(CpuMode new_cpu_mode) {
+    sp_banked[CurrentCpuModeIndex()] = regs[sp];
+    lr_banked[CurrentCpuModeIndex()] = regs[lr];
 
-    sp_banked[CpuModeIndex(old_cpu_mode)] = regs[sp];
-    lr_banked[CpuModeIndex(old_cpu_mode)] = regs[lr];
+    regs[sp] = sp_banked[CpuModeIndex(new_cpu_mode)];
+    regs[lr] = lr_banked[CpuModeIndex(new_cpu_mode)];
 
-    regs[sp] = sp_banked[CurrentCpuModeIndex()];
-    regs[lr] = lr_banked[CurrentCpuModeIndex()];
-
-    if (old_cpu_mode == CpuMode::Fiq || CurrentCpuMode() == CpuMode::Fiq) {
-        std::swap_ranges(regs.begin() + 8, regs.begin() + 13, fiq_regs.begin());
+    // Swap R8-R12 with the banked values if switched to or from FIQ mode, unless we're "switching" from FIQ to FIQ.
+    if ((new_cpu_mode == CpuMode::Fiq || CurrentCpuMode() == CpuMode::Fiq) && new_cpu_mode != CurrentCpuMode()) {
+        std::swap_ranges(regs.begin() + 8, regs.begin() + 13, fiq_banked_regs.begin());
     }
+
+    cpsr = (cpsr & ~cpu_mode) | static_cast<u32>(new_cpu_mode);
+}
+
+void Cpu::TakeException(CpuMode exception_type) {
+    // Save current CPSR and switch to the new CPU mode.
+    spsr[CpuModeIndex(exception_type)] = cpsr;
+    CpuModeSwitch(exception_type);
+
+    // Update the LR with the correct value for the exception type.
+    // For IRQ, LR is the address of the instruction on which the IRQ occurred, plus 4.
+    // For SVC and Undefined, LR is the address of the instruction after the one that caused the exception.
+    if (ThumbMode()) {
+        if (exception_type == CpuMode::Irq) {
+            regs[lr] = regs[pc];
+        } else {
+            regs[lr] = regs[pc] - 2;
+        }
+    } else {
+        regs[lr] = regs[pc] - 4;
+    }
+
+    // Disable IRQs and switch to ARM mode.
+    cpsr |= irq_disable;
+    cpsr &= ~thumb_mode;
+
+    // Jump to the exception vector.
+    switch (exception_type) {
+    case CpuMode::Undef:
+        regs[pc] = 0x04;
+        break;
+    case CpuMode::Svc:
+        regs[pc] = 0x08;
+        break;
+    case CpuMode::Irq:
+        regs[pc] = 0x18;
+        break;
+    default:
+        // There are no abort or FIQ exceptions on the GBA.
+        assert(false);
+        break;
+    }
+
+    // IRQs have higher priority than SVCs and undefined instructions.
 }
 
 Cpu::ImmediateShift Cpu::DecodeImmShift(ShiftType type, u32 imm5) {

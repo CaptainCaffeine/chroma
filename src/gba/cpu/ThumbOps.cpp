@@ -333,7 +333,9 @@ int Cpu::Thumb_RorReg(Reg m, Reg d) {
 
 // Branches
 int Cpu::Thumb_BT1(Condition cond, u32 imm8) {
-    assert(cond != Condition::Always); // Undefined
+    if (cond == Condition::Always) {
+        TakeException(CpuMode::Undef);
+    }
 
     if (!ConditionPassed(cond)) {
         return 1;
@@ -649,13 +651,13 @@ int Cpu::Thumb_StrhReg(Reg m, Reg n, Reg t) {
 
 // Misc
 int Cpu::Thumb_Swi(u32) {
-    assert(false && "Exceptions unimplemented");
+    TakeException(CpuMode::Svc);
 
     return 1;
 }
 
 int Cpu::Thumb_Undefined(u16) {
-    assert(false && "Exceptions unimplemented");
+    TakeException(CpuMode::Undef);
 
     return 1;
 }
