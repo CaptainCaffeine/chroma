@@ -357,8 +357,8 @@ int Cpu::Thumb_BT2(u32 imm11) {
 }
 
 int Cpu::Thumb_BlH1(u32 imm11) {
-    // The next instruction must be BlH2.
-    assert((mem.ReadMem<u32>(regs[pc] - 2) & 0xF800) == 0xF800);
+    // Unpredictable if the next instruction is not BlH2. This apparently might not be an issue on the GBA.
+    assert((mem.ReadMem<u16>(regs[pc] - 2) & 0xF800) == 0xF800);
 
     s32 signed_imm32 = SignExtend(imm11 << 12, 23);
 
@@ -368,8 +368,8 @@ int Cpu::Thumb_BlH1(u32 imm11) {
 }
 
 int Cpu::Thumb_BlH2(u32 imm11) {
-    // The previous instruction must be BlH1.
-    assert((mem.ReadMem<u32>(regs[pc] - 6) & 0xF800) == 0xF000);
+    // Unpredictable if the previous instruction is not BlH1. This apparently might not be an issue on the GBA.
+    assert((mem.ReadMem<u16>(regs[pc] - 6) & 0xF800) == 0xF000);
 
     u32 next_instr_addr = regs[pc] - 2;
     Thumb_BranchWritePC(regs[lr] + (imm11 << 1));
