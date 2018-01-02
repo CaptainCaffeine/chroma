@@ -36,19 +36,31 @@ Cpu::~Cpu() = default;
 void Cpu::Execute(int cycles) {
     while (cycles > 0) {
         if (ThumbMode()) {
-            Thumb opcode = mem.ReadMem<Thumb>(regs[pc]);
-            regs[pc] += 2;
+            pipeline[0] = pipeline[1];
+            pipeline[1] = pipeline[2];
+            pipeline[2] = mem.ReadMem<Thumb>(regs[pc]);
+            u32 prefetch_pc = regs[pc];
 
-            auto impl = DecodeThumb(opcode);
+            auto impl = DecodeThumb(pipeline[0]);
+            cycles -= impl(*this, pipeline[0]);
 
-            cycles -= impl(*this, opcode);
+            if (regs[pc] == prefetch_pc) {
+                // Only increment the PC if the executing instruction didn't change it.
+                regs[pc] += 2;
+            }
         } else {
-            Arm opcode = mem.ReadMem<Arm>(regs[pc]);
-            regs[pc] += 4;
+            pipeline[0] = pipeline[1];
+            pipeline[1] = pipeline[2];
+            pipeline[2] = mem.ReadMem<Arm>(regs[pc]);
+            u32 prefetch_pc = regs[pc];
 
-            auto impl = DecodeArm(opcode);
+            auto impl = DecodeArm(pipeline[0]);
+            cycles -= impl(*this, pipeline[0]);
 
-            cycles -= impl(*this, opcode);
+            if (regs[pc] == prefetch_pc) {
+                // Only increment the PC if the executing instruction didn't change it.
+                regs[pc] += 4;
+            }
         }
     }
 }
@@ -141,6 +153,8 @@ void Cpu::TakeException(CpuMode exception_type) {
         assert(false);
         break;
     }
+
+    FlushPipeline();
 
     // IRQs have higher priority than SVCs and undefined instructions.
 }

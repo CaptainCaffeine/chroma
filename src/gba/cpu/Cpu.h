@@ -51,6 +51,8 @@ private:
     const std::vector<Instruction<Thumb>> thumb_instructions;
     const std::vector<Instruction<Arm>> arm_instructions;
 
+    std::array<u32, 3> pipeline{};
+
     // Constants
     using Reg = std::size_t;
     static constexpr Reg sp = 13, lr = 14, pc = 15;
@@ -119,6 +121,8 @@ private:
     bool ValidCpuMode(u32 new_mode) const;
     void CpuModeSwitch(CpuMode new_cpu_mode);
 
+    void FlushPipeline() { for (auto& p : pipeline) { p = 0; } }
+
     void TakeException(CpuMode exception_type);
     void ReturnFromException(u32 address);
 
@@ -164,10 +168,12 @@ private:
 
     void Thumb_BranchWritePC(u32 addr) {
         regs[pc] = addr & ~0x1;
+        FlushPipeline();
     }
 
     void Arm_BranchWritePC(u32 addr) {
         regs[pc] = addr & ~0x3;
+        FlushPipeline();
     }
 
     void BxWritePC(u32 addr) {
@@ -183,6 +189,8 @@ private:
             // Unpredictable if the lower 2 bits of the address are 0b10.
             assert(false);
         }
+
+        FlushPipeline();
     }
 
     void SetAllFlags(u64 result);
