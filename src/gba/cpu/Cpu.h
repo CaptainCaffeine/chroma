@@ -115,10 +115,12 @@ private:
     std::size_t CurrentCpuModeIndex() const { return cpsr & 0xF; }
     std::size_t CpuModeIndex(CpuMode mode) const { return static_cast<u32>(mode) & 0xF; }
 
+    bool HasSpsr() const { return CurrentCpuMode() != CpuMode::User && CurrentCpuMode() != CpuMode::System; }
     bool ValidCpuMode(u32 new_mode) const;
     void CpuModeSwitch(CpuMode new_cpu_mode);
 
     void TakeException(CpuMode exception_type);
+    void ReturnFromException(u32 address);
 
     void SetSign(bool val)     { (val) ? (cpsr |= sign)     : (cpsr &= ~sign); }
     void SetZero(bool val)     { (val) ? (cpsr |= zero)     : (cpsr &= ~zero); }
@@ -169,11 +171,11 @@ private:
     }
 
     void BxWritePC(u32 addr) {
-        if ((addr & 0b01) == 0b01) {
+        if ((addr & 0x1) == 0x1) {
             // Switch to Thumb mode.
             cpsr |= thumb_mode;
             regs[pc] = addr & ~0x1;
-        } else if ((addr & 0b10) == 0b00) {
+        } else if ((addr & 0x2) == 0x0) {
             // Switch to Arm mode.
             cpsr &= ~thumb_mode;
             regs[pc] = addr;
@@ -400,8 +402,8 @@ public:
     int Arm_MvnRegShifted(Condition cond, bool set_flags, Reg d, Reg s, ShiftType type, Reg m);
 
     // Loads
-    int Arm_Ldmi(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 reg_list);
-    int Arm_Ldmd(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 reg_list);
+    int Arm_Ldmi(Condition cond, bool pre_indexed, bool exception_return, bool writeback, Reg n, u32 reg_list);
+    int Arm_Ldmd(Condition cond, bool pre_indexed, bool exception_return, bool writeback, Reg n, u32 reg_list);
 
     int Arm_LdrImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm);
     int Arm_LdrReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm,
@@ -427,8 +429,8 @@ public:
     int Arm_PushA1(Condition cond, u32 reg_list);
     int Arm_PushA2(Condition cond, Reg t);
 
-    int Arm_Stmi(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 reg_list);
-    int Arm_Stmd(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 reg_list);
+    int Arm_Stmi(Condition cond, bool pre_indexed, bool store_user_regs, bool writeback, Reg n, u32 reg_list);
+    int Arm_Stmd(Condition cond, bool pre_indexed, bool store_user_regs, bool writeback, Reg n, u32 reg_list);
 
     int Arm_StrImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm);
     int Arm_StrReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm,

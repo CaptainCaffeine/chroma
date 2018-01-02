@@ -145,6 +145,18 @@ void Cpu::TakeException(CpuMode exception_type) {
     // IRQs have higher priority than SVCs and undefined instructions.
 }
 
+void Cpu::ReturnFromException(u32 address) {
+    u32 spsr_exception = spsr[CurrentCpuModeIndex()];
+    CpuModeSwitch(static_cast<CpuMode>(spsr_exception & cpu_mode));
+    cpsr = spsr_exception;
+
+    if (ThumbMode()) {
+        Thumb_BranchWritePC(address);
+    } else {
+        Arm_BranchWritePC(address);
+    }
+}
+
 Cpu::ImmediateShift Cpu::DecodeImmShift(ShiftType type, u32 imm5) {
     if (imm5 == 0) {
         switch (type) {

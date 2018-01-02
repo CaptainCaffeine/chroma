@@ -174,11 +174,8 @@ std::vector<Instruction<Arm>> Instruction<Arm>::GetInstructionTable() {
 
         {"LDC coproc, CRd, [Rn, #+/-imm]{!}","cccc110pudw1nnnnddddkkkkiiiiiiii", &Cpu::Arm_Ldc},
 
-        {"LDMI{P} Rn{!}, rlist",             "cccc100p10w1nnnnrrrrrrrrrrrrrrrr", &Cpu::Arm_Ldmi}, // LDM if p == 0
-        {"LDMD{P} Rn{!}, rlist",             "cccc100p00w1nnnnrrrrrrrrrrrrrrrr", &Cpu::Arm_Ldmd},
-
-        {"LDM{mode} Rn, rlist^",             "cccc100pu1w1nnnn1rrrrrrrrrrrrrrr", &Cpu::Arm_Undefined}, // Registers must contain PC.
-        {"LDM{mode} Rn, rlist^",             "cccc100pu101nnnn0rrrrrrrrrrrrrrr", &Cpu::Arm_Undefined}, // Registers cannot contain PC. Cannot be executed from User or System modes.
+        {"LDMI{P} Rn{!}, rlist{^}",          "cccc100p1ew1nnnnrrrrrrrrrrrrrrrr", &Cpu::Arm_Ldmi}, // LDM if p == 0
+        {"LDMD{P} Rn{!}, rlist{^}",          "cccc100p0ew1nnnnrrrrrrrrrrrrrrrr", &Cpu::Arm_Ldmd},
 
         // Disassembly different for post-indexed (p == 0). Disassemble as LDR*T when p == 0 && w == 1.
         {"LDR Rt, [Rn, {#+/-imm}]{!}",       "cccc010pu0w1nnnnttttiiiiiiiiiiii", &Cpu::Arm_LdrImm},
@@ -253,10 +250,8 @@ std::vector<Instruction<Arm>> Instruction<Arm>::GetInstructionTable() {
 
         {"STC coproc, CRd, [Rn, #+/-imm]{!}","cccc110pudw0nnnnddddkkkkiiiiiiii", &Cpu::Arm_Ldc},
 
-        {"STMI{P} Rn{!}, rlist",             "cccc100p10w0nnnnrrrrrrrrrrrrrrrr", &Cpu::Arm_Stmi}, // STM when p == 0
-        {"STMD{P} Rn{!}, rlist",             "cccc100p00w0nnnnrrrrrrrrrrrrrrrr", &Cpu::Arm_Stmd},
-
-        {"STM{mode} Rn, rlist^",             "cccc100pu100nnnnrrrrrrrrrrrrrrrr", &Cpu::Arm_Undefined}, // Stores user-mode regs, cannot be executed from User or System modes.
+        {"STMI{P} Rn{!}, rlist{^}",          "cccc100p1ew0nnnnrrrrrrrrrrrrrrrr", &Cpu::Arm_Stmi}, // STM when p == 0
+        {"STMD{P} Rn{!}, rlist{^}",          "cccc100p0ew0nnnnrrrrrrrrrrrrrrrr", &Cpu::Arm_Stmd},
 
         // Disassembly different for post-indexed (p == 0).
         {"STR Rt, [Rn, {#+/-imm}]{!}",       "cccc010pu0w0nnnnttttiiiiiiiiiiii", &Cpu::Arm_StrImm},

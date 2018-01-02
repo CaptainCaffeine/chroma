@@ -30,7 +30,11 @@ int Cpu::Arm_AdcImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm) {
     u64 result = AddWithCarry(regs[n], imm, GetCarry());
 
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetAllFlags(set_flags, result);
@@ -50,7 +54,11 @@ int Cpu::Arm_AdcReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
     u64 result = AddWithCarry(regs[n], shifted_reg, GetCarry());
 
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetAllFlags(set_flags, result);
@@ -84,7 +92,11 @@ int Cpu::Arm_AddImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm) {
 
     u64 result = AddWithCarry(regs[n], imm, 0);
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetAllFlags(set_flags, result);
@@ -104,7 +116,11 @@ int Cpu::Arm_AddReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
     u64 result = AddWithCarry(regs[n], shifted_reg, 0);
 
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetAllFlags(set_flags, result);
@@ -256,7 +272,11 @@ int Cpu::Arm_RsbImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm) {
 
     u64 result = AddWithCarry(~regs[n], imm, 1);
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetAllFlags(set_flags, result);
@@ -276,7 +296,11 @@ int Cpu::Arm_RsbReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
     u64 result = AddWithCarry(~regs[n], shifted_reg, 1);
 
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetAllFlags(set_flags, result);
@@ -311,7 +335,11 @@ int Cpu::Arm_RscImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm) {
     u64 result = AddWithCarry(~regs[n], imm, GetCarry());
 
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetAllFlags(set_flags, result);
@@ -331,7 +359,11 @@ int Cpu::Arm_RscReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
     u64 result = AddWithCarry(~regs[n], shifted_reg, GetCarry());
 
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetAllFlags(set_flags, result);
@@ -366,7 +398,11 @@ int Cpu::Arm_SbcImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm) {
     u64 result = AddWithCarry(regs[n], ~imm, GetCarry());
 
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetAllFlags(set_flags, result);
@@ -386,7 +422,11 @@ int Cpu::Arm_SbcReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
     u64 result = AddWithCarry(regs[n], ~shifted_reg, GetCarry());
 
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetAllFlags(set_flags, result);
@@ -456,7 +496,11 @@ int Cpu::Arm_SubImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm) {
     u64 result = AddWithCarry(regs[n], ~imm, 1);
 
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetAllFlags(set_flags, result);
@@ -476,7 +520,11 @@ int Cpu::Arm_SubReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
     u64 result = AddWithCarry(regs[n], ~shifted_reg, 1);
 
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetAllFlags(set_flags, result);
@@ -546,7 +594,11 @@ int Cpu::Arm_AndImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm) {
 
     u32 result = regs[n] & expanded_imm.result;
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetSignZeroCarryFlags(set_flags, result, expanded_imm.carry);
@@ -566,7 +618,11 @@ int Cpu::Arm_AndReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
     u32 result = regs[n] & shifted_reg.result;
 
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetSignZeroCarryFlags(set_flags, result, shifted_reg.carry);
@@ -600,7 +656,11 @@ int Cpu::Arm_BicImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm) {
 
     u32 result = regs[n] & ~expanded_imm.result;
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetSignZeroCarryFlags(set_flags, result, expanded_imm.carry);
@@ -620,7 +680,11 @@ int Cpu::Arm_BicReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
     u32 result = regs[n] & ~shifted_reg.result;
 
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetSignZeroCarryFlags(set_flags, result, shifted_reg.carry);
@@ -654,7 +718,11 @@ int Cpu::Arm_EorImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm) {
 
     u32 result = regs[n] ^ expanded_imm.result;
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetSignZeroCarryFlags(set_flags, result, expanded_imm.carry);
@@ -674,7 +742,11 @@ int Cpu::Arm_EorReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
     u32 result = regs[n] ^ shifted_reg.result;
 
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetSignZeroCarryFlags(set_flags, result, shifted_reg.carry);
@@ -708,7 +780,11 @@ int Cpu::Arm_OrrImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm) {
 
     u32 result = regs[n] | expanded_imm.result;
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetSignZeroCarryFlags(set_flags, result, expanded_imm.carry);
@@ -728,7 +804,11 @@ int Cpu::Arm_OrrReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
     u32 result = regs[n] | shifted_reg.result;
 
     if (d == pc) {
-        Arm_BranchWritePC(result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(result);
+        } else {
+            Arm_BranchWritePC(result);
+        }
     } else {
         regs[d] = result;
         ConditionalSetSignZeroCarryFlags(set_flags, result, shifted_reg.carry);
@@ -850,7 +930,11 @@ int Cpu::Arm_AsrImm(Condition cond, bool set_flags, Reg d, u32 imm, Reg m) {
     ResultWithCarry shifted_reg = Shift_C(regs[m], ShiftType::ASR, shift.imm, GetCarry());
 
     if (d == pc) {
-        Arm_BranchWritePC(shifted_reg.result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(shifted_reg.result);
+        } else {
+            Arm_BranchWritePC(shifted_reg.result);
+        }
     } else {
         regs[d] = shifted_reg.result;
         ConditionalSetSignZeroCarryFlags(set_flags, shifted_reg.result, shifted_reg.carry);
@@ -883,7 +967,11 @@ int Cpu::Arm_LslImm(Condition cond, bool set_flags, Reg d, u32 imm, Reg m) {
     ResultWithCarry shifted_reg = Shift_C(regs[m], ShiftType::LSL, imm, GetCarry());
 
     if (d == pc) {
-        Arm_BranchWritePC(shifted_reg.result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(shifted_reg.result);
+        } else {
+            Arm_BranchWritePC(shifted_reg.result);
+        }
     } else {
         regs[d] = shifted_reg.result;
         ConditionalSetSignZeroCarryFlags(set_flags, shifted_reg.result, shifted_reg.carry);
@@ -917,7 +1005,11 @@ int Cpu::Arm_LsrImm(Condition cond, bool set_flags, Reg d, u32 imm, Reg m) {
     ResultWithCarry shifted_reg = Shift_C(regs[m], ShiftType::LSR, shift.imm, GetCarry());
 
     if (d == pc) {
-        Arm_BranchWritePC(shifted_reg.result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(shifted_reg.result);
+        } else {
+            Arm_BranchWritePC(shifted_reg.result);
+        }
     } else {
         regs[d] = shifted_reg.result;
         ConditionalSetSignZeroCarryFlags(set_flags, shifted_reg.result, shifted_reg.carry);
@@ -952,7 +1044,11 @@ int Cpu::Arm_RorImm(Condition cond, bool set_flags, Reg d, u32 imm, Reg m) {
     ResultWithCarry shifted_reg = Shift_C(regs[m], shift.type, shift.imm, GetCarry());
 
     if (d == pc) {
-        Arm_BranchWritePC(shifted_reg.result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(shifted_reg.result);
+        } else {
+            Arm_BranchWritePC(shifted_reg.result);
+        }
     } else {
         regs[d] = shifted_reg.result;
         ConditionalSetSignZeroCarryFlags(set_flags, shifted_reg.result, shifted_reg.carry);
@@ -1021,7 +1117,11 @@ int Cpu::Arm_MovImm(Condition cond, bool set_flags, Reg d, u32 imm) {
     ResultWithCarry expanded_imm = ArmExpandImmediate_C(imm);
 
     if (d == pc) {
-        Arm_BranchWritePC(expanded_imm.result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(expanded_imm.result);
+        } else {
+            Arm_BranchWritePC(expanded_imm.result);
+        }
     } else {
         regs[d] = expanded_imm.result;
         ConditionalSetSignZeroCarryFlags(set_flags, expanded_imm.result, expanded_imm.carry);
@@ -1036,7 +1136,11 @@ int Cpu::Arm_MovReg(Condition cond, bool set_flags, Reg d, Reg m) {
     }
 
     if (d == pc) {
-        Arm_BranchWritePC(regs[m]);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(regs[m]);
+        } else {
+            Arm_BranchWritePC(regs[m]);
+        }
     } else {
         regs[d] = regs[m];
         ConditionalSetSignZeroFlags(set_flags, regs[m]);
@@ -1054,7 +1158,11 @@ int Cpu::Arm_MvnImm(Condition cond, bool set_flags, Reg d, u32 imm) {
     expanded_imm.result = ~expanded_imm.result;
 
     if (d == pc) {
-        Arm_BranchWritePC(expanded_imm.result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(expanded_imm.result);
+        } else {
+            Arm_BranchWritePC(expanded_imm.result);
+        }
     } else {
         regs[d] = expanded_imm.result;
         ConditionalSetSignZeroCarryFlags(set_flags, expanded_imm.result, expanded_imm.carry);
@@ -1074,7 +1182,11 @@ int Cpu::Arm_MvnReg(Condition cond, bool set_flags, Reg d, u32 imm, ShiftType ty
     shifted_reg.result = ~shifted_reg.result;
 
     if (d == pc) {
-        Arm_BranchWritePC(shifted_reg.result);
+        if (set_flags && HasSpsr()) {
+            ReturnFromException(shifted_reg.result);
+        } else {
+            Arm_BranchWritePC(shifted_reg.result);
+        }
     } else {
         regs[d] = shifted_reg.result;
         ConditionalSetSignZeroCarryFlags(set_flags, shifted_reg.result, shifted_reg.carry);
@@ -1100,7 +1212,7 @@ int Cpu::Arm_MvnRegShifted(Condition cond, bool set_flags, Reg d, Reg s, ShiftTy
 }
 
 // Loads
-int Cpu::Arm_Ldmi(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 reg_list) {
+int Cpu::Arm_Ldmi(Condition cond, bool pre_indexed, bool exception_return, bool writeback, Reg n, u32 reg_list) {
     assert(n != pc && Popcount(reg_list) != 0); // Unpredictable
 
     if (!ConditionPassed(cond)) {
@@ -1113,6 +1225,14 @@ int Cpu::Arm_Ldmi(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 r
         addr += 4;
     }
 
+    // Loading user regs is unpredictable in User and System modes. I assume it just does a normal LDM in that case.
+    bool load_user_regs = exception_return && !rlist[pc] && HasSpsr();
+    CpuMode current_cpu_mode;
+    if (load_user_regs) {
+        current_cpu_mode = CurrentCpuMode();
+        CpuModeSwitch(CpuMode::User);
+    }
+
     for (Reg i = 0; i < 15; ++i) {
         if (rlist[i]) {
             // Reads must be aligned.
@@ -1121,8 +1241,8 @@ int Cpu::Arm_Ldmi(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 r
         }
     }
 
-    if (rlist[pc]) {
-        Arm_BranchWritePC(mem.ReadMem<u32>(addr & ~0x3));
+    if (load_user_regs) {
+        CpuModeSwitch(current_cpu_mode);
     }
 
     // Only write back to Rn if it wasn't in the register list (ARM7TDMI behaviour).
@@ -1130,10 +1250,18 @@ int Cpu::Arm_Ldmi(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 r
         regs[n] += 4 * rlist.count();
     }
 
+    if (rlist[pc]) {
+        if (exception_return && HasSpsr()) {
+            ReturnFromException(mem.ReadMem<u32>(addr & ~0x3));
+        } else {
+            Arm_BranchWritePC(mem.ReadMem<u32>(addr & ~0x3));
+        }
+    }
+
     return 1;
 }
 
-int Cpu::Arm_Ldmd(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 reg_list) {
+int Cpu::Arm_Ldmd(Condition cond, bool pre_indexed, bool exception_return, bool writeback, Reg n, u32 reg_list) {
     assert(n != pc && Popcount(reg_list) != 0); // Unpredictable
 
     if (!ConditionPassed(cond)) {
@@ -1146,6 +1274,14 @@ int Cpu::Arm_Ldmd(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 r
         addr += 4;
     }
 
+    // Loading user regs is unpredictable in User and System modes. I assume it just does a normal LDM in that case.
+    bool load_user_regs = exception_return && !rlist[pc] && HasSpsr();
+    CpuMode current_cpu_mode;
+    if (load_user_regs) {
+        current_cpu_mode = CurrentCpuMode();
+        CpuModeSwitch(CpuMode::User);
+    }
+
     for (Reg i = 0; i < 15; ++i) {
         if (rlist[i]) {
             // Reads must be aligned.
@@ -1154,13 +1290,21 @@ int Cpu::Arm_Ldmd(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 r
         }
     }
 
-    if (rlist[pc]) {
-        Arm_BranchWritePC(mem.ReadMem<u32>(addr & ~0x3));
+    if (load_user_regs) {
+        CpuModeSwitch(current_cpu_mode);
     }
 
     // Only write back to Rn if it wasn't in the register list (ARM7TDMI behaviour).
     if (writeback && !rlist[n]) {
         regs[n] -= 4 * rlist.count();
+    }
+
+    if (rlist[pc]) {
+        if (exception_return && HasSpsr()) {
+            ReturnFromException(mem.ReadMem<u32>(addr & ~0x3));
+        } else {
+            Arm_BranchWritePC(mem.ReadMem<u32>(addr & ~0x3));
+        }
     }
 
     return 1;
@@ -1562,7 +1706,7 @@ int Cpu::Arm_PushA2(Condition cond, Reg t) {
     return 1;
 }
 
-int Cpu::Arm_Stmi(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 reg_list) {
+int Cpu::Arm_Stmi(Condition cond, bool pre_indexed, bool store_user_regs, bool writeback, Reg n, u32 reg_list) {
     assert(n != pc && Popcount(reg_list) != 0); // Unpredictable
 
     if (!ConditionPassed(cond)) {
@@ -1575,10 +1719,18 @@ int Cpu::Arm_Stmi(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 r
         addr += 4;
     }
 
+    // Storing user regs is unpredictable in User and System modes. I assume it just does a normal STM in that case.
+    store_user_regs = store_user_regs && HasSpsr();
+    CpuMode current_cpu_mode;
+    if (store_user_regs) {
+        current_cpu_mode = CurrentCpuMode();
+        CpuModeSwitch(CpuMode::User);
+    }
+
     for (Reg i = 0; i < 16; ++i) {
         if (rlist[i]) {
             // Writes are always aligned.
-            if (i == n && n != LowestSetBit(reg_list)) {
+            if (i == n && writeback && n != LowestSetBit(reg_list)) {
                 // Store the new Rn value if it's not the first register in the list.
                 mem.WriteMem(addr, static_cast<u32>(regs[n] + 4 * rlist.count()));
             } else {
@@ -1588,6 +1740,10 @@ int Cpu::Arm_Stmi(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 r
         }
     }
 
+    if (store_user_regs) {
+        CpuModeSwitch(current_cpu_mode);
+    }
+
     if (writeback) {
         regs[n] += 4 * rlist.count();
     }
@@ -1595,7 +1751,7 @@ int Cpu::Arm_Stmi(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 r
     return 1;
 }
 
-int Cpu::Arm_Stmd(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 reg_list) {
+int Cpu::Arm_Stmd(Condition cond, bool pre_indexed, bool store_user_regs, bool writeback, Reg n, u32 reg_list) {
     assert(n != pc && Popcount(reg_list) != 0); // Unpredictable
 
     if (!ConditionPassed(cond)) {
@@ -1608,10 +1764,18 @@ int Cpu::Arm_Stmd(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 r
         addr += 4;
     }
 
+    // Storing user regs is unpredictable in User and System modes. I assume it just does a normal STM in that case.
+    store_user_regs = store_user_regs && HasSpsr();
+    CpuMode current_cpu_mode;
+    if (store_user_regs) {
+        current_cpu_mode = CurrentCpuMode();
+        CpuModeSwitch(CpuMode::User);
+    }
+
     for (Reg i = 0; i < 16; ++i) {
         if (rlist[i]) {
             // Writes are always aligned.
-            if (i == n && n != LowestSetBit(reg_list)) {
+            if (i == n && writeback && n != LowestSetBit(reg_list)) {
                 // Store the new Rn value if it's not the first register in the list.
                 mem.WriteMem(addr, static_cast<u32>(regs[n] - 4 * rlist.count()));
             } else {
@@ -1619,6 +1783,10 @@ int Cpu::Arm_Stmd(Condition cond, bool pre_indexed, bool writeback, Reg n, u32 r
             }
             addr += 4;
         }
+    }
+
+    if (store_user_regs) {
+        CpuModeSwitch(current_cpu_mode);
     }
 
     if (writeback) {
@@ -1862,7 +2030,7 @@ int Cpu::Arm_Mcr(Condition cond, u32, Reg, Reg, u32 coproc, u32, Reg) {
 
 int Cpu::Arm_Mrs(Condition cond, bool read_spsr, Reg d) {
     assert(d != pc); // Unpredictable
-    assert(!read_spsr || (CurrentCpuMode() != CpuMode::User && CurrentCpuMode() != CpuMode::System)); // Unpredictable
+    assert(!read_spsr || HasSpsr()); // Unpredictable
 
     if (!ConditionPassed(cond)) {
         return 1;
@@ -1879,11 +2047,15 @@ int Cpu::Arm_Mrs(Condition cond, bool read_spsr, Reg d) {
 }
 
 int Cpu::Arm_MsrImm(Condition cond, bool write_spsr, u32 mask, u32 imm) {
+    if (CurrentCpuMode() == CpuMode::User) {
+        // Cannot write the control byte in user mode.
+        mask &= ~0x1;
+    }
+
     const bool write_control_field = mask & 0x1;
 
     assert(mask != 0x0); // Unpredictable
-    assert(CurrentCpuMode() != CpuMode::User || !write_control_field); // Cannot write the control byte in user mode.
-    assert(!write_spsr || (CurrentCpuMode() != CpuMode::User && CurrentCpuMode() != CpuMode::System)); // Unpredictable
+    assert(!write_spsr || HasSpsr()); // Unpredictable
 
     if (!ConditionPassed(cond)) {
         return 1;
@@ -1913,11 +2085,15 @@ int Cpu::Arm_MsrImm(Condition cond, bool write_spsr, u32 mask, u32 imm) {
 }
 
 int Cpu::Arm_MsrReg(Condition cond, bool write_spsr, u32 mask, Reg n) {
+    if (CurrentCpuMode() == CpuMode::User) {
+        // Cannot write the control byte in user mode.
+        mask &= ~0x1;
+    }
+
     const bool write_control_field = mask & 0x1;
 
     assert(mask != 0x0); // Unpredictable
-    assert(CurrentCpuMode() != CpuMode::User || !write_control_field); // Cannot write the control byte in user mode.
-    assert(!write_spsr || (CurrentCpuMode() != CpuMode::User && CurrentCpuMode() != CpuMode::System)); // Unpredictable
+    assert(!write_spsr || HasSpsr()); // Unpredictable
     assert(!write_control_field || ValidCpuMode(regs[n])); // Probably hangs the CPU.
 
     if (!ConditionPassed(cond)) {
