@@ -190,7 +190,6 @@ private:
     void SetHalf(bool val)  { (val) ? (regs.reg8[F] |= half)  : (regs.reg8[F] &= ~half);  }
     void SetCarry(bool val) { (val) ? (regs.reg8[F] |= carry) : (regs.reg8[F] &= ~carry); }
 
-    // Getters
     u8 Zero()  const { return (regs.reg8[F] & zero)  >> 7; }
     u8 Sub()   const { return (regs.reg8[F] & sub)   >> 6; }
     u8 Half()  const { return (regs.reg8[F] & half)  >> 5; }

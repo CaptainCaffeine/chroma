@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <bitset>
+#include <cassert>
 
 #include "gba/cpu/Cpu.h"
 #include "gba/memory/Memory.h"
@@ -524,7 +525,7 @@ int Cpu::Thumb_LdrshReg(Reg m, Reg n, Reg t) {
 }
 
 int Cpu::Thumb_Pop(bool p, u32 reg_list) {
-    assert(Popcount(reg_list) != 0); // Unpredictable
+    assert(p || Popcount(reg_list) != 0); // Unpredictable
 
     const std::bitset<8> rlist{reg_list};
     u32 addr = regs[sp];
@@ -549,7 +550,7 @@ int Cpu::Thumb_Pop(bool p, u32 reg_list) {
 
 // Stores
 int Cpu::Thumb_Push(bool m, u32 reg_list) {
-    assert(Popcount(reg_list) != 0); // Unpredictable
+    assert(m || Popcount(reg_list) != 0); // Unpredictable
 
     const std::bitset<8> rlist{reg_list};
     regs[sp] -= 4 * rlist.count();

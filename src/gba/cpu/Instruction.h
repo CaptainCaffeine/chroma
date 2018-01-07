@@ -27,26 +27,36 @@
 namespace Gba {
 
 class Cpu;
+class Disassembler;
 
 template<typename T>
 class Instruction {
 public:
-    template<typename ReturnType, typename... Args>
-    Instruction(const char* _disasm, const char* instr_layout, ReturnType(Cpu::* impl)(Args...))
+    template<typename... Args>
+    Instruction(const char* _disasm, const char* instr_layout, int(Cpu::* impl)(Args...))
             : disasm(_disasm) {
 
-        CreateMasks(instr_layout);
+        auto fields = CreateMasks(instr_layout);
+        impl_func = GetImplFunction(impl, fields, std::index_sequence_for<Args...>{});
+    }
 
-        impl_func = GetImplFunction(impl, std::index_sequence_for<Args...>{});
+    template<typename... Args>
+    Instruction(const char* _disasm, const char* instr_layout, std::string(Disassembler::* impl)(Args...))
+            : disasm(_disasm) {
+
+        auto fields = CreateMasks(instr_layout);
+        disasm_func = GetImplFunction(impl, fields, std::index_sequence_for<Args...>{});
     }
 
     bool Match(T opcode) const {
         return (opcode & fixed_mask) == instr_mask;
     }
 
+    template<typename Dispatcher>
     static std::vector<Instruction<T>> GetInstructionTable();
 
     std::function<int(Cpu& cpu, T opcode)> impl_func;
+    std::function<std::string(Disassembler& dis, T opcode)> disasm_func;
 private:
     static constexpr auto num_bits = sizeof(T) * 8;
 
@@ -62,11 +72,10 @@ private:
         int shift;
     };
 
-    std::vector<FieldMask> fields;
-
-    void CreateMasks(const std::string& instr_layout) {
+    std::vector<FieldMask> CreateMasks(const std::string& instr_layout) {
         char last_bit = '0';
         T current_mask = 0;
+        std::vector<FieldMask> fields;
 
         for (std::size_t i = 0; i < instr_layout.size(); ++i) {
             const char bit = instr_layout[i];
@@ -92,12 +101,14 @@ private:
         }
 
         fields.emplace_back(current_mask, 0);
+
+        return fields;
     }
 
-    template<typename ReturnType, typename... Args, std::size_t... Is>
-    auto GetImplFunction(ReturnType(Cpu::* impl)(Args...), std::index_sequence<Is...>) {
-        return [impl, fields = this->fields](Cpu& cpu, T opcode) -> ReturnType {
-            return (cpu.*impl)(static_cast<Args>((opcode & fields[Is].mask) >> fields[Is].shift)...);
+    template<typename ReturnType, typename D, typename... Args, std::size_t... Is>
+    auto GetImplFunction(ReturnType(D::* impl)(Args...), std::vector<FieldMask> fields, std::index_sequence<Is...>) {
+        return [impl, fields](D& dis, T opcode) -> ReturnType {
+            return (dis.*impl)(static_cast<Args>((opcode & fields[Is].mask) >> fields[Is].shift)...);
         };
     }
 };

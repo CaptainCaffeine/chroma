@@ -19,17 +19,25 @@
 #include <array>
 #include <vector>
 #include <functional>
-#include <cassert>
+#include <memory>
 
 #include "common/CommonTypes.h"
 #include "common/CommonFuncs.h"
+#include "gba/core/Enums.h"
 
 namespace Gba {
 
 class Memory;
+class Disassembler;
 
 template<typename T>
 class Instruction;
+
+// Declared outside of class for Disassembler.
+struct ImmediateShift {
+    ShiftType type;
+    u32 imm;
+};
 
 class Cpu {
 public:
@@ -37,8 +45,20 @@ public:
     ~Cpu();
 
     void Execute(int cycles);
+
+    // Public for Disassembler.
+    u32 GetPc() const { return regs[pc]; };
+    static ImmediateShift DecodeImmShift(ShiftType type, u32 imm5);
+    static constexpr u32 ArmExpandImmediate(u32 value) noexcept {
+        const u32 base_value = value & 0xFF;
+        const u32 rotation = 2 * ((value >> 8) & 0x0F);
+
+        return RotateRight(base_value, rotation);
+    }
+
 private:
     Memory& mem;
+    std::unique_ptr<Disassembler> disasm;
 
     std::array<u32, 16> regs{};
     u32 cpsr = irq_disable | fiq_disable | static_cast<u32>(CpuMode::Svc);
@@ -75,37 +95,10 @@ private:
                               Undef  = 0x1B,
                               System = 0x1F};
 
-    enum class Condition {Equal         = 0b0000,
-                          NotEqual      = 0b0001,
-                          CarrySet      = 0b0010,
-                          CarryClear    = 0b0011,
-                          Minus         = 0b0100,
-                          Plus          = 0b0101,
-                          OverflowSet   = 0b0110,
-                          OverflowClear = 0b0111,
-                          Higher        = 0b1000,
-                          LowerSame     = 0b1001,
-                          GreaterEqual  = 0b1010,
-                          LessThan      = 0b1011,
-                          GreaterThan   = 0b1100,
-                          LessEqual     = 0b1101,
-                          Always        = 0b1110};
-
-    enum class ShiftType {LSL = 0,
-                          LSR = 1,
-                          ASR = 2,
-                          ROR = 3,
-                          RRX = 4};
-
     // Types
     struct ResultWithCarry {
         u32 result;
         u32 carry;
-    };
-
-    struct ImmediateShift {
-        ShiftType type;
-        u32 imm;
     };
 
     // Functions
@@ -140,20 +133,12 @@ private:
     std::function<int(Cpu& cpu, Arm opcode)> DecodeArm(Arm opcode) const;
 
     // ARM primitives
-    static constexpr u32 ArmExpandImmediate(u32 value) noexcept {
-        const u32 base_value = value & 0xFF;
-        const u32 rotation = 2 * ((value >> 8) & 0x0F);
-
-        return RotateRight(base_value, rotation);
-    }
-
     static constexpr ResultWithCarry ArmExpandImmediate_C(u32 value) noexcept {
         const u32 result = ArmExpandImmediate(value);
 
         return {result, result >> 31};
     }
 
-    static ImmediateShift DecodeImmShift(ShiftType type, u32 imm5);
     static u32 Shift(u32 value, ShiftType type, int shift_amount, u32 carry);
     static ResultWithCarry Shift_C(u32 value, ShiftType type, int shift_amount, u32 carry);
     static ResultWithCarry LogicalShiftLeft_C(u32 value, int shift_amount);
@@ -176,22 +161,7 @@ private:
         FlushPipeline();
     }
 
-    void BxWritePC(u32 addr) {
-        if ((addr & 0x1) == 0x1) {
-            // Switch to Thumb mode.
-            cpsr |= thumb_mode;
-            regs[pc] = addr & ~0x1;
-        } else if ((addr & 0x2) == 0x0) {
-            // Switch to Arm mode.
-            cpsr &= ~thumb_mode;
-            regs[pc] = addr;
-        } else {
-            // Unpredictable if the lower 2 bits of the address are 0b10.
-            assert(false);
-        }
-
-        FlushPipeline();
-    }
+    void BxWritePC(u32 addr);
 
     void SetAllFlags(u64 result);
     void SetSignZeroCarryFlags(u32 result, u32 carry);

@@ -27,6 +27,9 @@ set(SOURCES
     gba/cpu/Instruction.cpp
     gba/cpu/ArmOps.cpp
     gba/cpu/ThumbOps.cpp
+    gba/cpu/Disassembler.cpp
+    gba/cpu/ArmDisasm.cpp
+    gba/cpu/ThumbDisasm.cpp
 
     common/Screenshot.cpp
 
@@ -51,9 +54,11 @@ set(HEADERS
     gb/logging/Logging.h
 
     gba/core/Core.h
+    gba/core/Enums.h
     gba/memory/Memory.h
     gba/cpu/Cpu.h
     gba/cpu/Instruction.h
+    gba/cpu/Disassembler.h
 
     common/CommonTypes.h
     common/CommonFuncs.h

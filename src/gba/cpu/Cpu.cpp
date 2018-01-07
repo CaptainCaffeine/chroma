@@ -15,19 +15,22 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
+#include <cassert>
 
 #include "gba/cpu/Cpu.h"
 #include "gba/cpu/Instruction.h"
+#include "gba/cpu/Disassembler.h"
 #include "gba/memory/Memory.h"
 
 namespace Gba {
 
 Cpu::Cpu(Memory& memory)
         : mem(memory)
-        , thumb_instructions(Instruction<Thumb>::GetInstructionTable())
-        , arm_instructions(Instruction<Arm>::GetInstructionTable()) {
+        , disasm(std::make_unique<Disassembler>(memory, this))
+        , thumb_instructions(Instruction<Thumb>::GetInstructionTable<Cpu>())
+        , arm_instructions(Instruction<Arm>::GetInstructionTable<Cpu>()) {
 
-    regs[pc] = 0x80000B8;
+    regs[pc] = 0x0800'0000;
 }
 
 // Needed to declare std::vector with forward-declared type in the header file.
@@ -41,6 +44,7 @@ void Cpu::Execute(int cycles) {
             pipeline[2] = mem.ReadMem<Thumb>(regs[pc]);
             u32 prefetch_pc = regs[pc];
 
+            disasm->DisassembleThumb(pipeline[0]);
             auto impl = DecodeThumb(pipeline[0]);
             cycles -= impl(*this, pipeline[0]);
 
@@ -54,6 +58,7 @@ void Cpu::Execute(int cycles) {
             pipeline[2] = mem.ReadMem<Arm>(regs[pc]);
             u32 prefetch_pc = regs[pc];
 
+            disasm->DisassembleArm(pipeline[0]);
             auto impl = DecodeArm(pipeline[0]);
             cycles -= impl(*this, pipeline[0]);
 
@@ -72,6 +77,7 @@ std::function<int(Cpu& cpu, Thumb opcode)> Cpu::DecodeThumb(Thumb opcode) const 
         }
     }
 
+    // Undefined instruction.
     return thumb_instructions.back().impl_func;
 }
 
@@ -82,6 +88,7 @@ std::function<int(Cpu& cpu, Arm opcode)> Cpu::DecodeArm(Arm opcode) const {
         }
     }
 
+    // Undefined instruction.
     return arm_instructions.back().impl_func;
 }
 
@@ -171,7 +178,24 @@ void Cpu::ReturnFromException(u32 address) {
     }
 }
 
-Cpu::ImmediateShift Cpu::DecodeImmShift(ShiftType type, u32 imm5) {
+void Cpu::BxWritePC(u32 addr) {
+    if ((addr & 0x1) == 0x1) {
+        // Switch to Thumb mode.
+        cpsr |= thumb_mode;
+        regs[pc] = addr & ~0x1;
+    } else if ((addr & 0x2) == 0x0) {
+        // Switch to Arm mode.
+        cpsr &= ~thumb_mode;
+        regs[pc] = addr;
+    } else {
+        // Unpredictable if the lower 2 bits of the address are 0b10.
+        assert(false);
+    }
+
+    FlushPipeline();
+}
+
+ImmediateShift Cpu::DecodeImmShift(ShiftType type, u32 imm5) {
     if (imm5 == 0) {
         switch (type) {
         case ShiftType::LSL:
