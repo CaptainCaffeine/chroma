@@ -71,11 +71,11 @@ int Cpu::Arm_AdcReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
 }
 
 int Cpu::Arm_AdcRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s, ShiftType type, Reg m) {
-    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
 
     u32 shifted_reg = Shift(regs[m], type, regs[s] & 0xFF, GetCarry());
     u64 result = AddWithCarry(regs[n], shifted_reg, GetCarry());
@@ -133,11 +133,11 @@ int Cpu::Arm_AddReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
 }
 
 int Cpu::Arm_AddRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s, ShiftType type, Reg m) {
-    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
 
     u32 shifted_reg = Shift(regs[m], type, regs[s] & 0xFF, GetCarry());
     u64 result = AddWithCarry(regs[n], shifted_reg, 0);
@@ -177,11 +177,11 @@ int Cpu::Arm_CmnReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m) {
 }
 
 int Cpu::Arm_CmnRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m) {
-    assert(n != pc && m != pc && s != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(n != pc && m != pc && s != pc); // Unpredictable
 
     u32 shifted_reg = Shift(regs[m], type, regs[s] & 0xFF, GetCarry());
     u64 result = AddWithCarry(regs[n], shifted_reg, 0);
@@ -220,11 +220,11 @@ int Cpu::Arm_CmpReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m) {
 }
 
 int Cpu::Arm_CmpRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m) {
-    assert(n != pc && m != pc && s != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(n != pc && m != pc && s != pc); // Unpredictable
 
     u32 shifted_reg = Shift(regs[m], type, regs[s] & 0xFF, GetCarry());
     u64 result = AddWithCarry(regs[n], ~shifted_reg, 1);
@@ -235,11 +235,11 @@ int Cpu::Arm_CmpRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m) 
 }
 
 int Cpu::Arm_MlaReg(Condition cond, bool set_flags, Reg d, Reg a, Reg m, Reg n) {
-    assert(d != pc && n != pc && m != pc && a != pc && d != n); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc && n != pc && m != pc && a != pc && d != n); // Unpredictable
 
     u32 result = regs[n] * regs[m] + regs[a];
 
@@ -251,11 +251,11 @@ int Cpu::Arm_MlaReg(Condition cond, bool set_flags, Reg d, Reg a, Reg m, Reg n) 
 }
 
 int Cpu::Arm_MulReg(Condition cond, bool set_flags, Reg d, Reg m, Reg n) {
-    assert(d != pc && n != pc && m != pc && d != n); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc && n != pc && m != pc && d != n); // Unpredictable
 
     u32 result = regs[n] * regs[m];
 
@@ -313,11 +313,11 @@ int Cpu::Arm_RsbReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
 }
 
 int Cpu::Arm_RsbRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s, ShiftType type, Reg m) {
-    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
 
     u32 shifted_reg = Shift(regs[m], type, regs[s] & 0xFF, GetCarry());
     u64 result = AddWithCarry(~regs[n], shifted_reg, 1);
@@ -376,11 +376,11 @@ int Cpu::Arm_RscReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
 }
 
 int Cpu::Arm_RscRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s, ShiftType type, Reg m) {
-    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
 
     u32 shifted_reg = Shift(regs[m], type, regs[s] & 0xFF, GetCarry());
     u64 result = AddWithCarry(~regs[n], shifted_reg, GetCarry());
@@ -439,11 +439,11 @@ int Cpu::Arm_SbcReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
 }
 
 int Cpu::Arm_SbcRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s, ShiftType type, Reg m) {
-    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
 
     u32 shifted_reg = Shift(regs[m], type, regs[s] & 0xFF, GetCarry());
     u64 result = AddWithCarry(regs[n], ~shifted_reg, GetCarry());
@@ -455,11 +455,11 @@ int Cpu::Arm_SbcRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s, 
 }
 
 int Cpu::Arm_SmlalReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg m, Reg n) {
-    assert(dh != pc && dl != pc && m != pc && n != pc && dh != n && dl != n && dh != dl); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(dh != pc && dl != pc && m != pc && n != pc && dh != n && dl != n && dh != dl); // Unpredictable
 
     s64 result = static_cast<s64>(static_cast<s32>(regs[n])) * static_cast<s64>(static_cast<s32>(regs[m]));
     result += static_cast<s64>((static_cast<u64>(regs[dh]) << 32) | regs[dl]);
@@ -473,11 +473,11 @@ int Cpu::Arm_SmlalReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg m, Reg
 }
 
 int Cpu::Arm_SmullReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg m, Reg n) {
-    assert(dh != pc && dl != pc && m != pc && n != pc && dh != n && dl != n && dh != dl); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(dh != pc && dl != pc && m != pc && n != pc && dh != n && dl != n && dh != dl); // Unpredictable
 
     s64 result = static_cast<s64>(static_cast<s32>(regs[n])) * static_cast<s64>(static_cast<s32>(regs[m]));
 
@@ -537,11 +537,11 @@ int Cpu::Arm_SubReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
 }
 
 int Cpu::Arm_SubRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s, ShiftType type, Reg m) {
-    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
 
     u32 shifted_reg = Shift(regs[m], type, regs[s] & 0xFF, GetCarry());
     u64 result = AddWithCarry(regs[n], ~shifted_reg, 1);
@@ -553,11 +553,11 @@ int Cpu::Arm_SubRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s, 
 }
 
 int Cpu::Arm_UmlalReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg m, Reg n) {
-    assert(dh != pc && dl != pc && m != pc && n != pc && dh != n && dl != n && dh != dl); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(dh != pc && dl != pc && m != pc && n != pc && dh != n && dl != n && dh != dl); // Unpredictable
 
     u64 result = static_cast<u64>(regs[n]) * static_cast<u64>(regs[m]);
     result += (static_cast<u64>(regs[dh]) << 32) | regs[dl];
@@ -571,11 +571,11 @@ int Cpu::Arm_UmlalReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg m, Reg
 }
 
 int Cpu::Arm_UmullReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg m, Reg n) {
-    assert(dh != pc && dl != pc && m != pc && n != pc && dh != n && dl != n && dh != dl); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(dh != pc && dl != pc && m != pc && n != pc && dh != n && dl != n && dh != dl); // Unpredictable
 
     u64 result = static_cast<u64>(regs[n]) * static_cast<u64>(regs[m]);
 
@@ -635,11 +635,11 @@ int Cpu::Arm_AndReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
 }
 
 int Cpu::Arm_AndRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s, ShiftType type, Reg m) {
-    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
 
     ResultWithCarry shifted_reg = Shift_C(regs[m], type, regs[s] & 0xFF, GetCarry());
     u32 result = regs[n] & shifted_reg.result;
@@ -697,11 +697,11 @@ int Cpu::Arm_BicReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
 }
 
 int Cpu::Arm_BicRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s, ShiftType type, Reg m) {
-    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
 
     ResultWithCarry shifted_reg = Shift_C(regs[m], type, regs[s] & 0xFF, GetCarry());
     u32 result = regs[n] & ~shifted_reg.result;
@@ -759,11 +759,11 @@ int Cpu::Arm_EorReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
 }
 
 int Cpu::Arm_EorRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s, ShiftType type, Reg m) {
-    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
 
     ResultWithCarry shifted_reg = Shift_C(regs[m], type, regs[s] & 0xFF, GetCarry());
     u32 result = regs[n] ^ shifted_reg.result;
@@ -821,11 +821,11 @@ int Cpu::Arm_OrrReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shift
 }
 
 int Cpu::Arm_OrrRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s, ShiftType type, Reg m) {
-    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
 
     ResultWithCarry shifted_reg = Shift_C(regs[m], type, regs[s] & 0xFF, GetCarry());
     u32 result = regs[n] | shifted_reg.result;
@@ -865,11 +865,11 @@ int Cpu::Arm_TeqReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m) {
 }
 
 int Cpu::Arm_TeqRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m) {
-    assert(n != pc && m != pc && s != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(n != pc && m != pc && s != pc); // Unpredictable
 
     ResultWithCarry shifted_reg = Shift_C(regs[m], type, regs[s] & 0xFF, GetCarry());
     u32 result = regs[n] ^ shifted_reg.result;
@@ -908,11 +908,11 @@ int Cpu::Arm_TstReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m) {
 }
 
 int Cpu::Arm_TstRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m) {
-    assert(n != pc && m != pc && s != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(n != pc && m != pc && s != pc); // Unpredictable
 
     ResultWithCarry shifted_reg = Shift_C(regs[m], type, regs[s] & 0xFF, GetCarry());
     u32 result = regs[n] & shifted_reg.result;
@@ -947,11 +947,11 @@ int Cpu::Arm_AsrImm(Condition cond, bool set_flags, Reg d, u32 imm, Reg m) {
 }
 
 int Cpu::Arm_AsrReg(Condition cond, bool set_flags, Reg d, Reg m, Reg n) {
-    assert(d != pc && n != pc && m != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc && n != pc && m != pc); // Unpredictable
 
     ResultWithCarry shifted_reg = Shift_C(regs[n], ShiftType::ASR, regs[m] & 0xFF, GetCarry());
 
@@ -984,11 +984,11 @@ int Cpu::Arm_LslImm(Condition cond, bool set_flags, Reg d, u32 imm, Reg m) {
 }
 
 int Cpu::Arm_LslReg(Condition cond, bool set_flags, Reg d, Reg m, Reg n) {
-    assert(d != pc && n != pc && m != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc && n != pc && m != pc); // Unpredictable
 
     ResultWithCarry shifted_reg = Shift_C(regs[n], ShiftType::LSL, regs[m] & 0xFF, GetCarry());
 
@@ -1022,11 +1022,11 @@ int Cpu::Arm_LsrImm(Condition cond, bool set_flags, Reg d, u32 imm, Reg m) {
 }
 
 int Cpu::Arm_LsrReg(Condition cond, bool set_flags, Reg d, Reg m, Reg n) {
-    assert(d != pc && n != pc && m != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc && n != pc && m != pc); // Unpredictable
 
     ResultWithCarry shifted_reg = Shift_C(regs[n], ShiftType::LSR, regs[m] & 0xFF, GetCarry());
 
@@ -1061,11 +1061,11 @@ int Cpu::Arm_RorImm(Condition cond, bool set_flags, Reg d, u32 imm, Reg m) {
 }
 
 int Cpu::Arm_RorReg(Condition cond, bool set_flags, Reg d, Reg m, Reg n) {
-    assert(d != pc && n != pc && m != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc && n != pc && m != pc); // Unpredictable
 
     ResultWithCarry shifted_reg = Shift_C(regs[n], ShiftType::ROR, regs[m] & 0xFF, GetCarry());
 
@@ -1199,11 +1199,11 @@ int Cpu::Arm_MvnReg(Condition cond, bool set_flags, Reg d, u32 imm, ShiftType ty
 }
 
 int Cpu::Arm_MvnRegShifted(Condition cond, bool set_flags, Reg d, Reg s, ShiftType type, Reg m) {
-    assert(d != pc && m != pc && s != pc); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc && m != pc && s != pc); // Unpredictable
 
     ResultWithCarry shifted_reg = Shift_C(regs[m], type, regs[s] & 0xFF, GetCarry());
     shifted_reg.result = ~shifted_reg.result;
@@ -1216,11 +1216,11 @@ int Cpu::Arm_MvnRegShifted(Condition cond, bool set_flags, Reg d, Reg s, ShiftTy
 
 // Loads
 int Cpu::Arm_Ldmi(Condition cond, bool pre_indexed, bool exception_return, bool writeback, Reg n, u32 reg_list) {
-    assert(n != pc && Popcount(reg_list) != 0); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(n != pc && Popcount(reg_list) != 0); // Unpredictable
 
     const std::bitset<16> rlist{reg_list};
     u32 addr = regs[n];
@@ -1265,11 +1265,11 @@ int Cpu::Arm_Ldmi(Condition cond, bool pre_indexed, bool exception_return, bool 
 }
 
 int Cpu::Arm_Ldmd(Condition cond, bool pre_indexed, bool exception_return, bool writeback, Reg n, u32 reg_list) {
-    assert(n != pc && Popcount(reg_list) != 0); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(n != pc && Popcount(reg_list) != 0); // Unpredictable
 
     const std::bitset<16> rlist{reg_list};
     u32 addr = regs[n] - 4 * rlist.count();
@@ -1314,12 +1314,12 @@ int Cpu::Arm_Ldmd(Condition cond, bool pre_indexed, bool exception_return, bool 
 }
 
 int Cpu::Arm_LdrImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm) {
-    writeback = writeback || !pre_indexed;
-    assert(!(writeback && n == t)); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    writeback = writeback || !pre_indexed;
+    assert(!(writeback && n == t)); // Unpredictable
 
     if (!add) {
         imm = -imm;
@@ -1348,12 +1348,12 @@ int Cpu::Arm_LdrImm(Condition cond, bool pre_indexed, bool add, bool writeback, 
 
 int Cpu::Arm_LdrReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm,
                     ShiftType type, Reg m) {
-    writeback = writeback || !pre_indexed;
-    assert(m != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    writeback = writeback || !pre_indexed;
+    assert(m != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
 
     ImmediateShift shift = DecodeImmShift(type, imm);
 
@@ -1385,12 +1385,12 @@ int Cpu::Arm_LdrReg(Condition cond, bool pre_indexed, bool add, bool writeback, 
 }
 
 int Cpu::Arm_LdrbImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm) {
-    writeback = writeback || !pre_indexed;
-    assert(t != pc && !(writeback && n == t)); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    writeback = writeback || !pre_indexed;
+    assert(t != pc && !(writeback && n == t)); // Unpredictable
 
     if (!add) {
         imm = -imm;
@@ -1412,12 +1412,12 @@ int Cpu::Arm_LdrbImm(Condition cond, bool pre_indexed, bool add, bool writeback,
 
 int Cpu::Arm_LdrbReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm,
                     ShiftType type, Reg m) {
-    writeback = writeback || !pre_indexed;
-    assert(m != pc && t != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    writeback = writeback || !pre_indexed;
+    assert(m != pc && t != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
 
     ImmediateShift shift = DecodeImmShift(type, imm);
 
@@ -1443,12 +1443,12 @@ int Cpu::Arm_LdrbReg(Condition cond, bool pre_indexed, bool add, bool writeback,
 
 int Cpu::Arm_LdrhImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm_hi,
                      u32 imm_lo) {
-    writeback = writeback || !pre_indexed;
-    assert(t != pc && !(writeback && n == t)); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    writeback = writeback || !pre_indexed;
+    assert(t != pc && !(writeback && n == t)); // Unpredictable
 
     u32 imm = (imm_hi << 4) | imm_lo;
 
@@ -1471,12 +1471,12 @@ int Cpu::Arm_LdrhImm(Condition cond, bool pre_indexed, bool add, bool writeback,
 }
 
 int Cpu::Arm_LdrhReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, Reg m) {
-    writeback = writeback || !pre_indexed;
-    assert(m != pc && t != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    writeback = writeback || !pre_indexed;
+    assert(m != pc && t != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
 
     u32 offset = regs[m];
 
@@ -1500,12 +1500,12 @@ int Cpu::Arm_LdrhReg(Condition cond, bool pre_indexed, bool add, bool writeback,
 
 int Cpu::Arm_LdrsbImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm_hi,
                      u32 imm_lo) {
-    writeback = writeback || !pre_indexed;
-    assert(t != pc && !(writeback && n == t)); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    writeback = writeback || !pre_indexed;
+    assert(t != pc && !(writeback && n == t)); // Unpredictable
 
     u32 imm = (imm_hi << 4) | imm_lo;
 
@@ -1528,12 +1528,12 @@ int Cpu::Arm_LdrsbImm(Condition cond, bool pre_indexed, bool add, bool writeback
 }
 
 int Cpu::Arm_LdrsbReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, Reg m) {
-    writeback = writeback || !pre_indexed;
-    assert(m != pc && t != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    writeback = writeback || !pre_indexed;
+    assert(m != pc && t != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
 
     u32 offset = regs[m];
 
@@ -1557,12 +1557,12 @@ int Cpu::Arm_LdrsbReg(Condition cond, bool pre_indexed, bool add, bool writeback
 
 int Cpu::Arm_LdrshImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm_hi,
                      u32 imm_lo) {
-    writeback = writeback || !pre_indexed;
-    assert(t != pc && !(writeback && n == t)); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    writeback = writeback || !pre_indexed;
+    assert(t != pc && !(writeback && n == t)); // Unpredictable
 
     u32 imm = (imm_hi << 4) | imm_lo;
 
@@ -1585,12 +1585,12 @@ int Cpu::Arm_LdrshImm(Condition cond, bool pre_indexed, bool add, bool writeback
 }
 
 int Cpu::Arm_LdrshReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, Reg m) {
-    writeback = writeback || !pre_indexed;
-    assert(m != pc && t != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    writeback = writeback || !pre_indexed;
+    assert(m != pc && t != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
 
     u32 offset = regs[m];
 
@@ -1613,11 +1613,11 @@ int Cpu::Arm_LdrshReg(Condition cond, bool pre_indexed, bool add, bool writeback
 }
 
 int Cpu::Arm_PopA1(Condition cond, u32 reg_list) {
-    assert(Popcount(reg_list) != 0); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(Popcount(reg_list) != 0); // Unpredictable
 
     const std::bitset<16> rlist{reg_list};
     u32 addr = regs[sp];
@@ -1664,11 +1664,11 @@ int Cpu::Arm_PopA2(Condition cond, Reg t) {
 
 // Stores
 int Cpu::Arm_PushA1(Condition cond, u32 reg_list) {
-    assert(Popcount(reg_list) != 0); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(Popcount(reg_list) != 0); // Unpredictable
 
     const std::bitset<16> rlist{reg_list};
     u32 addr = regs[sp] - 4 * rlist.count();
@@ -1710,11 +1710,11 @@ int Cpu::Arm_PushA2(Condition cond, Reg t) {
 }
 
 int Cpu::Arm_Stmi(Condition cond, bool pre_indexed, bool store_user_regs, bool writeback, Reg n, u32 reg_list) {
-    assert(n != pc && Popcount(reg_list) != 0); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(n != pc && Popcount(reg_list) != 0); // Unpredictable
 
     const std::bitset<16> rlist{reg_list};
     u32 addr = regs[n];
@@ -1755,11 +1755,11 @@ int Cpu::Arm_Stmi(Condition cond, bool pre_indexed, bool store_user_regs, bool w
 }
 
 int Cpu::Arm_Stmd(Condition cond, bool pre_indexed, bool store_user_regs, bool writeback, Reg n, u32 reg_list) {
-    assert(n != pc && Popcount(reg_list) != 0); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(n != pc && Popcount(reg_list) != 0); // Unpredictable
 
     const std::bitset<16> rlist{reg_list};
     u32 addr = regs[n] - 4 * rlist.count();
@@ -1800,12 +1800,12 @@ int Cpu::Arm_Stmd(Condition cond, bool pre_indexed, bool store_user_regs, bool w
 }
 
 int Cpu::Arm_StrImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm) {
-    writeback = writeback || !pre_indexed;
-    assert(!(writeback && (n == t || n == pc))); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    writeback = writeback || !pre_indexed;
+    assert(!(writeback && (n == t || n == pc))); // Unpredictable
 
     if (!add) {
         imm = -imm;
@@ -1827,12 +1827,12 @@ int Cpu::Arm_StrImm(Condition cond, bool pre_indexed, bool add, bool writeback, 
 
 int Cpu::Arm_StrReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm,
                     ShiftType type, Reg m) {
-    writeback = writeback || !pre_indexed;
-    assert(m != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    writeback = writeback || !pre_indexed;
+    assert(m != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
 
     ImmediateShift shift = DecodeImmShift(type, imm);
 
@@ -1857,12 +1857,12 @@ int Cpu::Arm_StrReg(Condition cond, bool pre_indexed, bool add, bool writeback, 
 }
 
 int Cpu::Arm_StrbImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm) {
-    writeback = writeback || !pre_indexed;
-    assert(t != pc && !(writeback && (n == t || n == pc))); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    writeback = writeback || !pre_indexed;
+    assert(t != pc && !(writeback && (n == t || n == pc))); // Unpredictable
 
     if (!add) {
         imm = -imm;
@@ -1884,12 +1884,12 @@ int Cpu::Arm_StrbImm(Condition cond, bool pre_indexed, bool add, bool writeback,
 
 int Cpu::Arm_StrbReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm,
                     ShiftType type, Reg m) {
-    writeback = writeback || !pre_indexed;
-    assert(m != pc && t != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    writeback = writeback || !pre_indexed;
+    assert(m != pc && t != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
 
     ImmediateShift shift = DecodeImmShift(type, imm);
 
@@ -1915,12 +1915,12 @@ int Cpu::Arm_StrbReg(Condition cond, bool pre_indexed, bool add, bool writeback,
 
 int Cpu::Arm_StrhImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm_hi,
                      u32 imm_lo) {
-    writeback = writeback || !pre_indexed;
-    assert(t != pc && !(writeback && (n == t || n == pc))); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    writeback = writeback || !pre_indexed;
+    assert(t != pc && !(writeback && (n == t || n == pc))); // Unpredictable
 
     u32 imm = (imm_hi << 4) | imm_lo;
 
@@ -1943,12 +1943,12 @@ int Cpu::Arm_StrhImm(Condition cond, bool pre_indexed, bool add, bool writeback,
 }
 
 int Cpu::Arm_StrhReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, Reg m) {
-    writeback = writeback || !pre_indexed;
-    assert(m != pc && t != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    writeback = writeback || !pre_indexed;
+    assert(m != pc && t != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
 
     u32 offset = regs[m];
 
@@ -1971,11 +1971,11 @@ int Cpu::Arm_StrhReg(Condition cond, bool pre_indexed, bool add, bool writeback,
 }
 
 int Cpu::Arm_SwpReg(Condition cond, bool byte, Reg n, Reg t, Reg t2) {
-    assert(t != pc && t2 != pc && n == pc || n == t || n == t2); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(t != pc && t2 != pc && n == pc || n == t || n == t2); // Unpredictable
 
     u32 data;
     if (byte) {
@@ -2032,12 +2032,12 @@ int Cpu::Arm_Mcr(Condition cond, u32, Reg, Reg, u32 coproc, u32, Reg) {
 }
 
 int Cpu::Arm_Mrs(Condition cond, bool read_spsr, Reg d) {
-    assert(d != pc); // Unpredictable
-    assert(!read_spsr || HasSpsr()); // Unpredictable
-
     if (!ConditionPassed(cond)) {
         return 1;
     }
+
+    assert(d != pc); // Unpredictable
+    assert(!read_spsr || HasSpsr()); // Unpredictable
 
     if (read_spsr) {
         regs[d] = spsr[CurrentCpuModeIndex()];
@@ -2050,6 +2050,10 @@ int Cpu::Arm_Mrs(Condition cond, bool read_spsr, Reg d) {
 }
 
 int Cpu::Arm_MsrImm(Condition cond, bool write_spsr, u32 mask, u32 imm) {
+    if (!ConditionPassed(cond)) {
+        return 1;
+    }
+
     if (CurrentCpuMode() == CpuMode::User) {
         // Cannot write the control byte in user mode.
         mask &= ~0x1;
@@ -2060,13 +2064,9 @@ int Cpu::Arm_MsrImm(Condition cond, bool write_spsr, u32 mask, u32 imm) {
     assert(mask != 0x0); // Unpredictable
     assert(!write_spsr || HasSpsr()); // Unpredictable
 
-    if (!ConditionPassed(cond)) {
-        return 1;
-    }
-
     imm = ArmExpandImmediate(imm);
 
-    assert(!write_control_field || ValidCpuMode(imm)); // Probably hangs the CPU.
+    assert(write_spsr || !write_control_field || ValidCpuMode(imm)); // Probably hangs the CPU.
 
     // The 4 bits of the "mask" field specify which bytes of the PSR to write.
     // On the ARM7TDMI, only the first and last bytes of the PSRs are used, so we only check the first and last bits.
@@ -2088,6 +2088,10 @@ int Cpu::Arm_MsrImm(Condition cond, bool write_spsr, u32 mask, u32 imm) {
 }
 
 int Cpu::Arm_MsrReg(Condition cond, bool write_spsr, u32 mask, Reg n) {
+    if (!ConditionPassed(cond)) {
+        return 1;
+    }
+
     if (CurrentCpuMode() == CpuMode::User) {
         // Cannot write the control byte in user mode.
         mask &= ~0x1;
@@ -2097,11 +2101,7 @@ int Cpu::Arm_MsrReg(Condition cond, bool write_spsr, u32 mask, Reg n) {
 
     assert(mask != 0x0); // Unpredictable
     assert(!write_spsr || HasSpsr()); // Unpredictable
-    assert(!write_control_field || ValidCpuMode(regs[n])); // Probably hangs the CPU.
-
-    if (!ConditionPassed(cond)) {
-        return 1;
-    }
+    assert(write_spsr || !write_control_field || ValidCpuMode(regs[n])); // Probably hangs the CPU.
 
     // The 4 bits of the "mask" field specify which bytes of the PSR to write.
     // On the ARM7TDMI, only the first and last bytes of the PSRs are used, so we only check the first and last bits.
