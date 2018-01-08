@@ -42,13 +42,12 @@ void Cpu::Execute(int cycles) {
             pipeline[0] = pipeline[1];
             pipeline[1] = pipeline[2];
             pipeline[2] = mem.ReadMem<Thumb>(regs[pc]);
-            u32 prefetch_pc = regs[pc];
 
             disasm->DisassembleThumb(pipeline[0]);
             auto impl = DecodeThumb(pipeline[0]);
             cycles -= impl(*this, pipeline[0]);
 
-            if (regs[pc] == prefetch_pc) {
+            if (!pc_written) {
                 // Only increment the PC if the executing instruction didn't change it.
                 regs[pc] += 2;
             }
@@ -56,17 +55,18 @@ void Cpu::Execute(int cycles) {
             pipeline[0] = pipeline[1];
             pipeline[1] = pipeline[2];
             pipeline[2] = mem.ReadMem<Arm>(regs[pc]);
-            u32 prefetch_pc = regs[pc];
 
             disasm->DisassembleArm(pipeline[0]);
             auto impl = DecodeArm(pipeline[0]);
             cycles -= impl(*this, pipeline[0]);
 
-            if (regs[pc] == prefetch_pc) {
+            if (!pc_written) {
                 // Only increment the PC if the executing instruction didn't change it.
                 regs[pc] += 4;
             }
         }
+
+        pc_written = false;
     }
 }
 
@@ -120,6 +120,14 @@ void Cpu::CpuModeSwitch(CpuMode new_cpu_mode) {
     }
 
     cpsr = (cpsr & ~cpu_mode) | static_cast<u32>(new_cpu_mode);
+}
+
+void Cpu::FlushPipeline() {
+    for (auto& p : pipeline) {
+        p = 0;
+    }
+
+    pc_written = true;
 }
 
 void Cpu::TakeException(CpuMode exception_type) {

@@ -72,6 +72,7 @@ private:
     const std::vector<Instruction<Arm>> arm_instructions;
 
     std::array<u32, 3> pipeline{};
+    bool pc_written = false;
 
     // Constants
     using Reg = std::size_t;
@@ -114,7 +115,7 @@ private:
     bool ValidCpuMode(u32 new_mode) const;
     void CpuModeSwitch(CpuMode new_cpu_mode);
 
-    void FlushPipeline() { for (auto& p : pipeline) { p = 0; } }
+    void FlushPipeline();
 
     void TakeException(CpuMode exception_type);
     void ReturnFromException(u32 address);
