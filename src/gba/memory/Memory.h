@@ -24,7 +24,7 @@ namespace Gba {
 
 class Memory {
 public:
-    Memory(const std::vector<u16>& rom_contents);
+    Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom);
 
     template <typename T>
     T ReadMem(const u32 addr) const;
@@ -34,13 +34,14 @@ public:
     static bool CheckNintendoLogo(const std::vector<u8>& rom_header) noexcept;
     static void CheckHeader(const std::vector<u16>& rom_header);
 private:
-    const std::vector<u16>& rom;
+    const std::vector<u32>& bios;
     std::vector<u16> xram;
     std::vector<u32> iram;
     std::vector<u32> io_regs;
     std::vector<u16> pram;
     std::vector<u16> vram;
     std::vector<u32> oam;
+    const std::vector<u16>& rom;
 
     static constexpr unsigned int kbyte = 1024;
     static constexpr unsigned int mbyte = kbyte * kbyte;
@@ -57,22 +58,24 @@ private:
                        Rom2 = 0xC,
                        SRam = 0xE};
 
-    enum RegionSize {rom_size  = 32 * mbyte,
+    enum RegionSize {bios_size = 16 * kbyte,
                      xram_size = 256 * kbyte,
                      iram_size = 32 * kbyte,
                      io_size   = kbyte,
                      pram_size = kbyte,
                      vram_size = 96 * kbyte,
-                     oam_size  = kbyte};
+                     oam_size  = kbyte,
+                     rom_size  = 32 * mbyte};
 
-    enum AddressMask : u32 {rom_addr_mask   = rom_size - 1,
+    enum AddressMask : u32 {bios_addr_mask  = bios_size - 1,
                             xram_addr_mask  = xram_size - 1,
                             iram_addr_mask  = iram_size - 1,
                             io_addr_mask    = io_size - 1,
                             pram_addr_mask  = pram_size - 1,
                             vram_addr_mask1 = 0x0000FFFF,
                             vram_addr_mask2 = 0x00017FFF,
-                            oam_addr_mask   = oam_size - 1};
+                            oam_addr_mask   = oam_size - 1,
+                            rom_addr_mask   = rom_size - 1};
 
     static constexpr u32 region_offset = 24;
     static constexpr Region GetRegion(const u32 addr) {
@@ -85,7 +88,7 @@ private:
     void WriteRegion(std::vector<BusWidth>& region, const AddressMask region_mask, const u32 addr, const AccessWidth data);
 
     template <typename T>
-    T ReadRom(const u32 addr) const { return ReadRegion<T>(rom, rom_addr_mask, addr); }
+    T ReadBios(const u32 addr) const { return ReadRegion<T>(bios, bios_addr_mask, addr); }
     template <typename T>
     T ReadXRam(const u32 addr) const { return ReadRegion<T>(xram, xram_addr_mask, addr); }
     template <typename T>
@@ -100,6 +103,8 @@ private:
     }
     template <typename T>
     T ReadOam(const u32 addr) const { return ReadRegion<T>(oam, oam_addr_mask, addr); }
+    template <typename T>
+    T ReadRom(const u32 addr) const { return ReadRegion<T>(rom, rom_addr_mask, addr); }
 
     template <typename T>
     void WriteXRam(const u32 addr, const T data) { WriteRegion(xram, xram_addr_mask, addr, data); }

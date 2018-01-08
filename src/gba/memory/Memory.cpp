@@ -19,14 +19,15 @@
 
 namespace Gba {
 
-Memory::Memory(const std::vector<u16>& rom_contents)
-        : rom(rom_contents)
+Memory::Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom)
+        : bios(_bios)
         , xram(xram_size / sizeof(u16))
         , iram(iram_size / sizeof(u32))
         , io_regs(io_size / sizeof(u32))
         , pram(pram_size / sizeof(u16))
         , vram(vram_size / sizeof(u16))
-        , oam(oam_size / sizeof(u32)) {}
+        , oam(oam_size / sizeof(u32))
+        , rom(_rom) {}
 
 // Bus width 16.
 template <>
@@ -78,7 +79,7 @@ template <typename T>
 T Memory::ReadMem(const u32 addr) const {
     switch (GetRegion(addr)) {
     case Region::Bios:
-        return 0;
+        return ReadBios<T>(addr);
     case Region::XRam:
         return ReadXRam<T>(addr);
     case Region::IRam:

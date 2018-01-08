@@ -30,7 +30,7 @@ Cpu::Cpu(Memory& memory)
         , thumb_instructions(Instruction<Thumb>::GetInstructionTable<Cpu>())
         , arm_instructions(Instruction<Arm>::GetInstructionTable<Cpu>()) {
 
-    regs[pc] = 0x0800'0000;
+    regs[pc] = 0x0000'0000;
 }
 
 // Needed to declare std::vector with forward-declared type in the header file.

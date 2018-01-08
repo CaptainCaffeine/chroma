@@ -30,7 +30,7 @@ class Cpu;
 
 class Core {
 public:
-    Core(Emu::SDLContext& context, const std::vector<u16>& rom);
+    Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom);
     ~Core();
 
     void EmulatorLoop();

@@ -127,6 +127,14 @@ bool GetFilterEnable(const std::vector<std::string>& tokens) {
     }
 }
 
+std::streampos GetFileSize(std::ifstream& filestream) {
+    filestream.seekg(0, std::ios_base::end);
+    std::streampos size = filestream.tellg();
+    filestream.seekg(0, std::ios_base::beg);
+
+    return size;
+}
+
 Gb::Console CheckRomFile(const std::string& filename) {
     std::ifstream rom_file(filename);
     if (!rom_file) {
@@ -135,9 +143,7 @@ Gb::Console CheckRomFile(const std::string& filename) {
 
     CheckPathIsRegularFile(filename);
 
-    rom_file.seekg(0, std::ios_base::end);
-    const auto rom_size = rom_file.tellg();
-    rom_file.seekg(0, std::ios_base::beg);
+    const auto rom_size = GetFileSize(rom_file);
 
     if (rom_size < 0x8000) {
         // 32KB is the smallest possible GB game.
@@ -205,17 +211,15 @@ std::vector<u8> LoadSaveGame(const Gb::CartridgeHeader& cart_header, const std::
 }
 
 std::vector<u8> ReadSaveFile(const std::string& filename) {
-    CheckPathIsRegularFile(filename);
-
     std::ifstream save_file(filename);
     if (!save_file) {
         // Save file doesn't exist.
         return std::vector<u8>();
     }
 
-    save_file.seekg(0, std::ios_base::end);
-    const auto save_size = save_file.tellg();
-    save_file.seekg(0, std::ios_base::beg);
+    CheckPathIsRegularFile(filename);
+
+    const auto save_size = GetFileSize(save_file);
 
     if (save_size > 0x20030) {
         throw std::runtime_error("Save game size of " + std::to_string(save_size)
@@ -226,6 +230,37 @@ std::vector<u8> ReadSaveFile(const std::string& filename) {
     save_file.read(reinterpret_cast<char*>(save_contents.data()), save_size);
 
     return save_contents;
+}
+
+std::vector<u32> LoadGbaBios() {
+    std::string bios_path = "gba_bios.bin";
+    std::ifstream bios_file(bios_path);
+    for (int i = 0; i < 2; ++i) {
+        if (bios_file) {
+            break;
+        }
+
+        bios_file.close();
+        bios_path = "../" + bios_path;
+        bios_file.open(bios_path);
+    }
+
+    if (!bios_file) {
+        throw std::runtime_error("Error when attempting to open gba_bios.bin");
+    }
+
+    CheckPathIsRegularFile(bios_path);
+
+    const auto bios_size = GetFileSize(bios_file);
+
+    if (bios_size != 0x4000) {
+        throw std::runtime_error("GBA BIOS must be 16KB. Provided file is " + std::to_string(bios_size) + " bytes.");
+    }
+
+    std::vector<u32> bios_contents(bios_size / sizeof(u32));
+    bios_file.read(reinterpret_cast<char*>(bios_contents.data()), bios_size);
+
+    return bios_contents;
 }
 
 void CheckPathIsRegularFile(const std::string& filename) {

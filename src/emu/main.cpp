@@ -60,11 +60,12 @@ int main(int argc, char** argv) {
         const std::string rom_path{tokens.back()};
 
         if (Emu::CheckRomFile(rom_path) == Gb::Console::AGB) {
+            const std::vector<u32> bios{Emu::LoadGbaBios()};
             const std::vector<u16> rom{Emu::LoadRom<u16>(rom_path)};
             Gba::Memory::CheckHeader(rom);
 
             Emu::SDLContext sdl_context{240, 160, pixel_scale, fullscreen};
-            Gba::Core gba_core{sdl_context, rom};
+            Gba::Core gba_core{sdl_context, bios, rom};
 
             gba_core.EmulatorLoop();
         } else {
