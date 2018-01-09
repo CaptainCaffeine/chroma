@@ -36,7 +36,7 @@ std::string Disassembler::AluReg(const char* name, Reg m, Reg d) {
 }
 
 std::string Disassembler::AluRegReg(const char* name, Reg m, Reg n, Reg d) {
-    return fmt::format("{} {}, {}", name, RegStr(d), RegStr(n), RegStr(m));
+    return fmt::format("{} {}, {}, {}", name, RegStr(d), RegStr(n), RegStr(m));
 }
 
 std::string Disassembler::LoadImm(const char* name, u32 imm, Reg n, Reg t) {
