@@ -123,8 +123,16 @@ void Cpu::CpuModeSwitch(CpuMode new_cpu_mode) {
 }
 
 void Cpu::FlushPipeline() {
-    for (auto& p : pipeline) {
-        p = 0;
+    if (ThumbMode()) {
+        for (auto& p : pipeline) {
+            // MOV R8, R8
+            p = 0x46C0;
+        }
+    } else {
+        for (auto& p : pipeline) {
+            // ANDEQ R0, R0, R0
+            p = 0;
+        }
     }
 
     pc_written = true;
