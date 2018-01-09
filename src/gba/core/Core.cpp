@@ -26,6 +26,8 @@ Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::ve
         , mem(std::make_unique<Memory>(bios, rom))
         , cpu(std::make_unique<Cpu>(*mem)) {
 
+    mem->LinkToCpu(cpu.get());
+
     RegisterCallbacks();
 }
 
@@ -33,7 +35,7 @@ Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::ve
 Core::~Core() = default;
 
 void Core::EmulatorLoop() {
-    cpu->Execute(2048);
+    cpu->Execute(0x1000);
     //while (!quit) {
     //    sdl_context.PollEvents();
 

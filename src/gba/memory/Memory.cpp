@@ -16,6 +16,7 @@
 
 #include "common/CommonFuncs.h"
 #include "gba/memory/Memory.h"
+#include "gba/cpu/Cpu.h"
 
 namespace Gba {
 
@@ -85,7 +86,6 @@ T Memory::ReadMem(const u32 addr) const {
     case Region::IRam:
         return ReadIRam<T>(addr);
     case Region::IO:
-        // TODO: I/O region is not supposed to be mirrored.
         return ReadIO<T>(addr);
     case Region::PRam:
         return ReadPRam<T>(addr);
@@ -170,7 +170,6 @@ void Memory::WriteMem(const u32 addr, const T data) {
         WriteIRam(addr, data);
         break;
     case Region::IO:
-        // TODO: I/O region is not supposed to be mirrored.
         WriteIO(addr, data);
         break;
     case Region::PRam:
@@ -197,5 +196,19 @@ void Memory::WriteMem(const u32 addr, const T data) {
 template void Memory::WriteMem<u8>(const u32 addr, const u8 data);
 template void Memory::WriteMem<u16>(const u32 addr, const u16 data);
 template void Memory::WriteMem<u32>(const u32 addr, const u32 data);
+
+template <typename T>
+T Memory::ReadBios(const u32 addr) const {
+    // The BIOS region is not mirrored, and can only be read if the PC is currently within the BIOS.
+    if (addr < bios_size && cpu->GetPc() < bios_size) {
+        return ReadRegion<T>(bios, bios_addr_mask, addr);
+    } else {
+        return 0;
+    }
+}
+
+template u8 Memory::ReadBios<u8>(const u32 addr) const;
+template u16 Memory::ReadBios<u16>(const u32 addr) const;
+template u32 Memory::ReadBios<u32>(const u32 addr) const;
 
 } // End namespace Gba
