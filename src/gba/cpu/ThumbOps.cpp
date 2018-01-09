@@ -554,6 +554,9 @@ int Cpu::Thumb_Push(bool m, u32 reg_list) {
 
     const std::bitset<8> rlist{reg_list};
     regs[sp] -= 4 * rlist.count();
+    if (m) {
+        regs[sp] -= 4;
+    }
     u32 addr = regs[sp];
 
     for (Reg i = 0; i < 8; ++i) {

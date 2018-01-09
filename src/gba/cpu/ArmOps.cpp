@@ -1703,7 +1703,7 @@ int Cpu::Arm_PushA2(Condition cond, Reg t) {
 
     // Only write back to SP if it wasn't in the register list (ARM7TDMI behaviour).
     if (t != sp) {
-        regs[sp] += 4;
+        regs[sp] -= 4;
     }
 
     return 1;
