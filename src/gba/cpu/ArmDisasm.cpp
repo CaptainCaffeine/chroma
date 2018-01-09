@@ -120,23 +120,23 @@ std::string Disassembler::Arm_AddRegShifted(Condition cond, bool sf, Reg n, Reg 
 }
 
 std::string Disassembler::Arm_CmnImm(Condition cond, Reg n, u32 imm) {
-    return FlagsImm("CMN", cond, true, n, imm);
+    return FlagsImm("CMN", cond, false, n, imm);
 }
 std::string Disassembler::Arm_CmnReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m) {
-    return FlagsReg("CMN", cond, true, n, imm, type, m);
+    return FlagsReg("CMN", cond, false, n, imm, type, m);
 }
 std::string Disassembler::Arm_CmnRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m) {
-    return FlagsRegShifted("CMN", cond, true, n, s, type, m);
+    return FlagsRegShifted("CMN", cond, false, n, s, type, m);
 }
 
 std::string Disassembler::Arm_CmpImm(Condition cond, Reg n, u32 imm) {
-    return FlagsImm("CMP", cond, true, n, imm);
+    return FlagsImm("CMP", cond, false, n, imm);
 }
 std::string Disassembler::Arm_CmpReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m) {
-    return FlagsReg("CMP", cond, true, n, imm, type, m);
+    return FlagsReg("CMP", cond, false, n, imm, type, m);
 }
 std::string Disassembler::Arm_CmpRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m) {
-    return FlagsRegShifted("CMP", cond, true, n, s, type, m);
+    return FlagsRegShifted("CMP", cond, false, n, s, type, m);
 }
 
 std::string Disassembler::Arm_MlaReg(Condition cond, bool sf, Reg d, Reg a, Reg m, Reg n) {
@@ -243,23 +243,23 @@ std::string Disassembler::Arm_OrrRegShifted(Condition cond, bool sf, Reg n, Reg 
 }
 
 std::string Disassembler::Arm_TeqImm(Condition cond, Reg n, u32 imm) {
-    return FlagsImm("TEQ", cond, true, n, imm);
+    return FlagsImm("TEQ", cond, false, n, imm);
 }
 std::string Disassembler::Arm_TeqReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m) {
-    return FlagsReg("TEQ", cond, true, n, imm, type, m);
+    return FlagsReg("TEQ", cond, false, n, imm, type, m);
 }
 std::string Disassembler::Arm_TeqRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m) {
-    return FlagsRegShifted("TEQ", cond, true, n, s, type, m);
+    return FlagsRegShifted("TEQ", cond, false, n, s, type, m);
 }
 
 std::string Disassembler::Arm_TstImm(Condition cond, Reg n, u32 imm) {
-    return FlagsImm("TST", cond, true, n, imm);
+    return FlagsImm("TST", cond, false, n, imm);
 }
 std::string Disassembler::Arm_TstReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m) {
-    return FlagsReg("TST", cond, true, n, imm, type, m);
+    return FlagsReg("TST", cond, false, n, imm, type, m);
 }
 std::string Disassembler::Arm_TstRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m) {
-    return FlagsRegShifted("TST", cond, true, n, s, type, m);
+    return FlagsRegShifted("TST", cond, false, n, s, type, m);
 }
 
 // Shifts
