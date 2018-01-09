@@ -321,7 +321,7 @@ bool Cpu::ConditionPassed(Condition cond) const {
 
 void Cpu::SetAllFlags(u64 result) {
     SetSign(result & sign_bit);
-    SetZero(result == 0);
+    SetZero(static_cast<u32>(result) == 0);
     SetCarry(result & carry_bit);
     SetOverflow(((result & carry_bit) >> 1) ^ (result & sign_bit));
 }
