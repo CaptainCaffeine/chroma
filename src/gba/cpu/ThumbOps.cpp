@@ -22,41 +22,101 @@
 
 namespace Gba {
 
-// Arithmetic Operators
-int Cpu::Thumb_AdcReg(Reg m, Reg d) {
-    u64 result = AddWithCarry(regs[d], regs[m], GetCarry());
+int Cpu::Thumb_ArithImm(u32 imm, Reg n, Reg d, ArithOp op, u32 carry) {
+    u64 result = op(regs[n], imm, carry);
 
     regs[d] = result;
     SetAllFlags(result);
 
     return 1;
+}
+
+int Cpu::Thumb_ArithReg(Reg m, Reg n, Reg d, ArithOp op, u32 carry) {
+    u64 result = op(regs[n], regs[m], carry);
+
+    regs[d] = result;
+    SetAllFlags(result);
+
+    return 1;
+}
+
+int Cpu::Thumb_ArithImmSp(Reg d, u32 imm, ArithOp op, u32 carry) {
+    imm <<= 2;
+
+    u64 result = op(regs[sp], imm, carry);
+
+    regs[d] = result;
+    // Don't set flags.
+
+    return 1;
+}
+
+int Cpu::Thumb_Compare(u32 imm, Reg n, ArithOp op, u32 carry) {
+    u64 result = op(regs[n], imm, carry);
+
+    SetAllFlags(result);
+
+    return 1;
+}
+
+int Cpu::Thumb_LogicReg(Reg m, Reg d, LogicOp op) {
+    u32 result = op(regs[d], regs[m]);
+
+    regs[d] = result;
+    SetSignZeroFlags(result);
+
+    return 1;
+}
+
+int Cpu::Thumb_ShiftImm(u32 imm, Reg m, Reg d, ShiftType type) {
+    ImmediateShift shift = DecodeImmShift(type, imm);
+
+    ResultWithCarry shifted_reg = Shift_C(regs[m], shift.type, shift.imm, GetCarry());
+
+    regs[d] = shifted_reg.result;
+    SetSignZeroCarryFlags(shifted_reg.result, shifted_reg.carry);
+
+    return 1;
+}
+
+int Cpu::Thumb_ShiftReg(Reg m, Reg d, ShiftType type) {
+    ResultWithCarry shifted_reg = Shift_C(regs[d], type, regs[m] & 0xFF, GetCarry());
+
+    regs[d] = shifted_reg.result;
+    SetSignZeroCarryFlags(shifted_reg.result, shifted_reg.carry);
+
+    return 1;
+}
+
+int Cpu::Thumb_Load(u32 imm, Reg n, Reg t, LoadOp op) {
+    u32 addr = regs[n] + imm;
+    regs[t] = op(mem, addr);
+
+    return 1;
+}
+
+int Cpu::Thumb_Store(u32 imm, Reg n, Reg t, StoreOp op) {
+    u32 addr = regs[n] + imm;
+    op(mem, addr, regs[t]);
+
+    return 1;
+}
+
+// Arithmetic Operators
+int Cpu::Thumb_AdcReg(Reg m, Reg d) {
+    return Thumb_ArithReg(m, d, d, add_op, GetCarry());
 }
 
 int Cpu::Thumb_AddImmT1(u32 imm, Reg n, Reg d) {
-    u64 result = AddWithCarry(regs[n], imm, 0);
-
-    regs[d] = result;
-    SetAllFlags(result);
-
-    return 1;
+    return Thumb_ArithImm(imm, n, d, add_op, 0);
 }
 
 int Cpu::Thumb_AddImmT2(Reg d, u32 imm) {
-    u64 result = AddWithCarry(regs[d], imm, 0);
-
-    regs[d] = result;
-    SetAllFlags(result);
-
-    return 1;
+    return Thumb_ArithImm(imm, d, d, add_op, 0);
 }
 
 int Cpu::Thumb_AddRegT1(Reg m, Reg n, Reg d) {
-    u64 result = AddWithCarry(regs[n], regs[m], 0);
-
-    regs[d] = result;
-    SetAllFlags(result);
-
-    return 1;
+    return Thumb_ArithReg(m, n, d, add_op, 0);
 }
 
 int Cpu::Thumb_AddRegT2(Reg d1, Reg m, Reg d2) {
@@ -79,25 +139,11 @@ int Cpu::Thumb_AddRegT2(Reg d1, Reg m, Reg d2) {
 }
 
 int Cpu::Thumb_AddSpImmT1(Reg d, u32 imm) {
-    imm <<= 2;
-
-    u64 result = AddWithCarry(regs[sp], imm, 0);
-
-    regs[d] = result;
-    // Don't set flags.
-
-    return 1;
+    return Thumb_ArithImmSp(d, imm, add_op, 0);
 }
 
 int Cpu::Thumb_AddSpImmT2(u32 imm) {
-    imm <<= 2;
-
-    u64 result = AddWithCarry(regs[sp], imm, 0);
-
-    regs[sp] = result;
-    // Don't set flags.
-
-    return 1;
+    return Thumb_ArithImmSp(sp, imm, add_op, 0);
 }
 
 int Cpu::Thumb_AddPcImm(Reg d, u32 imm) {
@@ -112,27 +158,15 @@ int Cpu::Thumb_AddPcImm(Reg d, u32 imm) {
 }
 
 int Cpu::Thumb_CmnReg(Reg m, Reg n) {
-    u64 result = AddWithCarry(regs[n], regs[m], 0);
-
-    SetAllFlags(result);
-
-    return 1;
+    return Thumb_Compare(regs[m], n, add_op, 0);
 }
 
 int Cpu::Thumb_CmpImm(Reg n, u32 imm) {
-    u64 result = AddWithCarry(regs[n], ~imm, 1);
-
-    SetAllFlags(result);
-
-    return 1;
+    return Thumb_Compare(imm, n, sub_op, 1);
 }
 
 int Cpu::Thumb_CmpRegT1(Reg m, Reg n) {
-    u64 result = AddWithCarry(regs[n], ~regs[m], 1);
-
-    SetAllFlags(result);
-
-    return 1;
+    return Thumb_Compare(regs[m], n, sub_op, 1);
 }
 
 int Cpu::Thumb_CmpRegT2(Reg n1, Reg m, Reg n2) {
@@ -162,96 +196,44 @@ int Cpu::Thumb_MulReg(Reg n, Reg d) {
 
 int Cpu::Thumb_RsbImm(Reg n, Reg d) {
     // The immediate is always 0 for this instruction.
-    u64 result = AddWithCarry(~regs[n], 0, 1);
-
-    regs[d] = result;
-    SetAllFlags(result);
-
-    return 1;
+    return Thumb_ArithImm(0, n, d, rsb_op, 1);
 }
 
 int Cpu::Thumb_SbcReg(Reg m, Reg d) {
-    u64 result = AddWithCarry(regs[d], ~regs[m], GetCarry());
-
-    regs[d] = result;
-    SetAllFlags(result);
-
-    return 1;
+    return Thumb_ArithReg(m, d, d, sub_op, GetCarry());
 }
 
 int Cpu::Thumb_SubImmT1(u32 imm, Reg n, Reg d) {
-    u64 result = AddWithCarry(regs[n], ~imm, 1);
-
-    regs[d] = result;
-    SetAllFlags(result);
-
-    return 1;
+    return Thumb_ArithImm(imm, n, d, sub_op, 1);
 }
 
 int Cpu::Thumb_SubImmT2(Reg d, u32 imm) {
-    u64 result = AddWithCarry(regs[d], ~imm, 1);
-
-    regs[d] = result;
-    SetAllFlags(result);
-
-    return 1;
+    return Thumb_ArithImm(imm, d, d, sub_op, 1);
 }
 
 int Cpu::Thumb_SubReg(Reg m, Reg n, Reg d) {
-    u64 result = AddWithCarry(regs[n], ~regs[m], 1);
-
-    regs[d] = result;
-    SetAllFlags(result);
-
-    return 1;
+    return Thumb_ArithReg(m, n, d, sub_op, 1);
 }
 
 int Cpu::Thumb_SubSpImm(u32 imm) {
-    imm <<= 2;
-
-    u64 result = AddWithCarry(regs[sp], ~imm, 1);
-
-    regs[sp] = result;
-    // Don't set flags.
-
-    return 1;
+    return Thumb_ArithImmSp(sp, imm, sub_op, 1);
 }
 
 // Logical Operators
 int Cpu::Thumb_AndReg(Reg m, Reg d) {
-    u32 result = regs[d] & regs[m];
-
-    regs[d] = result;
-    SetSignZeroFlags(result);
-
-    return 1;
+    return Thumb_LogicReg(m, d, and_op);
 }
 
 int Cpu::Thumb_BicReg(Reg m, Reg d) {
-    u32 result = regs[d] & ~regs[m];
-
-    regs[d] = result;
-    SetSignZeroFlags(result);
-
-    return 1;
+    return Thumb_LogicReg(m, d, bic_op);
 }
 
 int Cpu::Thumb_EorReg(Reg m, Reg d) {
-    u32 result = regs[d] ^ regs[m];
-
-    regs[d] = result;
-    SetSignZeroFlags(result);
-
-    return 1;
+    return Thumb_LogicReg(m, d, eor_op);
 }
 
 int Cpu::Thumb_OrrReg(Reg m, Reg d) {
-    u32 result = regs[d] | regs[m];
-
-    regs[d] = result;
-    SetSignZeroFlags(result);
-
-    return 1;
+    return Thumb_LogicReg(m, d, orr_op);
 }
 
 int Cpu::Thumb_TstReg(Reg m, Reg n) {
@@ -264,72 +246,31 @@ int Cpu::Thumb_TstReg(Reg m, Reg n) {
 
 // Shifts
 int Cpu::Thumb_AsrImm(u32 imm, Reg m, Reg d) {
-    ImmediateShift shift = DecodeImmShift(ShiftType::ASR, imm);
-
-    ResultWithCarry shifted_reg = Shift_C(regs[m], ShiftType::ASR, shift.imm, GetCarry());
-
-    regs[d] = shifted_reg.result;
-    SetSignZeroCarryFlags(shifted_reg.result, shifted_reg.carry);
-
-    return 1;
+    return Thumb_ShiftImm(imm, m, d, ShiftType::ASR);
 }
 
 int Cpu::Thumb_AsrReg(Reg m, Reg d) {
-    ResultWithCarry shifted_reg = Shift_C(regs[d], ShiftType::ASR, regs[m] & 0xFF, GetCarry());
-
-    regs[d] = shifted_reg.result;
-    SetSignZeroCarryFlags(shifted_reg.result, shifted_reg.carry);
-
-    return 1;
+    return Thumb_ShiftReg(m, d, ShiftType::ASR);
 }
 
 int Cpu::Thumb_LslImm(u32 imm, Reg m, Reg d) {
-    // No need to DecodeImmShift for LSL.
-
-    ResultWithCarry shifted_reg = Shift_C(regs[m], ShiftType::LSL, imm, GetCarry());
-
-    regs[d] = shifted_reg.result;
-    SetSignZeroCarryFlags(shifted_reg.result, shifted_reg.carry);
-
-    return 1;
+    return Thumb_ShiftImm(imm, m, d, ShiftType::LSL);
 }
 
 int Cpu::Thumb_LslReg(Reg m, Reg d) {
-    ResultWithCarry shifted_reg = Shift_C(regs[d], ShiftType::LSL, regs[m] & 0xFF, GetCarry());
-
-    regs[d] = shifted_reg.result;
-    SetSignZeroCarryFlags(shifted_reg.result, shifted_reg.carry);
-
-    return 1;
+    return Thumb_ShiftReg(m, d, ShiftType::LSL);
 }
 
 int Cpu::Thumb_LsrImm(u32 imm, Reg m, Reg d) {
-    ImmediateShift shift = DecodeImmShift(ShiftType::LSR, imm);
-
-    ResultWithCarry shifted_reg = Shift_C(regs[m], ShiftType::LSR, shift.imm, GetCarry());
-
-    regs[d] = shifted_reg.result;
-    SetSignZeroCarryFlags(shifted_reg.result, shifted_reg.carry);
-
-    return 1;
+    return Thumb_ShiftImm(imm, m, d, ShiftType::LSR);
 }
 
 int Cpu::Thumb_LsrReg(Reg m, Reg d) {
-    ResultWithCarry shifted_reg = Shift_C(regs[d], ShiftType::LSR, regs[m] & 0xFF, GetCarry());
-
-    regs[d] = shifted_reg.result;
-    SetSignZeroCarryFlags(shifted_reg.result, shifted_reg.carry);
-
-    return 1;
+    return Thumb_ShiftReg(m, d, ShiftType::LSR);
 }
 
 int Cpu::Thumb_RorReg(Reg m, Reg d) {
-    ResultWithCarry shifted_reg = Shift_C(regs[d], ShiftType::ROR, regs[m] & 0xFF, GetCarry());
-
-    regs[d] = shifted_reg.result;
-    SetSignZeroCarryFlags(shifted_reg.result, shifted_reg.carry);
-
-    return 1;
+    return Thumb_ShiftReg(m, d, ShiftType::ROR);
 }
 
 // Branches
@@ -447,21 +388,17 @@ int Cpu::Thumb_Ldm(Reg n, u32 reg_list) {
 }
 
 int Cpu::Thumb_LdrImm(u32 imm, Reg n, Reg t) {
-    imm <<= 2;
-
-    u32 addr = regs[n] + imm;
-    regs[t] = mem.ReadMem<u32>(addr);
-
-    return 1;
+    auto ldr_op = [](Memory& _mem, u32 addr) -> u32 {
+        return _mem.ReadMem<u32>(addr);
+    };
+    return Thumb_Load(imm << 2, n, t, ldr_op);
 }
 
 int Cpu::Thumb_LdrSpImm(Reg t, u32 imm) {
-    imm <<= 2;
-
-    u32 addr = regs[sp] + imm;
-    regs[t] = mem.ReadMem<u32>(addr);
-
-    return 1;
+    auto ldr_op = [](Memory& _mem, u32 addr) -> u32 {
+        return _mem.ReadMem<u32>(addr);
+    };
+    return Thumb_Load(imm << 2, sp, t, ldr_op);
 }
 
 int Cpu::Thumb_LdrPcImm(Reg t, u32 imm) {
@@ -474,54 +411,52 @@ int Cpu::Thumb_LdrPcImm(Reg t, u32 imm) {
 }
 
 int Cpu::Thumb_LdrReg(Reg m, Reg n, Reg t) {
-    u32 addr = regs[n] + regs[m];
-    regs[t] = mem.ReadMem<u32>(addr);
-
-    return 1;
+    auto ldr_op = [](Memory& _mem, u32 addr) -> u32 {
+        return _mem.ReadMem<u32>(addr);
+    };
+    return Thumb_Load(regs[m], n, t, ldr_op);
 }
 
 int Cpu::Thumb_LdrbImm(u32 imm, Reg n, Reg t) {
-    u32 addr = regs[n] + imm;
-    regs[t] = mem.ReadMem<u8>(addr);
-
-    return 1;
+    auto ldrb_op = [](Memory& _mem, u32 addr) -> u32 {
+        return _mem.ReadMem<u8>(addr);
+    };
+    return Thumb_Load(imm, n, t, ldrb_op);
 }
 
 int Cpu::Thumb_LdrbReg(Reg m, Reg n, Reg t) {
-    u32 addr = regs[n] + regs[m];
-    regs[t] = mem.ReadMem<u8>(addr);
-
-    return 1;
+    auto ldrb_op = [](Memory& _mem, u32 addr) -> u32 {
+        return _mem.ReadMem<u8>(addr);
+    };
+    return Thumb_Load(regs[m], n, t, ldrb_op);
 }
 
 int Cpu::Thumb_LdrhImm(u32 imm, Reg n, Reg t) {
-    imm <<= 1;
-
-    u32 addr = regs[n] + imm;
-    regs[t] = mem.ReadMem<u16>(addr);
-
-    return 1;
+    auto ldrh_op = [](Memory& _mem, u32 addr) -> u32 {
+        return _mem.ReadMem<u16>(addr);
+    };
+    return Thumb_Load(imm << 1, n, t, ldrh_op);
 }
 
 int Cpu::Thumb_LdrhReg(Reg m, Reg n, Reg t) {
-    u32 addr = regs[n] + regs[m];
-    regs[t] = mem.ReadMem<u16>(addr);
-
-    return 1;
+    auto ldrh_op = [](Memory& _mem, u32 addr) -> u32 {
+        return _mem.ReadMem<u16>(addr);
+    };
+    return Thumb_Load(regs[m], n, t, ldrh_op);
 }
 
 int Cpu::Thumb_LdrsbReg(Reg m, Reg n, Reg t) {
-    u32 addr = regs[n] + regs[m];
-    regs[t] = SignExtend(static_cast<u32>(mem.ReadMem<u8>(addr)), 8);
-
-    return 1;
+    auto ldrsb_op = [](Memory& _mem, u32 addr) -> u32 {
+        return SignExtend(static_cast<u32>(_mem.ReadMem<u8>(addr)), 8);
+    };
+    return Thumb_Load(regs[m], n, t, ldrsb_op);
 }
 
 int Cpu::Thumb_LdrshReg(Reg m, Reg n, Reg t) {
-    u32 addr = regs[n] + regs[m];
-    regs[t] = SignExtend(static_cast<u32>(mem.ReadMem<u16>(addr)), 16);
-
-    return 1;
+    auto ldrsh_op = [](Memory& _mem, u32 addr) -> u32 {
+        return SignExtend(static_cast<u32>(_mem.ReadMem<u16>(addr)), 16);
+    };
+    return Thumb_Load(regs[m], n, t, ldrsh_op);
 }
 
 int Cpu::Thumb_Pop(bool p, u32 reg_list) {
@@ -599,58 +534,52 @@ int Cpu::Thumb_Stm(Reg n, u32 reg_list) {
 }
 
 int Cpu::Thumb_StrImm(u32 imm, Reg n, Reg t) {
-    imm <<= 2;
-
-    u32 addr = regs[n] + imm;
-    mem.WriteMem(addr, regs[t]);
-
-    return 1;
+    auto str_op = [](Memory& _mem, u32 addr, u32 data) {
+        _mem.WriteMem(addr, data);
+    };
+    return Thumb_Store(imm << 2, n, t, str_op);
 }
 
 int Cpu::Thumb_StrSpImm(Reg t, u32 imm) {
-    imm <<= 2;
-
-    u32 addr = regs[sp] + imm;
-    mem.WriteMem(addr, regs[t]);
-
-    return 1;
+    auto str_op = [](Memory& _mem, u32 addr, u32 data) {
+        _mem.WriteMem(addr, data);
+    };
+    return Thumb_Store(imm << 2, sp, t, str_op);
 }
 
 int Cpu::Thumb_StrReg(Reg m, Reg n, Reg t) {
-    u32 addr = regs[n] + regs[m];
-    mem.WriteMem(addr, regs[t]);
-
-    return 1;
+    auto str_op = [](Memory& _mem, u32 addr, u32 data) {
+        _mem.WriteMem(addr, data);
+    };
+    return Thumb_Store(regs[m], n, t, str_op);
 }
 
 int Cpu::Thumb_StrbImm(u32 imm, Reg n, Reg t) {
-    u32 addr = regs[n] + imm;
-    mem.WriteMem(addr, static_cast<u8>(regs[t]));
-
-    return 1;
+    auto strb_op = [](Memory& _mem, u32 addr, u32 data) {
+        _mem.WriteMem<u8>(addr, data);
+    };
+    return Thumb_Store(imm, n, t, strb_op);
 }
 
 int Cpu::Thumb_StrbReg(Reg m, Reg n, Reg t) {
-    u32 addr = regs[n] + regs[m];
-    mem.WriteMem(addr, static_cast<u8>(regs[t]));
-
-    return 1;
+    auto strb_op = [](Memory& _mem, u32 addr, u32 data) {
+        _mem.WriteMem<u8>(addr, data);
+    };
+    return Thumb_Store(regs[m], n, t, strb_op);
 }
 
 int Cpu::Thumb_StrhImm(u32 imm, Reg n, Reg t) {
-    imm <<= 1;
-
-    u32 addr = regs[n] + imm;
-    mem.WriteMem(addr, static_cast<u16>(regs[t]));
-
-    return 1;
+    auto strh_op = [](Memory& _mem, u32 addr, u32 data) {
+        _mem.WriteMem<u16>(addr, data);
+    };
+    return Thumb_Store(imm << 1, n, t, strh_op);
 }
 
 int Cpu::Thumb_StrhReg(Reg m, Reg n, Reg t) {
-    u32 addr = regs[n] + regs[m];
-    mem.WriteMem(addr, static_cast<u16>(regs[t]));
-
-    return 1;
+    auto strh_op = [](Memory& _mem, u32 addr, u32 data) {
+        _mem.WriteMem<u16>(addr, data);
+    };
+    return Thumb_Store(regs[m], n, t, strh_op);
 }
 
 // Misc

@@ -180,8 +180,7 @@ std::vector<Instruction<Arm>> Instruction<Arm>::GetInstructionTable() {
 
         {"LDC coproc, CRd, [Rn, #+/-imm]{!}","cccc110pudw1nnnnddddkkkkiiiiiiii", &Dispatcher::Arm_Ldc},
 
-        {"LDMI{P} Rn{!}, rlist{^}",          "cccc100p1ew1nnnnrrrrrrrrrrrrrrrr", &Dispatcher::Arm_Ldmi}, // LDM if p == 0
-        {"LDMD{P} Rn{!}, rlist{^}",          "cccc100p0ew1nnnnrrrrrrrrrrrrrrrr", &Dispatcher::Arm_Ldmd},
+        {"LDM{U}{P} Rn{!}, rlist{^}",        "cccc100puew1nnnnrrrrrrrrrrrrrrrr", &Dispatcher::Arm_Ldm},
 
         // Disassembly different for post-indexed (p == 0). Disassemble as LDR*T when p == 0 && w == 1.
         {"LDR Rt, [Rn, {#+/-imm}]{!}",       "cccc010pu0w1nnnnttttiiiiiiiiiiii", &Dispatcher::Arm_LdrImm},
@@ -255,8 +254,7 @@ std::vector<Instruction<Arm>> Instruction<Arm>::GetInstructionTable() {
 
         {"STC coproc, CRd, [Rn, #+/-imm]{!}","cccc110pudw0nnnnddddkkkkiiiiiiii", &Dispatcher::Arm_Ldc},
 
-        {"STMI{P} Rn{!}, rlist{^}",          "cccc100p1ew0nnnnrrrrrrrrrrrrrrrr", &Dispatcher::Arm_Stmi}, // STM when p == 0
-        {"STMD{P} Rn{!}, rlist{^}",          "cccc100p0ew0nnnnrrrrrrrrrrrrrrrr", &Dispatcher::Arm_Stmd},
+        {"STM{U}{P} Rn{!}, rlist{^}",        "cccc100puew0nnnnrrrrrrrrrrrrrrrr", &Dispatcher::Arm_Stm},
 
         // Disassembly different for post-indexed (p == 0).
         {"STR Rt, [Rn, {#+/-imm}]{!}",       "cccc010pu0w0nnnnttttiiiiiiiiiiii", &Dispatcher::Arm_StrImm},

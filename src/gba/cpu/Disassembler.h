@@ -84,10 +84,12 @@ private:
 
     std::string BranchImm(const char* name, Condition cond, s32 signed_imm32);
 
-    std::string LoadMultiple(const char* name, Condition cond, bool pre_indexed, bool exception_return, bool wb, Reg n, u32 reg_list);
+    std::string LoadMultiple(const char* name, Condition cond, bool pre_indexed, bool increment, bool exception_return,
+                             bool wb, Reg n, u32 reg_list);
 
     std::string LoadImm(const char* name, Condition cond, bool pre_indexed, bool add, bool wb, Reg n, Reg t, u32 imm);
-    std::string LoadReg(const char* name, Condition cond, bool pre_indexed, bool add, bool wb, Reg n, Reg t, u32 imm, ShiftType type, Reg m);
+    std::string LoadReg(const char* name, Condition cond, bool pre_indexed, bool add, bool wb, Reg n, Reg t, u32 imm,
+                        ShiftType type, Reg m);
 
     // Thumb
     std::string AluImm(const char* name, Reg d, u32 imm);
@@ -305,8 +307,8 @@ public:
     std::string Arm_MvnRegShifted(Condition cond, bool sf, Reg d, Reg s, ShiftType type, Reg m);
 
     // Loads
-    std::string Arm_Ldmi(Condition cond, bool pre_indexed, bool exception_return, bool wb, Reg n, u32 reg_list);
-    std::string Arm_Ldmd(Condition cond, bool pre_indexed, bool exception_return, bool wb, Reg n, u32 reg_list);
+    std::string Arm_Ldm(Condition cond, bool pre_indexed, bool increment, bool exception_return, bool wb, Reg n,
+                        u32 reg_list);
 
     std::string Arm_LdrImm(Condition cond, bool pre_indexed, bool add, bool wb, Reg n, Reg t, u32 imm);
     std::string Arm_LdrReg(Condition cond, bool pre_indexed, bool add, bool wb, Reg n, Reg t, u32 imm,
@@ -332,8 +334,8 @@ public:
     std::string Arm_PushA1(Condition cond, u32 reg_list);
     std::string Arm_PushA2(Condition cond, Reg t);
 
-    std::string Arm_Stmi(Condition cond, bool pre_indexed, bool store_user_regs, bool wb, Reg n, u32 reg_list);
-    std::string Arm_Stmd(Condition cond, bool pre_indexed, bool store_user_regs, bool wb, Reg n, u32 reg_list);
+    std::string Arm_Stm(Condition cond, bool pre_indexed, bool increment, bool store_user_regs, bool wb, Reg n,
+                        u32 reg_list);
 
     std::string Arm_StrImm(Condition cond, bool pre_indexed, bool add, bool wb, Reg n, Reg t, u32 imm);
     std::string Arm_StrReg(Condition cond, bool pre_indexed, bool add, bool wb, Reg n, Reg t, u32 imm,

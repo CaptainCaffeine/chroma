@@ -74,10 +74,10 @@ std::string Disassembler::BranchImm(const char* name, Condition cond, s32 signed
     }
 }
 
-std::string Disassembler::LoadMultiple(const char* name, Condition cond, bool pre_indexed, bool exception_return,
-                                       bool wb, Reg n, u32 reg_list) {
-    return fmt::format("{}{}{} {}{}, {}{}", name, (pre_indexed) ? "B" : "A", cond, RegStr(n),
-                       (wb) ? "!" : "", ListStr(reg_list), (exception_return) ? "^" : "");
+std::string Disassembler::LoadMultiple(const char* name, Condition cond, bool pre_indexed, bool increment,
+                                       bool exception_return, bool wb, Reg n, u32 reg_list) {
+    return fmt::format("{}{}{}{} {}{}, {}{}", name, (increment) ? "I" : "D", (pre_indexed) ? "B" : "A", cond,
+                       RegStr(n), (wb) ? "!" : "", ListStr(reg_list), (exception_return) ? "^" : "");
 }
 
 std::string Disassembler::LoadImm(const char* name, Condition cond, bool pre_indexed, bool add, bool wb,
@@ -323,11 +323,9 @@ std::string Disassembler::Arm_MvnRegShifted(Condition cond, bool sf, Reg d, Reg 
 }
 
 // Loads
-std::string Disassembler::Arm_Ldmi(Condition cond, bool pre_indexed, bool exception_return, bool wb, Reg n, u32 reg_list) {
-    return LoadMultiple("LDMI", cond, pre_indexed, exception_return, wb, n, reg_list);
-}
-std::string Disassembler::Arm_Ldmd(Condition cond, bool pre_indexed, bool exception_return, bool wb, Reg n, u32 reg_list) {
-    return LoadMultiple("LDMD", cond, pre_indexed, exception_return, wb, n, reg_list);
+std::string Disassembler::Arm_Ldm(Condition cond, bool pre_indexed, bool increment, bool exception_return,
+                                  bool wb, Reg n, u32 reg_list) {
+    return LoadMultiple("LDM", cond, pre_indexed, increment, exception_return, wb, n, reg_list);
 }
 
 std::string Disassembler::Arm_LdrImm(Condition cond, bool pre_indexed, bool add, bool wb, Reg n, Reg t, u32 imm) {
@@ -385,11 +383,9 @@ std::string Disassembler::Arm_PushA2(Condition cond, Reg t) {
     return fmt::format("PUSH{} {}", cond, RegStr(t));
 }
 
-std::string Disassembler::Arm_Stmi(Condition cond, bool pre_indexed, bool user_regs, bool wb, Reg n, u32 reg_list) {
-    return LoadMultiple("STMI", cond, pre_indexed, user_regs, wb, n, reg_list);
-}
-std::string Disassembler::Arm_Stmd(Condition cond, bool pre_indexed, bool user_regs, bool wb, Reg n, u32 reg_list) {
-    return LoadMultiple("STMD", cond, pre_indexed, user_regs, wb, n, reg_list);
+std::string Disassembler::Arm_Stm(Condition cond, bool pre_indexed, bool increment, bool user_regs, bool wb, Reg n,
+                                  u32 reg_list) {
+    return LoadMultiple("STM", cond, pre_indexed, increment, user_regs, wb, n, reg_list);
 }
 
 std::string Disassembler::Arm_StrImm(Condition cond, bool pre_indexed, bool add, bool wb, Reg n, Reg t, u32 imm) {
