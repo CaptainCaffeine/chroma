@@ -231,7 +231,7 @@ ImmediateShift Cpu::DecodeImmShift(ShiftType type, u32 imm5) {
     return {type, imm5};
 }
 
-u32 Cpu::Shift(u32 value, ShiftType type, int shift_amount, u32 carry) {
+u32 Cpu::Shift(u32 value, ShiftType type, int shift_amount) {
     assert(!(type == ShiftType::RRX && shift_amount != 1));
 
     if (shift_amount == 0) {
@@ -248,18 +248,18 @@ u32 Cpu::Shift(u32 value, ShiftType type, int shift_amount, u32 carry) {
     case ShiftType::ROR:
         return RotateRight(value, shift_amount);
     case ShiftType::RRX:
-        return (value >> 1) | (carry << 31);
+        return (value >> 1) | (GetCarry() << 31);
     default:
         assert(false);
         return 0;
     }
 }
 
-Cpu::ResultWithCarry Cpu::Shift_C(u32 value, ShiftType type, int shift_amount, u32 carry) {
+Cpu::ResultWithCarry Cpu::Shift_C(u32 value, ShiftType type, int shift_amount) {
     assert(!(type == ShiftType::RRX && shift_amount != 1));
 
     if (shift_amount == 0) {
-        return {value, carry};
+        return {value, GetCarry()};
     }
 
     switch (type) {
@@ -272,7 +272,7 @@ Cpu::ResultWithCarry Cpu::Shift_C(u32 value, ShiftType type, int shift_amount, u
     case ShiftType::ROR:
         return RotateRight_C(value, shift_amount);
     case ShiftType::RRX:
-        return RotateRightExtend_C(value, carry);
+        return RotateRightExtend_C(value, GetCarry());
     default:
         assert(false);
         return {0, 0};

@@ -146,8 +146,8 @@ private:
         return {result, result >> 31};
     }
 
-    static u32 Shift(u32 value, ShiftType type, int shift_amount, u32 carry);
-    static ResultWithCarry Shift_C(u32 value, ShiftType type, int shift_amount, u32 carry);
+    u32 Shift(u32 value, ShiftType type, int shift_amount);
+    ResultWithCarry Shift_C(u32 value, ShiftType type, int shift_amount);
     static ResultWithCarry LogicalShiftLeft_C(u32 value, int shift_amount);
     static ResultWithCarry LogicalShiftRight_C(u32 value, int shift_amount);
     static ResultWithCarry ArithmeticShiftRight_C(u32 value, int shift_amount);

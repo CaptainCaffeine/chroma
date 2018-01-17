@@ -71,7 +71,7 @@ int Cpu::Thumb_LogicReg(Reg m, Reg d, LogicOp op) {
 int Cpu::Thumb_ShiftImm(u32 imm, Reg m, Reg d, ShiftType type) {
     ImmediateShift shift = DecodeImmShift(type, imm);
 
-    ResultWithCarry shifted_reg = Shift_C(regs[m], shift.type, shift.imm, GetCarry());
+    ResultWithCarry shifted_reg = Shift_C(regs[m], shift.type, shift.imm);
 
     regs[d] = shifted_reg.result;
     SetSignZeroCarryFlags(shifted_reg.result, shifted_reg.carry);
@@ -80,7 +80,7 @@ int Cpu::Thumb_ShiftImm(u32 imm, Reg m, Reg d, ShiftType type) {
 }
 
 int Cpu::Thumb_ShiftReg(Reg m, Reg d, ShiftType type) {
-    ResultWithCarry shifted_reg = Shift_C(regs[d], type, regs[m] & 0xFF, GetCarry());
+    ResultWithCarry shifted_reg = Shift_C(regs[d], type, regs[m] & 0xFF);
 
     regs[d] = shifted_reg.result;
     SetSignZeroCarryFlags(shifted_reg.result, shifted_reg.carry);

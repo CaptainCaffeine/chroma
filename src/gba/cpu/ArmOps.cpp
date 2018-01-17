@@ -53,7 +53,7 @@ int Cpu::Arm_ArithReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shi
 
     ImmediateShift shift = DecodeImmShift(type, imm);
 
-    u32 shifted_reg = Shift(regs[m], shift.type, shift.imm, GetCarry());
+    u32 shifted_reg = Shift(regs[m], shift.type, shift.imm);
     u64 result = op(regs[n], shifted_reg, carry);
 
     if (d == pc) {
@@ -78,7 +78,7 @@ int Cpu::Arm_ArithRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s
 
     assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
 
-    u32 shifted_reg = Shift(regs[m], type, regs[s] & 0xFF, GetCarry());
+    u32 shifted_reg = Shift(regs[m], type, regs[s] & 0xFF);
     u64 result = op(regs[n], shifted_reg, carry);
 
     regs[d] = result;
@@ -107,7 +107,7 @@ int Cpu::Arm_CompareReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m, A
 
     ImmediateShift shift = DecodeImmShift(type, imm);
 
-    u32 shifted_reg = Shift(regs[m], shift.type, shift.imm, GetCarry());
+    u32 shifted_reg = Shift(regs[m], shift.type, shift.imm);
     u64 result = op(regs[n], shifted_reg, carry);
 
     SetAllFlags(result);
@@ -122,7 +122,7 @@ int Cpu::Arm_CompareRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg
 
     assert(n != pc && m != pc && s != pc); // Unpredictable
 
-    u32 shifted_reg = Shift(regs[m], type, regs[s] & 0xFF, GetCarry());
+    u32 shifted_reg = Shift(regs[m], type, regs[s] & 0xFF);
     u64 result = op(regs[n], shifted_reg, carry);
 
     SetAllFlags(result);
@@ -192,7 +192,7 @@ int Cpu::Arm_LogicReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shi
 
     ImmediateShift shift = DecodeImmShift(type, imm);
 
-    ResultWithCarry shifted_reg = Shift_C(regs[m], shift.type, shift.imm, GetCarry());
+    ResultWithCarry shifted_reg = Shift_C(regs[m], shift.type, shift.imm);
     u32 result = op(regs[n], shifted_reg.result);
 
     if (d == pc) {
@@ -216,7 +216,7 @@ int Cpu::Arm_LogicRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s
 
     assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
 
-    ResultWithCarry shifted_reg = Shift_C(regs[m], type, regs[s] & 0xFF, GetCarry());
+    ResultWithCarry shifted_reg = Shift_C(regs[m], type, regs[s] & 0xFF);
     u32 result = op(regs[n], shifted_reg.result);
 
     regs[d] = result;
@@ -245,7 +245,7 @@ int Cpu::Arm_TestReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m, Logi
 
     ImmediateShift shift = DecodeImmShift(type, imm);
 
-    ResultWithCarry shifted_reg = Shift_C(regs[m], shift.type, shift.imm, GetCarry());
+    ResultWithCarry shifted_reg = Shift_C(regs[m], shift.type, shift.imm);
     u32 result = op(regs[n], shifted_reg.result);
 
     SetSignZeroCarryFlags(result, shifted_reg.carry);
@@ -260,7 +260,7 @@ int Cpu::Arm_TestRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m,
 
     assert(n != pc && m != pc && s != pc); // Unpredictable
 
-    ResultWithCarry shifted_reg = Shift_C(regs[m], type, regs[s] & 0xFF, GetCarry());
+    ResultWithCarry shifted_reg = Shift_C(regs[m], type, regs[s] & 0xFF);
     u32 result = op(regs[n], shifted_reg.result);
 
     SetSignZeroCarryFlags(result, shifted_reg.carry);
@@ -275,7 +275,7 @@ int Cpu::Arm_ShiftImm(Condition cond, bool set_flags, Reg d, u32 imm, Reg m, Shi
 
     ImmediateShift shift = DecodeImmShift(type, imm);
 
-    ResultWithCarry shifted_reg = Shift_C(regs[m], shift.type, shift.imm, GetCarry());
+    ResultWithCarry shifted_reg = Shift_C(regs[m], shift.type, shift.imm);
 
     if (d == pc) {
         if (set_flags && HasSpsr()) {
@@ -298,7 +298,7 @@ int Cpu::Arm_ShiftReg(Condition cond, bool set_flags, Reg d, Reg m, Reg n, Shift
 
     assert(d != pc && n != pc && m != pc); // Unpredictable
 
-    ResultWithCarry shifted_reg = Shift_C(regs[n], type, regs[m] & 0xFF, GetCarry());
+    ResultWithCarry shifted_reg = Shift_C(regs[n], type, regs[m] & 0xFF);
 
     regs[d] = shifted_reg.result;
     ConditionalSetSignZeroCarryFlags(set_flags, shifted_reg.result, shifted_reg.carry);
@@ -343,7 +343,7 @@ int Cpu::Arm_LoadReg(Condition cond, bool pre_indexed, bool add, bool writeback,
 
     ImmediateShift shift = DecodeImmShift(type, imm);
 
-    u32 offset = Shift(regs[m], shift.type, shift.imm, GetCarry());
+    u32 offset = Shift(regs[m], shift.type, shift.imm);
 
     if (!add) {
         offset = -offset;
@@ -400,7 +400,7 @@ int Cpu::Arm_StoreReg(Condition cond, bool pre_indexed, bool add, bool writeback
 
     ImmediateShift shift = DecodeImmShift(type, imm);
 
-    u32 offset = Shift(regs[m], shift.type, shift.imm, GetCarry());
+    u32 offset = Shift(regs[m], shift.type, shift.imm);
 
     if (!add) {
         offset = -offset;
@@ -873,7 +873,7 @@ int Cpu::Arm_LdrReg(Condition cond, bool pre_indexed, bool add, bool writeback, 
 
     ImmediateShift shift = DecodeImmShift(type, imm);
 
-    u32 offset = Shift(regs[m], shift.type, shift.imm, GetCarry());
+    u32 offset = Shift(regs[m], shift.type, shift.imm);
 
     if (!add) {
         offset = -offset;
