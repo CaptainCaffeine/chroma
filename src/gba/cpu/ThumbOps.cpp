@@ -28,7 +28,7 @@ int Cpu::Thumb_ArithImm(u32 imm, Reg n, Reg d, ArithOp op, u32 carry) {
     regs[d] = result;
     SetAllFlags(result);
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Thumb_ArithReg(Reg m, Reg n, Reg d, ArithOp op, u32 carry) {
@@ -37,7 +37,7 @@ int Cpu::Thumb_ArithReg(Reg m, Reg n, Reg d, ArithOp op, u32 carry) {
     regs[d] = result;
     SetAllFlags(result);
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Thumb_ArithImmSp(Reg d, u32 imm, ArithOp op, u32 carry) {
@@ -48,7 +48,7 @@ int Cpu::Thumb_ArithImmSp(Reg d, u32 imm, ArithOp op, u32 carry) {
     regs[d] = result;
     // Don't set flags.
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Thumb_Compare(u32 imm, Reg n, ArithOp op, u32 carry) {
@@ -56,7 +56,7 @@ int Cpu::Thumb_Compare(u32 imm, Reg n, ArithOp op, u32 carry) {
 
     SetAllFlags(result);
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Thumb_LogicReg(Reg m, Reg d, LogicOp op) {
@@ -65,7 +65,7 @@ int Cpu::Thumb_LogicReg(Reg m, Reg d, LogicOp op) {
     regs[d] = result;
     SetSignZeroFlags(result);
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Thumb_ShiftImm(u32 imm, Reg m, Reg d, ShiftType type) {
@@ -76,7 +76,7 @@ int Cpu::Thumb_ShiftImm(u32 imm, Reg m, Reg d, ShiftType type) {
     regs[d] = shifted_reg.result;
     SetSignZeroCarryFlags(shifted_reg.result, shifted_reg.carry);
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Thumb_ShiftReg(Reg m, Reg d, ShiftType type) {
@@ -85,21 +85,28 @@ int Cpu::Thumb_ShiftReg(Reg m, Reg d, ShiftType type) {
     regs[d] = shifted_reg.result;
     SetSignZeroCarryFlags(shifted_reg.result, shifted_reg.carry);
 
+    // One internal cycle for shifting by register.
     return 1;
 }
 
 int Cpu::Thumb_Load(u32 imm, Reg n, Reg t, LoadOp op) {
     u32 addr = regs[n] + imm;
-    regs[t] = op(mem, addr);
 
-    return 1;
+    int cycles;
+    std::tie(regs[t], cycles) = op(mem, addr);
+    // Plus one internal cycle to transfer the loaded value to Rt.
+    cycles += 1;
+
+    // The next opcode fetch after an LDR is a sequential access, despite the data load.
+    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
+    mem.MakeNextAccessSequential(regs[pc] + 2);
+
+    return cycles;
 }
 
 int Cpu::Thumb_Store(u32 imm, Reg n, Reg t, StoreOp op) {
     u32 addr = regs[n] + imm;
-    op(mem, addr, regs[t]);
-
-    return 1;
+    return op(mem, addr, regs[t]);
 }
 
 // Arithmetic Operators
@@ -129,13 +136,13 @@ int Cpu::Thumb_AddRegT2(Reg d1, Reg m, Reg d2) {
     u64 result = AddWithCarry(regs[d], regs[m], 0);
 
     if (d == pc) {
-        Thumb_BranchWritePC(result);
+        return Thumb_BranchWritePC(result);
     } else {
         regs[d] = result;
         // Don't set flags.
     }
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Thumb_AddSpImmT1(Reg d, u32 imm) {
@@ -154,7 +161,7 @@ int Cpu::Thumb_AddPcImm(Reg d, u32 imm) {
     regs[d] = result;
     // Don't set flags.
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Thumb_CmnReg(Reg m, Reg n) {
@@ -179,19 +186,20 @@ int Cpu::Thumb_CmpRegT2(Reg n1, Reg m, Reg n2) {
     u64 result = AddWithCarry(regs[n], ~regs[m], 1);
     SetAllFlags(result);
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Thumb_MulReg(Reg n, Reg d) {
     assert(d != n); // Unpredictable
 
+    int cycles = MultiplyCycles(regs[n]);
     u32 result = regs[d] * regs[n];
 
     regs[d] = result;
     // The carry flag gets destroyed on ARMv4.
     SetSignZeroCarryFlags(result, 0);
 
-    return 1;
+    return cycles;
 }
 
 int Cpu::Thumb_RsbImm(Reg n, Reg d) {
@@ -241,7 +249,7 @@ int Cpu::Thumb_TstReg(Reg m, Reg n) {
 
     SetSignZeroFlags(result);
 
-    return 1;
+    return 0;
 }
 
 // Shifts
@@ -276,26 +284,22 @@ int Cpu::Thumb_RorReg(Reg m, Reg d) {
 // Branches
 int Cpu::Thumb_BT1(Condition cond, u32 imm8) {
     if (cond == Condition::Always) {
-        TakeException(CpuMode::Undef);
+        return TakeException(CpuMode::Undef);
     }
 
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     s32 signed_imm32 = SignExtend(imm8 << 1, 9);
 
-    Thumb_BranchWritePC(regs[pc] + signed_imm32);
-
-    return 1;
+    return Thumb_BranchWritePC(regs[pc] + signed_imm32);
 }
 
 int Cpu::Thumb_BT2(u32 imm11) {
     s32 signed_imm32 = SignExtend(imm11 << 1, 12);
 
-    Thumb_BranchWritePC(regs[pc] + signed_imm32);
-
-    return 1;
+    return Thumb_BranchWritePC(regs[pc] + signed_imm32);
 }
 
 int Cpu::Thumb_BlH1(u32 imm11) {
@@ -303,10 +307,9 @@ int Cpu::Thumb_BlH1(u32 imm11) {
     assert((mem.ReadMem<u16>(regs[pc] - 2) & 0xF800) == 0xF800);
 
     s32 signed_imm32 = SignExtend(imm11 << 12, 23);
-
     regs[lr] = regs[pc] + signed_imm32;
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Thumb_BlH2(u32 imm11) {
@@ -314,16 +317,14 @@ int Cpu::Thumb_BlH2(u32 imm11) {
     assert((mem.ReadMem<u16>(regs[pc] - 6) & 0xF800) == 0xF000);
 
     u32 next_instr_addr = regs[pc] - 2;
-    Thumb_BranchWritePC(regs[lr] + (imm11 << 1));
+    int cycles = Thumb_BranchWritePC(regs[lr] + (imm11 << 1));
     regs[lr] = next_instr_addr | 0x1;
 
-    return 1;
+    return cycles;
 }
 
 int Cpu::Thumb_Bx(Reg m) {
-    BxWritePC(regs[m]);
-
-    return 1;
+    return BxWritePC(regs[m]);
 }
 
 // Moves
@@ -331,7 +332,7 @@ int Cpu::Thumb_MovImm(Reg d, u32 imm) {
     regs[d] = imm;
     SetSignZeroFlags(imm);
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Thumb_MovRegT1(Reg d1, Reg m, Reg d2) {
@@ -341,27 +342,27 @@ int Cpu::Thumb_MovRegT1(Reg d1, Reg m, Reg d2) {
     assert(d >= 8 || m >= 8);
 
     if (d == pc) {
-        Thumb_BranchWritePC(regs[m]);
+        return Thumb_BranchWritePC(regs[m]);
     } else {
         regs[d] = regs[m];
         // Don't set flags.
     }
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Thumb_MovRegT2(Reg m, Reg d) {
     regs[d] = regs[m];
     SetSignZeroFlags(regs[m]);
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Thumb_MvnReg(Reg m, Reg d) {
     regs[d] = ~regs[m];
     SetSignZeroFlags(~regs[m]);
 
-    return 1;
+    return 0;
 }
 
 // Loads
@@ -371,10 +372,14 @@ int Cpu::Thumb_Ldm(Reg n, u32 reg_list) {
     const std::bitset<8> rlist{reg_list};
     u32 addr = regs[n];
 
+    // One internal cycle to transfer the last loaded value to the destination register.
+    int cycles = 1;
+
     for (Reg i = 0; i < 8; ++i) {
         if (rlist[i]) {
             // Reads must be aligned.
             regs[i] = mem.ReadMem<u32>(addr & ~0x3);
+            cycles += mem.AccessTime<u32>(addr & ~0x3);
             addr += 4;
         }
     }
@@ -384,19 +389,23 @@ int Cpu::Thumb_Ldm(Reg n, u32 reg_list) {
         regs[n] = addr;
     }
 
-    return 1;
+    // The next opcode fetch after an LDM is a sequential access, despite the data load.
+    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
+    mem.MakeNextAccessSequential(regs[pc] + 2);
+
+    return cycles;
 }
 
 int Cpu::Thumb_LdrImm(u32 imm, Reg n, Reg t) {
-    auto ldr_op = [](Memory& _mem, u32 addr) -> u32 {
-        return _mem.ReadMem<u32>(addr);
+    auto ldr_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
+        return std::make_tuple(_mem.ReadMem<u32>(addr), _mem.AccessTime<u32>(addr));
     };
     return Thumb_Load(imm << 2, n, t, ldr_op);
 }
 
 int Cpu::Thumb_LdrSpImm(Reg t, u32 imm) {
-    auto ldr_op = [](Memory& _mem, u32 addr) -> u32 {
-        return _mem.ReadMem<u32>(addr);
+    auto ldr_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
+        return std::make_tuple(_mem.ReadMem<u32>(addr), _mem.AccessTime<u32>(addr));
     };
     return Thumb_Load(imm << 2, sp, t, ldr_op);
 }
@@ -406,55 +415,61 @@ int Cpu::Thumb_LdrPcImm(Reg t, u32 imm) {
 
     u32 addr = (regs[pc] & ~0x3) + imm;
     regs[t] = mem.ReadMem<u32>(addr);
+    // Plus one internal cycle to transfer the loaded value to Rt.
+    int cycles = 1 + mem.AccessTime<u32>(addr);
 
-    return 1;
+    // The next opcode fetch after an LDR is a sequential access, despite the data load.
+    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
+    mem.MakeNextAccessSequential(regs[pc] + 2);
+
+    return cycles;
 }
 
 int Cpu::Thumb_LdrReg(Reg m, Reg n, Reg t) {
-    auto ldr_op = [](Memory& _mem, u32 addr) -> u32 {
-        return _mem.ReadMem<u32>(addr);
+    auto ldr_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
+        return std::make_tuple(_mem.ReadMem<u32>(addr), _mem.AccessTime<u32>(addr));
     };
     return Thumb_Load(regs[m], n, t, ldr_op);
 }
 
 int Cpu::Thumb_LdrbImm(u32 imm, Reg n, Reg t) {
-    auto ldrb_op = [](Memory& _mem, u32 addr) -> u32 {
-        return _mem.ReadMem<u8>(addr);
+    auto ldrb_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
+        return std::make_tuple(_mem.ReadMem<u8>(addr), _mem.AccessTime<u8>(addr));
     };
     return Thumb_Load(imm, n, t, ldrb_op);
 }
 
 int Cpu::Thumb_LdrbReg(Reg m, Reg n, Reg t) {
-    auto ldrb_op = [](Memory& _mem, u32 addr) -> u32 {
-        return _mem.ReadMem<u8>(addr);
+    auto ldrb_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
+        return std::make_tuple(_mem.ReadMem<u8>(addr), _mem.AccessTime<u8>(addr));
     };
     return Thumb_Load(regs[m], n, t, ldrb_op);
 }
 
 int Cpu::Thumb_LdrhImm(u32 imm, Reg n, Reg t) {
-    auto ldrh_op = [](Memory& _mem, u32 addr) -> u32 {
-        return _mem.ReadMem<u16>(addr);
+    auto ldrh_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
+        return std::make_tuple(_mem.ReadMem<u16>(addr), _mem.AccessTime<u16>(addr));
     };
     return Thumb_Load(imm << 1, n, t, ldrh_op);
 }
 
 int Cpu::Thumb_LdrhReg(Reg m, Reg n, Reg t) {
-    auto ldrh_op = [](Memory& _mem, u32 addr) -> u32 {
-        return _mem.ReadMem<u16>(addr);
+    auto ldrh_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
+        return std::make_tuple(_mem.ReadMem<u16>(addr), _mem.AccessTime<u16>(addr));
     };
     return Thumb_Load(regs[m], n, t, ldrh_op);
 }
 
 int Cpu::Thumb_LdrsbReg(Reg m, Reg n, Reg t) {
-    auto ldrsb_op = [](Memory& _mem, u32 addr) -> u32 {
-        return SignExtend(static_cast<u32>(_mem.ReadMem<u8>(addr)), 8);
+    auto ldrsb_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
+        return std::make_tuple(SignExtend(static_cast<u32>(_mem.ReadMem<u8>(addr)), 8), _mem.AccessTime<u8>(addr));
     };
     return Thumb_Load(regs[m], n, t, ldrsb_op);
 }
 
 int Cpu::Thumb_LdrshReg(Reg m, Reg n, Reg t) {
-    auto ldrsh_op = [](Memory& _mem, u32 addr) -> u32 {
-        return SignExtend(static_cast<u32>(_mem.ReadMem<u16>(addr)), 16);
+    auto ldrsh_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
+        return std::make_tuple(SignExtend(static_cast<u32>(_mem.ReadMem<u16>(addr)), 16), _mem.AccessTime<u16>(addr));
     };
     return Thumb_Load(regs[m], n, t, ldrsh_op);
 }
@@ -465,22 +480,26 @@ int Cpu::Thumb_Pop(bool p, u32 reg_list) {
     const std::bitset<8> rlist{reg_list};
     u32 addr = regs[sp];
 
+    // One internal cycle to transfer the last loaded value to the destination register.
+    int cycles = 1;
+
     for (Reg i = 0; i < 8; ++i) {
         if (rlist[i]) {
             // Reads must be aligned.
             regs[i] = mem.ReadMem<u32>(addr & ~0x3);
+            cycles += mem.AccessTime<u32>(addr & ~0x3);
             addr += 4;
         }
     }
 
     if (p) {
-        Thumb_BranchWritePC(mem.ReadMem<u32>(addr & ~0x3));
+        cycles += Thumb_BranchWritePC(mem.ReadMem<u32>(addr & ~0x3));
         addr += 4;
     }
 
     regs[sp] = addr;
 
-    return 1;
+    return cycles;
 }
 
 // Stores
@@ -494,19 +513,22 @@ int Cpu::Thumb_Push(bool m, u32 reg_list) {
     }
     u32 addr = regs[sp];
 
+    int cycles = 0;
     for (Reg i = 0; i < 8; ++i) {
         if (rlist[i]) {
             // Writes are always aligned.
             mem.WriteMem(addr, regs[i]);
+            cycles += mem.AccessTime<u32>(addr);
             addr += 4;
         }
     }
 
     if (m) {
         mem.WriteMem(addr, regs[lr]);
+        cycles += mem.AccessTime<u32>(addr);
     }
 
-    return 1;
+    return cycles;
 }
 
 int Cpu::Thumb_Stm(Reg n, u32 reg_list) {
@@ -515,6 +537,7 @@ int Cpu::Thumb_Stm(Reg n, u32 reg_list) {
     const std::bitset<8> rlist{reg_list};
     u32 addr = regs[n];
 
+    int cycles = 0;
     for (Reg i = 0; i < 8; ++i) {
         if (rlist[i]) {
             // Writes are always aligned.
@@ -524,75 +547,79 @@ int Cpu::Thumb_Stm(Reg n, u32 reg_list) {
             } else {
                 mem.WriteMem(addr, regs[i]);
             }
+            cycles += mem.AccessTime<u32>(addr);
             addr += 4;
         }
     }
 
     regs[n] = addr;
 
-    return 1;
+    return cycles;
 }
 
 int Cpu::Thumb_StrImm(u32 imm, Reg n, Reg t) {
-    auto str_op = [](Memory& _mem, u32 addr, u32 data) {
+    auto str_op = [](Memory& _mem, u32 addr, u32 data) -> int {
         _mem.WriteMem(addr, data);
+        return _mem.AccessTime<u32>(addr);
     };
     return Thumb_Store(imm << 2, n, t, str_op);
 }
 
 int Cpu::Thumb_StrSpImm(Reg t, u32 imm) {
-    auto str_op = [](Memory& _mem, u32 addr, u32 data) {
+    auto str_op = [](Memory& _mem, u32 addr, u32 data) -> int {
         _mem.WriteMem(addr, data);
+        return _mem.AccessTime<u32>(addr);
     };
     return Thumb_Store(imm << 2, sp, t, str_op);
 }
 
 int Cpu::Thumb_StrReg(Reg m, Reg n, Reg t) {
-    auto str_op = [](Memory& _mem, u32 addr, u32 data) {
+    auto str_op = [](Memory& _mem, u32 addr, u32 data) -> int {
         _mem.WriteMem(addr, data);
+        return _mem.AccessTime<u32>(addr);
     };
     return Thumb_Store(regs[m], n, t, str_op);
 }
 
 int Cpu::Thumb_StrbImm(u32 imm, Reg n, Reg t) {
-    auto strb_op = [](Memory& _mem, u32 addr, u32 data) {
+    auto strb_op = [](Memory& _mem, u32 addr, u32 data) -> int {
         _mem.WriteMem<u8>(addr, data);
+        return _mem.AccessTime<u8>(addr);
     };
     return Thumb_Store(imm, n, t, strb_op);
 }
 
 int Cpu::Thumb_StrbReg(Reg m, Reg n, Reg t) {
-    auto strb_op = [](Memory& _mem, u32 addr, u32 data) {
+    auto strb_op = [](Memory& _mem, u32 addr, u32 data) -> int {
         _mem.WriteMem<u8>(addr, data);
+        return _mem.AccessTime<u8>(addr);
     };
     return Thumb_Store(regs[m], n, t, strb_op);
 }
 
 int Cpu::Thumb_StrhImm(u32 imm, Reg n, Reg t) {
-    auto strh_op = [](Memory& _mem, u32 addr, u32 data) {
+    auto strh_op = [](Memory& _mem, u32 addr, u32 data) -> int {
         _mem.WriteMem<u16>(addr, data);
+        return _mem.AccessTime<u16>(addr);
     };
     return Thumb_Store(imm << 1, n, t, strh_op);
 }
 
 int Cpu::Thumb_StrhReg(Reg m, Reg n, Reg t) {
-    auto strh_op = [](Memory& _mem, u32 addr, u32 data) {
+    auto strh_op = [](Memory& _mem, u32 addr, u32 data) -> int {
         _mem.WriteMem<u16>(addr, data);
+        return _mem.AccessTime<u16>(addr);
     };
     return Thumb_Store(regs[m], n, t, strh_op);
 }
 
 // Misc
 int Cpu::Thumb_Swi(u32) {
-    TakeException(CpuMode::Svc);
-
-    return 1;
+    return TakeException(CpuMode::Svc);
 }
 
 int Cpu::Thumb_Undefined(u16) {
-    TakeException(CpuMode::Undef);
-
-    return 1;
+    return TakeException(CpuMode::Undef);
 }
 
 } // End namespace Gba

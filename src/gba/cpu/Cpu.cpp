@@ -42,6 +42,7 @@ void Cpu::Execute(int cycles) {
             pipeline[0] = pipeline[1];
             pipeline[1] = pipeline[2];
             pipeline[2] = mem.ReadMem<Thumb>(regs[pc]);
+            cycles -= mem.AccessTime<Thumb>(regs[pc]);
 
             disasm->DisassembleThumb(pipeline[0]);
             auto impl = DecodeThumb(pipeline[0]);
@@ -55,6 +56,7 @@ void Cpu::Execute(int cycles) {
             pipeline[0] = pipeline[1];
             pipeline[1] = pipeline[2];
             pipeline[2] = mem.ReadMem<Arm>(regs[pc]);
+            cycles -= mem.AccessTime<Arm>(regs[pc]);
 
             disasm->DisassembleArm(pipeline[0]);
             auto impl = DecodeArm(pipeline[0]);
@@ -122,23 +124,31 @@ void Cpu::CpuModeSwitch(CpuMode new_cpu_mode) {
     cpsr = (cpsr & ~cpu_mode) | static_cast<u32>(new_cpu_mode);
 }
 
-void Cpu::FlushPipeline() {
+int Cpu::FlushPipeline() {
+    int cycles = 0;
     if (ThumbMode()) {
-        for (auto& p : pipeline) {
-            // MOV R8, R8
-            p = 0x46C0;
-        }
+        pipeline[1] = mem.ReadMem<Thumb>(regs[pc]);
+        cycles += mem.AccessTime<Thumb>(regs[pc]);
+        regs[pc] += 2;
+
+        pipeline[2] = mem.ReadMem<Thumb>(regs[pc]);
+        cycles += mem.AccessTime<Thumb>(regs[pc]);
+        regs[pc] += 2;
     } else {
-        for (auto& p : pipeline) {
-            // ANDEQ R0, R0, R0
-            p = 0;
-        }
+        pipeline[1] = mem.ReadMem<Arm>(regs[pc]);
+        cycles += mem.AccessTime<Arm>(regs[pc]);
+        regs[pc] += 4;
+
+        pipeline[2] = mem.ReadMem<Arm>(regs[pc]);
+        cycles += mem.AccessTime<Arm>(regs[pc]);
+        regs[pc] += 4;
     }
 
     pc_written = true;
+    return cycles;
 }
 
-void Cpu::TakeException(CpuMode exception_type) {
+int Cpu::TakeException(CpuMode exception_type) {
     // Save current CPSR and switch to the new CPU mode.
     spsr[CpuModeIndex(exception_type)] = cpsr;
     CpuModeSwitch(exception_type);
@@ -160,10 +170,13 @@ void Cpu::TakeException(CpuMode exception_type) {
     cpsr |= irq_disable;
     cpsr &= ~thumb_mode;
 
+    int cycles = 0;
     // Jump to the exception vector.
     switch (exception_type) {
     case CpuMode::Undef:
         regs[pc] = 0x04;
+        // Undefined instruction exceptions take an extra internal cycle.
+        cycles = 1;
         break;
     case CpuMode::Svc:
         regs[pc] = 0x08;
@@ -177,24 +190,24 @@ void Cpu::TakeException(CpuMode exception_type) {
         break;
     }
 
-    FlushPipeline();
+    return cycles + FlushPipeline();
 
     // IRQs have higher priority than SVCs and undefined instructions.
 }
 
-void Cpu::ReturnFromException(u32 address) {
+int Cpu::ReturnFromException(u32 address) {
     u32 spsr_exception = spsr[CurrentCpuModeIndex()];
     CpuModeSwitch(static_cast<CpuMode>(spsr_exception & cpu_mode));
     cpsr = spsr_exception;
 
     if (ThumbMode()) {
-        Thumb_BranchWritePC(address);
+        return Thumb_BranchWritePC(address);
     } else {
-        Arm_BranchWritePC(address);
+        return Arm_BranchWritePC(address);
     }
 }
 
-void Cpu::BxWritePC(u32 addr) {
+int Cpu::BxWritePC(u32 addr) {
     if ((addr & 0x1) == 0x1) {
         // Switch to Thumb mode.
         cpsr |= thumb_mode;
@@ -208,7 +221,7 @@ void Cpu::BxWritePC(u32 addr) {
         assert(false);
     }
 
-    FlushPipeline();
+    return FlushPipeline();
 }
 
 ImmediateShift Cpu::DecodeImmShift(ShiftType type, u32 imm5) {
@@ -370,6 +383,19 @@ void Cpu::ConditionalSetMultiplyLongFlags(bool set_flags, u64 result) {
         SetCarry(0);
         SetOverflow(0);
     }
+}
+
+int Cpu::MultiplyCycles(u32 operand) {
+    u32 mask = 0xFFFFFF00;
+    for (int cycles = 1; cycles < 4; ++cycles) {
+        if ((operand & mask) == mask || (operand & mask) == 0) {
+            return cycles;
+        }
+
+        mask <<= 8;
+    }
+
+    return 4;
 }
 
 } // End namespace Gba

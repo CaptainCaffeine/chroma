@@ -20,6 +20,7 @@
 #include <vector>
 #include <functional>
 #include <memory>
+#include <tuple>
 
 #include "common/CommonTypes.h"
 #include "common/CommonFuncs.h"
@@ -100,8 +101,8 @@ private:
     using ArithOp = u64(*)(u32,u32,u32);
     using MullOp = s64(*)(u32,u32,u32,u32);
     using LogicOp = u32(*)(u32,u32);
-    using LoadOp = u32(*)(Memory&,u32);
-    using StoreOp = void(*)(Memory&,u32,u32);
+    using LoadOp = std::tuple<u32,int>(*)(Memory&,u32);
+    using StoreOp = int(*)(Memory&,u32,u32);
 
     struct ResultWithCarry {
         u32 result;
@@ -121,10 +122,10 @@ private:
     bool ValidCpuMode(u32 new_mode) const;
     void CpuModeSwitch(CpuMode new_cpu_mode);
 
-    void FlushPipeline();
+    int FlushPipeline();
 
-    void TakeException(CpuMode exception_type);
-    void ReturnFromException(u32 address);
+    int TakeException(CpuMode exception_type);
+    int ReturnFromException(u32 address);
 
     void SetSign(bool val)     { (val) ? (cpsr |= sign)     : (cpsr &= ~sign); }
     void SetZero(bool val)     { (val) ? (cpsr |= zero)     : (cpsr &= ~zero); }
@@ -158,17 +159,17 @@ private:
         return static_cast<u64>(value1) + static_cast<u64>(value2) + static_cast<u64>(carry);
     }
 
-    void Thumb_BranchWritePC(u32 addr) {
+    int Thumb_BranchWritePC(u32 addr) {
         regs[pc] = addr & ~0x1;
-        FlushPipeline();
+        return FlushPipeline();
     }
 
-    void Arm_BranchWritePC(u32 addr) {
+    int Arm_BranchWritePC(u32 addr) {
         regs[pc] = addr & ~0x3;
-        FlushPipeline();
+        return FlushPipeline();
     }
 
-    void BxWritePC(u32 addr);
+    int BxWritePC(u32 addr);
 
     void SetAllFlags(u64 result);
     void SetSignZeroCarryFlags(u32 result, u32 carry);
@@ -180,8 +181,9 @@ private:
 
     bool ConditionPassed(Condition cond) const;
 
-    // Implementation Helpers
+    static int MultiplyCycles(u32 operand);
 
+    // Implementation Helpers
     ArithOp add_op = [](u32 value1, u32 value2, u32 carry) -> u64 { return AddWithCarry(value1, value2, carry); };
     ArithOp sub_op = [](u32 value1, u32 value2, u32 carry) -> u64 { return AddWithCarry(value1, ~value2, carry); };
     ArithOp rsb_op = [](u32 value1, u32 value2, u32 carry) -> u64 { return AddWithCarry(~value1, value2, carry); };
@@ -206,6 +208,8 @@ private:
     int Thumb_Load(u32 imm, Reg n, Reg t, LoadOp op);
     int Thumb_Store(u32 imm, Reg n, Reg t, StoreOp op);
 
+    int AluWritePC(bool set_flags, u32 result);
+
     int Arm_ArithImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, ArithOp op, u32 carry);
     int Arm_ArithReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, ShiftType type, Reg m, ArithOp op,
                      u32 carry);
@@ -216,8 +220,8 @@ private:
     int Arm_CompareReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m, ArithOp op, u32 carry);
     int Arm_CompareRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m, ArithOp op, u32 carry);
 
-    int Arm_MultiplyReg(Condition cond, bool set_flags, Reg d, Reg m, Reg n, u32 accumulator);
-    int Arm_MultiplyLongReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg m, Reg n, MullOp op);
+    int Arm_MultiplyReg(Condition cond, bool set_flags, Reg d, Reg a, Reg m, Reg n);
+    int Arm_MultiplyLongReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg m, Reg n, MullOp op, bool acc);
 
     int Arm_LogicImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, LogicOp op);
     int Arm_LogicReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, ShiftType type, Reg m, LogicOp op);

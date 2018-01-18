@@ -22,9 +22,17 @@
 
 namespace Gba {
 
+int Cpu::AluWritePC(bool set_flags, u32 result) {
+    if (set_flags && HasSpsr()) {
+        return ReturnFromException(result);
+    } else {
+        return Arm_BranchWritePC(result);
+    }
+}
+
 int Cpu::Arm_ArithImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, ArithOp op, u32 carry) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     imm = ArmExpandImmediate(imm);
@@ -32,23 +40,19 @@ int Cpu::Arm_ArithImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Ari
     u64 result = op(regs[n], imm, carry);
 
     if (d == pc) {
-        if (set_flags && HasSpsr()) {
-            ReturnFromException(result);
-        } else {
-            Arm_BranchWritePC(result);
-        }
+        return AluWritePC(set_flags, result);
     } else {
         regs[d] = result;
         ConditionalSetAllFlags(set_flags, result);
     }
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Arm_ArithReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, ShiftType type, Reg m, ArithOp op,
                       u32 carry) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     ImmediateShift shift = DecodeImmShift(type, imm);
@@ -57,23 +61,19 @@ int Cpu::Arm_ArithReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shi
     u64 result = op(regs[n], shifted_reg, carry);
 
     if (d == pc) {
-        if (set_flags && HasSpsr()) {
-            ReturnFromException(result);
-        } else {
-            Arm_BranchWritePC(result);
-        }
+        return AluWritePC(set_flags, result);
     } else {
         regs[d] = result;
         ConditionalSetAllFlags(set_flags, result);
     }
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Arm_ArithRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s, ShiftType type, Reg m, ArithOp op,
                              u32 carry) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
@@ -84,12 +84,13 @@ int Cpu::Arm_ArithRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s
     regs[d] = result;
     ConditionalSetAllFlags(set_flags, result);
 
+    // One internal cycle for shifting by register.
     return 1;
 }
 
 int Cpu::Arm_CompareImm(Condition cond, Reg n, u32 imm, ArithOp op, u32 carry) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     imm = ArmExpandImmediate(imm);
@@ -97,12 +98,12 @@ int Cpu::Arm_CompareImm(Condition cond, Reg n, u32 imm, ArithOp op, u32 carry) {
     u64 result = op(regs[n], imm, carry);
     SetAllFlags(result);
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Arm_CompareReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m, ArithOp op, u32 carry) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     ImmediateShift shift = DecodeImmShift(type, imm);
@@ -112,12 +113,12 @@ int Cpu::Arm_CompareReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m, A
 
     SetAllFlags(result);
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Arm_CompareRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m, ArithOp op, u32 carry) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     assert(n != pc && m != pc && s != pc); // Unpredictable
@@ -127,31 +128,49 @@ int Cpu::Arm_CompareRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg
 
     SetAllFlags(result);
 
+    // One internal cycle for shifting by register.
     return 1;
 }
 
-int Cpu::Arm_MultiplyReg(Condition cond, bool set_flags, Reg d, Reg m, Reg n, u32 accumulator) {
+int Cpu::Arm_MultiplyReg(Condition cond, bool set_flags, Reg d, Reg a, Reg m, Reg n) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     assert(d != pc && n != pc && m != pc && d != n); // Unpredictable
 
-    u32 result = regs[n] * regs[m] + accumulator;
+    int cycles = MultiplyCycles(regs[m]);
+    u32 result = regs[n] * regs[m];
+
+    // We set `a` to 0xFF if we're just doing a MUL.
+    if (a != 0xFF) {
+        assert(a != pc); // Unpredictable
+
+        result += regs[a];
+        // Plus one internal cycle for the accumulator addition.
+        cycles += 1;
+    }
 
     regs[d] = result;
     // The carry flag gets destroyed on ARMv4.
     ConditionalSetSignZeroCarryFlags(set_flags, result, 0);
 
-    return 1;
+    return cycles;
 }
 
-int Cpu::Arm_MultiplyLongReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg m, Reg n, MullOp op) {
+int Cpu::Arm_MultiplyLongReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg m, Reg n, MullOp op, bool acc) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     assert(dh != pc && dl != pc && m != pc && n != pc && dh != n && dl != n && dh != dl); // Unpredictable
+
+    // Multiply Long takes an extra internal cycle.
+    int cycles = MultiplyCycles(regs[m]) + 1;
+    if (acc) {
+        // Plus one internal cycle for the accumulator addition.
+        cycles += 1;
+    }
 
     s64 result = op(regs[n], regs[m], regs[dh], regs[dl]);
 
@@ -160,34 +179,30 @@ int Cpu::Arm_MultiplyLongReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg
     // The carry and overflow flags get destroyed on ARMv4.
     ConditionalSetMultiplyLongFlags(set_flags, result);
 
-    return 1;
+    return cycles;
 }
 
 int Cpu::Arm_LogicImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, LogicOp op) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     ResultWithCarry expanded_imm = ArmExpandImmediate_C(imm);
 
     u32 result = op(regs[n], expanded_imm.result);
     if (d == pc) {
-        if (set_flags && HasSpsr()) {
-            ReturnFromException(result);
-        } else {
-            Arm_BranchWritePC(result);
-        }
+        return AluWritePC(set_flags, result);
     } else {
         regs[d] = result;
         ConditionalSetSignZeroCarryFlags(set_flags, result, expanded_imm.carry);
     }
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Arm_LogicReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, ShiftType type, Reg m, LogicOp op) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     ImmediateShift shift = DecodeImmShift(type, imm);
@@ -196,22 +211,18 @@ int Cpu::Arm_LogicReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shi
     u32 result = op(regs[n], shifted_reg.result);
 
     if (d == pc) {
-        if (set_flags && HasSpsr()) {
-            ReturnFromException(result);
-        } else {
-            Arm_BranchWritePC(result);
-        }
+        return AluWritePC(set_flags, result);
     } else {
         regs[d] = result;
         ConditionalSetSignZeroCarryFlags(set_flags, result, shifted_reg.carry);
     }
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Arm_LogicRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s, ShiftType type, Reg m, LogicOp op) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
@@ -222,12 +233,13 @@ int Cpu::Arm_LogicRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s
     regs[d] = result;
     ConditionalSetSignZeroCarryFlags(set_flags, result, shifted_reg.carry);
 
+    // One internal cycle for shifting by register.
     return 1;
 }
 
 int Cpu::Arm_TestImm(Condition cond, Reg n, u32 imm, LogicOp op) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     ResultWithCarry expanded_imm = ArmExpandImmediate_C(imm);
@@ -235,12 +247,12 @@ int Cpu::Arm_TestImm(Condition cond, Reg n, u32 imm, LogicOp op) {
     u32 result = op(regs[n], expanded_imm.result);
     SetSignZeroCarryFlags(result, expanded_imm.carry);
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Arm_TestReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m, LogicOp op) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     ImmediateShift shift = DecodeImmShift(type, imm);
@@ -250,12 +262,12 @@ int Cpu::Arm_TestReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m, Logi
 
     SetSignZeroCarryFlags(result, shifted_reg.carry);
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Arm_TestRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m, LogicOp op) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     assert(n != pc && m != pc && s != pc); // Unpredictable
@@ -265,12 +277,13 @@ int Cpu::Arm_TestRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m,
 
     SetSignZeroCarryFlags(result, shifted_reg.carry);
 
+    // One internal cycle for shifting by register.
     return 1;
 }
 
 int Cpu::Arm_ShiftImm(Condition cond, bool set_flags, Reg d, u32 imm, Reg m, ShiftType type) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     ImmediateShift shift = DecodeImmShift(type, imm);
@@ -278,22 +291,18 @@ int Cpu::Arm_ShiftImm(Condition cond, bool set_flags, Reg d, u32 imm, Reg m, Shi
     ResultWithCarry shifted_reg = Shift_C(regs[m], shift.type, shift.imm);
 
     if (d == pc) {
-        if (set_flags && HasSpsr()) {
-            ReturnFromException(shifted_reg.result);
-        } else {
-            Arm_BranchWritePC(shifted_reg.result);
-        }
+        return AluWritePC(set_flags, shifted_reg.result);
     } else {
         regs[d] = shifted_reg.result;
         ConditionalSetSignZeroCarryFlags(set_flags, shifted_reg.result, shifted_reg.carry);
     }
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Arm_ShiftReg(Condition cond, bool set_flags, Reg d, Reg m, Reg n, ShiftType type) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     assert(d != pc && n != pc && m != pc); // Unpredictable
@@ -303,12 +312,13 @@ int Cpu::Arm_ShiftReg(Condition cond, bool set_flags, Reg d, Reg m, Reg n, Shift
     regs[d] = shifted_reg.result;
     ConditionalSetSignZeroCarryFlags(set_flags, shifted_reg.result, shifted_reg.carry);
 
+    // One internal cycle for shifting by register.
     return 1;
 }
 
 int Cpu::Arm_LoadImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm, LoadOp op) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     writeback = writeback || !pre_indexed;
@@ -323,19 +333,26 @@ int Cpu::Arm_LoadImm(Condition cond, bool pre_indexed, bool add, bool writeback,
         addr += imm;
     }
 
-    regs[t] = op(mem, addr);
+    int cycles;
+    std::tie(regs[t], cycles) = op(mem, addr);
+    // Plus one internal cycle to transfer the loaded value to Rt.
+    cycles += 1;
 
     if (writeback) {
         regs[n] += imm;
     }
 
-    return 1;
+    // The next opcode fetch after an LDR is a sequential access, despite the data load.
+    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
+    mem.MakeNextAccessSequential(regs[pc] + 4);
+
+    return cycles;
 }
 
 int Cpu::Arm_LoadReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm,
                      ShiftType type, Reg m, LoadOp op) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     writeback = writeback || !pre_indexed;
@@ -354,18 +371,25 @@ int Cpu::Arm_LoadReg(Condition cond, bool pre_indexed, bool add, bool writeback,
         addr += offset;
     }
 
-    regs[t] = op(mem, addr);
+    int cycles;
+    std::tie(regs[t], cycles) = op(mem, addr);
+    // Plus one internal cycle to transfer the loaded value to Rt.
+    cycles += 1;
 
     if (writeback) {
         regs[n] += offset;
     }
 
-    return 1;
+    // The next opcode fetch after an LDR is a sequential access, despite the data load.
+    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
+    mem.MakeNextAccessSequential(regs[pc] + 4);
+
+    return cycles;
 }
 
 int Cpu::Arm_StoreImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm, StoreOp op) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     writeback = writeback || !pre_indexed;
@@ -380,19 +404,19 @@ int Cpu::Arm_StoreImm(Condition cond, bool pre_indexed, bool add, bool writeback
         addr += imm;
     }
 
-    op(mem, addr, regs[t]);
+    int cycles = op(mem, addr, regs[t]);
 
     if (writeback) {
         regs[n] += imm;
     }
 
-    return 1;
+    return cycles;
 }
 
 int Cpu::Arm_StoreReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm,
                       ShiftType type, Reg m, StoreOp op) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     writeback = writeback || !pre_indexed;
@@ -411,18 +435,18 @@ int Cpu::Arm_StoreReg(Condition cond, bool pre_indexed, bool add, bool writeback
         addr += offset;
     }
 
-    op(mem, addr, regs[t]);
+    int cycles = op(mem, addr, regs[t]);
 
     if (writeback) {
         regs[n] += offset;
     }
 
-    return 1;
+    return cycles;
 }
 
 int Cpu::Arm_WriteStatusReg(Condition cond, bool write_spsr, u32 mask, u32 value) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     if (CurrentCpuMode() == CpuMode::User) {
@@ -452,7 +476,7 @@ int Cpu::Arm_WriteStatusReg(Condition cond, bool write_spsr, u32 mask, u32 value
         cpsr = value & psr_mask & ~thumb_mode;
     }
 
-    return 1;
+    return 0;
 }
 
 // Arithmetic Operators
@@ -505,12 +529,11 @@ int Cpu::Arm_CmpRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m) 
 }
 
 int Cpu::Arm_MlaReg(Condition cond, bool set_flags, Reg d, Reg a, Reg m, Reg n) {
-    assert(a != pc); // Unpredictable
-    return Arm_MultiplyReg(cond, set_flags, d, m, n, regs[a]);
+    return Arm_MultiplyReg(cond, set_flags, d, a, m, n);
 }
 
 int Cpu::Arm_MulReg(Condition cond, bool set_flags, Reg d, Reg m, Reg n) {
-    return Arm_MultiplyReg(cond, set_flags, d, m, n, 0);
+    return Arm_MultiplyReg(cond, set_flags, d, 0xFF, m, n);
 }
 
 int Cpu::Arm_RsbImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm) {
@@ -554,14 +577,14 @@ int Cpu::Arm_SmlalReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg m, Reg
         s64 result = static_cast<s64>(static_cast<s32>(value1)) * static_cast<s64>(static_cast<s32>(value2));
         return result + static_cast<s64>((static_cast<u64>(acc_hi) << 32) | acc_lo);
     };
-    return Arm_MultiplyLongReg(cond, set_flags, dh, dl, m, n, smlal_op);
+    return Arm_MultiplyLongReg(cond, set_flags, dh, dl, m, n, smlal_op, true);
 }
 
 int Cpu::Arm_SmullReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg m, Reg n) {
     auto smull_op = [](u32 value1, u32 value2, u32, u32) -> s64 {
         return static_cast<s64>(static_cast<s32>(value1)) * static_cast<s64>(static_cast<s32>(value2));
     };
-    return Arm_MultiplyLongReg(cond, set_flags, dh, dl, m, n, smull_op);
+    return Arm_MultiplyLongReg(cond, set_flags, dh, dl, m, n, smull_op, false);
 }
 
 int Cpu::Arm_SubImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm) {
@@ -581,14 +604,14 @@ int Cpu::Arm_UmlalReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg m, Reg
         u64 result = static_cast<u64>(value1) * static_cast<u64>(value2);
         return result + (static_cast<u64>(acc_hi) << 32) | acc_lo;
     };
-    return Arm_MultiplyLongReg(cond, set_flags, dh, dl, m, n, umlal_op);
+    return Arm_MultiplyLongReg(cond, set_flags, dh, dl, m, n, umlal_op, true);
 }
 
 int Cpu::Arm_UmullReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg m, Reg n) {
     auto umull_op = [](u32 value1, u32 value2, u32, u32) -> s64 {
         return static_cast<u64>(value1) * static_cast<u64>(value2);
     };
-    return Arm_MultiplyLongReg(cond, set_flags, dh, dl, m, n, umull_op);
+    return Arm_MultiplyLongReg(cond, set_flags, dh, dl, m, n, umull_op, false);
 }
 
 // Logical Operators
@@ -700,37 +723,31 @@ int Cpu::Arm_RorReg(Condition cond, bool set_flags, Reg d, Reg m, Reg n) {
 // Branches
 int Cpu::Arm_B(Condition cond, u32 imm24) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     s32 signed_imm32 = SignExtend(imm24 << 2, 26);
 
-    Arm_BranchWritePC(regs[pc] + signed_imm32);
-
-    return 1;
+    return Arm_BranchWritePC(regs[pc] + signed_imm32);
 }
 
 int Cpu::Arm_Bl(Condition cond, u32 imm24) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     s32 signed_imm32 = SignExtend(imm24 << 2, 26);
-
     regs[lr] = regs[pc] - 4;
-    Arm_BranchWritePC(regs[pc] + signed_imm32);
 
-    return 1;
+    return Arm_BranchWritePC(regs[pc] + signed_imm32);
 }
 
 int Cpu::Arm_Bx(Condition cond, Reg m) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
-    BxWritePC(regs[m]);
-
-    return 1;
+    return BxWritePC(regs[m]);
 }
 
 // Moves
@@ -740,22 +757,18 @@ int Cpu::Arm_MovImm(Condition cond, bool set_flags, Reg d, u32 imm) {
 
 int Cpu::Arm_MovReg(Condition cond, bool set_flags, Reg d, Reg m) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     if (d == pc) {
-        if (set_flags && HasSpsr()) {
-            ReturnFromException(regs[m]);
-        } else {
-            Arm_BranchWritePC(regs[m]);
-        }
+        return AluWritePC(set_flags, regs[m]);
     } else {
         regs[d] = regs[m];
         // Carry flag is preserved, which is why we can't use Arm_LogicReg.
         ConditionalSetSignZeroFlags(set_flags, regs[m]);
     }
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Arm_MvnImm(Condition cond, bool set_flags, Reg d, u32 imm) {
@@ -774,7 +787,7 @@ int Cpu::Arm_MvnRegShifted(Condition cond, bool set_flags, Reg d, Reg s, ShiftTy
 int Cpu::Arm_Ldm(Condition cond, bool pre_indexed, bool increment, bool exception_return, bool writeback, Reg n,
                  u32 reg_list) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     assert(n != pc && Popcount(reg_list) != 0); // Unpredictable
@@ -801,10 +814,14 @@ int Cpu::Arm_Ldm(Condition cond, bool pre_indexed, bool increment, bool exceptio
         CpuModeSwitch(CpuMode::User);
     }
 
+    // One internal cycle to transfer the last loaded value to the destination register.
+    int cycles = 1;
+
     for (Reg i = 0; i < 15; ++i) {
         if (rlist[i]) {
             // Reads must be aligned.
             regs[i] = mem.ReadMem<u32>(addr & ~0x3);
+            cycles += mem.AccessTime<u32>(addr & ~0x3);
             addr += 4;
         }
     }
@@ -819,19 +836,19 @@ int Cpu::Arm_Ldm(Condition cond, bool pre_indexed, bool increment, bool exceptio
     }
 
     if (rlist[pc]) {
-        if (exception_return && HasSpsr()) {
-            ReturnFromException(mem.ReadMem<u32>(addr & ~0x3));
-        } else {
-            Arm_BranchWritePC(mem.ReadMem<u32>(addr & ~0x3));
-        }
+        return cycles + AluWritePC(exception_return, mem.ReadMem<u32>(addr & ~0x3));
     }
 
-    return 1;
+    // The next opcode fetch after an LDM is a sequential access, despite the data load.
+    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
+    mem.MakeNextAccessSequential(regs[pc] + 4);
+
+    return cycles;
 }
 
 int Cpu::Arm_LdrImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     writeback = writeback || !pre_indexed;
@@ -847,6 +864,8 @@ int Cpu::Arm_LdrImm(Condition cond, bool pre_indexed, bool add, bool writeback, 
     }
 
     u32 data = mem.ReadMem<u32>(addr);
+    // Plus one internal cycle to transfer the loaded value to Rt.
+    int cycles = 1 + mem.AccessTime<u32>(addr);
 
     if (writeback) {
         regs[n] += imm;
@@ -854,18 +873,22 @@ int Cpu::Arm_LdrImm(Condition cond, bool pre_indexed, bool add, bool writeback, 
 
     if (t == pc) {
         assert((addr & 0x3) == 0x0); // Unpredictable
-        Arm_BranchWritePC(data);
+        return cycles + Arm_BranchWritePC(data);
     } else {
         regs[t] = data;
     }
 
-    return 1;
+    // The next opcode fetch after an LDR is a sequential access, despite the data load.
+    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
+    mem.MakeNextAccessSequential(regs[pc] + 4);
+
+    return cycles;
 }
 
 int Cpu::Arm_LdrReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm,
                     ShiftType type, Reg m) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     writeback = writeback || !pre_indexed;
@@ -885,6 +908,8 @@ int Cpu::Arm_LdrReg(Condition cond, bool pre_indexed, bool add, bool writeback, 
     }
 
     u32 data = mem.ReadMem<u32>(addr);
+    // Plus one internal cycle to transfer the loaded value to Rt.
+    int cycles = 1 + mem.AccessTime<u32>(addr);
 
     if (writeback) {
         regs[n] += offset;
@@ -892,70 +917,74 @@ int Cpu::Arm_LdrReg(Condition cond, bool pre_indexed, bool add, bool writeback, 
 
     if (t == pc) {
         assert((addr & 0x3) == 0x0); // Unpredictable
-        Arm_BranchWritePC(data);
+        return cycles + Arm_BranchWritePC(data);
     } else {
         regs[t] = data;
     }
 
-    return 1;
+    // The next opcode fetch after an LDR is a sequential access, despite the data load.
+    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
+    mem.MakeNextAccessSequential(regs[pc] + 4);
+
+    return cycles;
 }
 
 int Cpu::Arm_LdrbImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm) {
-    auto ldrb_op = [](Memory& _mem, u32 addr) -> u32 {
-        return _mem.ReadMem<u8>(addr);
+    auto ldrb_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
+        return std::make_tuple(_mem.ReadMem<u8>(addr), _mem.AccessTime<u8>(addr));
     };
     return Arm_LoadImm(cond, pre_indexed, add, writeback, n, t, imm, ldrb_op);
 }
 
 int Cpu::Arm_LdrbReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm,
                      ShiftType type, Reg m) {
-    auto ldrb_op = [](Memory& _mem, u32 addr) -> u32 {
-        return _mem.ReadMem<u8>(addr);
+    auto ldrb_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
+        return std::make_tuple(_mem.ReadMem<u8>(addr), _mem.AccessTime<u8>(addr));
     };
     return Arm_LoadReg(cond, pre_indexed, add, writeback, n, t, imm, type, m, ldrb_op);
 }
 
 int Cpu::Arm_LdrhImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm_hi,
                      u32 imm_lo) {
-    auto ldrh_op = [](Memory& _mem, u32 addr) -> u32 {
-        return _mem.ReadMem<u16>(addr);
+    auto ldrh_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
+        return std::make_tuple(_mem.ReadMem<u16>(addr), _mem.AccessTime<u16>(addr));
     };
     return Arm_LoadImm(cond, pre_indexed, add, writeback, n, t, (imm_hi << 4) | imm_lo, ldrh_op);
 }
 
 int Cpu::Arm_LdrhReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, Reg m) {
-    auto ldrh_op = [](Memory& _mem, u32 addr) -> u32 {
-        return _mem.ReadMem<u16>(addr);
+    auto ldrh_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
+        return std::make_tuple(_mem.ReadMem<u16>(addr), _mem.AccessTime<u16>(addr));
     };
     return Arm_LoadReg(cond, pre_indexed, add, writeback, n, t, 0, ShiftType::LSL, m, ldrh_op);
 }
 
 int Cpu::Arm_LdrsbImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm_hi,
                       u32 imm_lo) {
-    auto ldrsb_op = [](Memory& _mem, u32 addr) -> u32 {
-        return SignExtend(static_cast<u32>(_mem.ReadMem<u8>(addr)), 8);
+    auto ldrsb_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
+        return std::make_tuple(SignExtend(static_cast<u32>(_mem.ReadMem<u8>(addr)), 8), _mem.AccessTime<u8>(addr));
     };
     return Arm_LoadImm(cond, pre_indexed, add, writeback, n, t, (imm_hi << 4) | imm_lo, ldrsb_op);
 }
 
 int Cpu::Arm_LdrsbReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, Reg m) {
-    auto ldrsb_op = [](Memory& _mem, u32 addr) -> u32 {
-        return SignExtend(static_cast<u32>(_mem.ReadMem<u8>(addr)), 8);
+    auto ldrsb_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
+        return std::make_tuple(SignExtend(static_cast<u32>(_mem.ReadMem<u8>(addr)), 8), _mem.AccessTime<u8>(addr));
     };
     return Arm_LoadReg(cond, pre_indexed, add, writeback, n, t, 0, ShiftType::LSL, m, ldrsb_op);
 }
 
 int Cpu::Arm_LdrshImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm_hi,
                       u32 imm_lo) {
-    auto ldrsh_op = [](Memory& _mem, u32 addr) -> u32 {
-        return SignExtend(static_cast<u32>(_mem.ReadMem<u16>(addr)), 16);
+    auto ldrsh_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
+        return std::make_tuple(SignExtend(static_cast<u32>(_mem.ReadMem<u16>(addr)), 16), _mem.AccessTime<u16>(addr));
     };
     return Arm_LoadImm(cond, pre_indexed, add, writeback, n, t, (imm_hi << 4) | imm_lo, ldrsh_op);
 }
 
 int Cpu::Arm_LdrshReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, Reg m) {
-    auto ldrsh_op = [](Memory& _mem, u32 addr) -> u32 {
-        return SignExtend(static_cast<u32>(_mem.ReadMem<u16>(addr)), 16);
+    auto ldrsh_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
+        return std::make_tuple(SignExtend(static_cast<u32>(_mem.ReadMem<u16>(addr)), 16), _mem.AccessTime<u16>(addr));
     };
     return Arm_LoadReg(cond, pre_indexed, add, writeback, n, t, 0, ShiftType::LSL, m, ldrsh_op);
 }
@@ -966,11 +995,13 @@ int Cpu::Arm_PopA1(Condition cond, u32 reg_list) {
 
 int Cpu::Arm_PopA2(Condition cond, Reg t) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
+    // Plus one internal cycle to transfer the loaded value to Rt.
+    int cycles = 1 + mem.AccessTime<u32>(regs[sp]);
     if (t == pc) {
-        Arm_BranchWritePC(mem.ReadMem<u32>(regs[sp]));
+        cycles += Arm_BranchWritePC(mem.ReadMem<u32>(regs[sp]));
     } else {
         // Unaligned reads are allowed.
         regs[t] = mem.ReadMem<u32>(regs[sp]);
@@ -981,7 +1012,11 @@ int Cpu::Arm_PopA2(Condition cond, Reg t) {
         regs[sp] += 4;
     }
 
-    return 1;
+    // The next opcode fetch after an LDR is a sequential access, despite the data load.
+    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
+    mem.MakeNextAccessSequential(regs[pc] + 4);
+
+    return cycles;
 }
 
 // Stores
@@ -991,22 +1026,24 @@ int Cpu::Arm_PushA1(Condition cond, u32 reg_list) {
 
 int Cpu::Arm_PushA2(Condition cond, Reg t) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     mem.WriteMem(regs[sp], regs[t]);
+    int cycles = mem.AccessTime<u32>(regs[sp]);
 
     // Only write back to SP if it wasn't in the register list (ARM7TDMI behaviour).
     if (t != sp) {
         regs[sp] -= 4;
     }
 
-    return 1;
+    return cycles;
 }
 
-int Cpu::Arm_Stm(Condition cond, bool pre_indexed, bool increment, bool store_user_regs, bool writeback, Reg n, u32 reg_list) {
+int Cpu::Arm_Stm(Condition cond, bool pre_indexed, bool increment, bool store_user_regs, bool writeback, Reg n,
+                 u32 reg_list) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     assert(n != pc && Popcount(reg_list) != 0); // Unpredictable
@@ -1033,6 +1070,7 @@ int Cpu::Arm_Stm(Condition cond, bool pre_indexed, bool increment, bool store_us
         CpuModeSwitch(CpuMode::User);
     }
 
+    int cycles = 0;
     for (Reg i = 0; i < 16; ++i) {
         if (rlist[i]) {
             // Writes are always aligned.
@@ -1043,6 +1081,7 @@ int Cpu::Arm_Stm(Condition cond, bool pre_indexed, bool increment, bool store_us
             } else {
                 mem.WriteMem(addr, regs[i]);
             }
+            cycles += mem.AccessTime<u32>(addr);
             addr += 4;
         }
     }
@@ -1055,20 +1094,22 @@ int Cpu::Arm_Stm(Condition cond, bool pre_indexed, bool increment, bool store_us
         regs[n] += offset;
     }
 
-    return 1;
+    return cycles;
 }
 
 int Cpu::Arm_StrImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm) {
-    auto str_op = [](Memory& _mem, u32 addr, u32 data) {
+    auto str_op = [](Memory& _mem, u32 addr, u32 data) -> int {
         _mem.WriteMem(addr, data);
+        return _mem.AccessTime<u32>(addr);
     };
     return Arm_StoreImm(cond, pre_indexed, add, writeback, n, t, imm, str_op);
 }
 
 int Cpu::Arm_StrReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm,
                     ShiftType type, Reg m) {
-    auto str_op = [](Memory& _mem, u32 addr, u32 data) {
+    auto str_op = [](Memory& _mem, u32 addr, u32 data) -> int {
         _mem.WriteMem(addr, data);
+        return _mem.AccessTime<u32>(addr);
     };
     return Arm_StoreReg(cond, pre_indexed, add, writeback, n, t, imm, type, m, str_op);
 }
@@ -1076,8 +1117,9 @@ int Cpu::Arm_StrReg(Condition cond, bool pre_indexed, bool add, bool writeback, 
 int Cpu::Arm_StrbImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm) {
     assert(t != pc); // Unpredictable
 
-    auto strb_op = [](Memory& _mem, u32 addr, u32 data) {
+    auto strb_op = [](Memory& _mem, u32 addr, u32 data) -> int {
         _mem.WriteMem<u8>(addr, data);
+        return _mem.AccessTime<u8>(addr);
     };
     return Arm_StoreImm(cond, pre_indexed, add, writeback, n, t, imm, strb_op);
 }
@@ -1086,8 +1128,9 @@ int Cpu::Arm_StrbReg(Condition cond, bool pre_indexed, bool add, bool writeback,
                     ShiftType type, Reg m) {
     assert(t != pc); // Unpredictable
 
-    auto strb_op = [](Memory& _mem, u32 addr, u32 data) {
+    auto strb_op = [](Memory& _mem, u32 addr, u32 data) -> int {
         _mem.WriteMem<u8>(addr, data);
+        return _mem.AccessTime<u8>(addr);
     };
     return Arm_StoreReg(cond, pre_indexed, add, writeback, n, t, imm, type, m, strb_op);
 }
@@ -1096,8 +1139,9 @@ int Cpu::Arm_StrhImm(Condition cond, bool pre_indexed, bool add, bool writeback,
                      u32 imm_lo) {
     assert(t != pc); // Unpredictable
 
-    auto strh_op = [](Memory& _mem, u32 addr, u32 data) {
+    auto strh_op = [](Memory& _mem, u32 addr, u32 data) -> int {
         _mem.WriteMem<u16>(addr, data);
+        return _mem.AccessTime<u16>(addr);
     };
     return Arm_StoreImm(cond, pre_indexed, add, writeback, n, t, (imm_hi << 4) | imm_lo, strh_op);
 }
@@ -1105,76 +1149,86 @@ int Cpu::Arm_StrhImm(Condition cond, bool pre_indexed, bool add, bool writeback,
 int Cpu::Arm_StrhReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, Reg m) {
     assert(t != pc); // Unpredictable
 
-    auto strh_op = [](Memory& _mem, u32 addr, u32 data) {
+    auto strh_op = [](Memory& _mem, u32 addr, u32 data) -> int {
         _mem.WriteMem<u16>(addr, data);
+        return _mem.AccessTime<u16>(addr);
     };
     return Arm_StoreReg(cond, pre_indexed, add, writeback, n, t, 0, ShiftType::LSL, m, strh_op);
 }
 
 int Cpu::Arm_SwpReg(Condition cond, bool byte, Reg n, Reg t, Reg t2) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
-    assert(t != pc && t2 != pc && n == pc || n == t || n == t2); // Unpredictable
+    assert(t != pc && t2 != pc && n != pc && n != t && n != t2); // Unpredictable
 
     u32 data;
+    // One internal cycle to transfer the loaded value to Rt.
+    int cycles = 1;
     if (byte) {
         data = mem.ReadMem<u8>(regs[n]);
         mem.WriteMem<u8>(regs[n], regs[t2]);
+        // Two N-cycles (sequential reads must be in the same direction).
+        cycles += mem.AccessTime<u8>(regs[n]) * 2;
     } else {
         data = mem.ReadMem<u32>(regs[n]);
         mem.WriteMem<u32>(regs[n], regs[t2]);
+        cycles += mem.AccessTime<u32>(regs[n]) * 2;
     }
 
     regs[t] = data;
 
-    return 1;
+    // The next opcode fetch after a SWP is a sequential access, despite the read/write.
+    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
+    mem.MakeNextAccessSequential(regs[pc] + 4);
+
+    return cycles;
 }
 
 // Misc
 int Cpu::Arm_Cdp(Condition cond, u32, Reg, Reg, u32 coproc, u32, Reg) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     // Access to any coprocessor besides CP14 generates an undefined instruction exception.
     if (coproc != 14) {
-        TakeException(CpuMode::Undef);
+        return TakeException(CpuMode::Undef);
     }
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Arm_Ldc(Condition cond, bool p, bool u, bool d, bool w, Reg, Reg, u32 coproc, u32) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     // Access to any coprocessor besides CP14 generates an undefined instruction exception.
     if (coproc != 14 || (!p && !u && !d && !w)) {
-        TakeException(CpuMode::Undef);
+        return TakeException(CpuMode::Undef);
     }
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Arm_Mcr(Condition cond, u32, Reg, Reg, u32 coproc, u32, Reg) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     // Access to any coprocessor besides CP14 generates an undefined instruction exception.
     if (coproc != 14) {
-        TakeException(CpuMode::Undef);
+        return TakeException(CpuMode::Undef);
     }
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Arm_Mrs(Condition cond, bool read_spsr, Reg d) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
     assert(d != pc); // Unpredictable
@@ -1187,7 +1241,7 @@ int Cpu::Arm_Mrs(Condition cond, bool read_spsr, Reg d) {
         regs[d] = cpsr & ~thumb_mode;
     }
 
-    return 1;
+    return 0;
 }
 
 int Cpu::Arm_MsrImm(Condition cond, bool write_spsr, u32 mask, u32 imm) {
@@ -1200,18 +1254,14 @@ int Cpu::Arm_MsrReg(Condition cond, bool write_spsr, u32 mask, Reg n) {
 
 int Cpu::Arm_Swi(Condition cond, u32) {
     if (!ConditionPassed(cond)) {
-        return 1;
+        return 0;
     }
 
-    TakeException(CpuMode::Svc);
-
-    return 1;
+    return TakeException(CpuMode::Svc);
 }
 
 int Cpu::Arm_Undefined(u32) {
-    TakeException(CpuMode::Undef);
-
-    return 1;
+    return TakeException(CpuMode::Undef);
 }
 
 } // End namespace Gba

@@ -35,7 +35,7 @@ Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::ve
 Core::~Core() = default;
 
 void Core::EmulatorLoop() {
-    cpu->Execute(0x1000);
+    cpu->Execute(0x2000);
     //while (!quit) {
     //    sdl_context.PollEvents();
 

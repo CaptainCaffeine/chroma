@@ -32,6 +32,10 @@ public:
     T ReadMem(const u32 addr) const;
     template <typename T>
     void WriteMem(const u32 addr, const T data);
+    template <typename T>
+    int AccessTime(const u32 addr);
+
+    void MakeNextAccessSequential(u32 addr) { last_addr = addr; }
 
     static bool CheckNintendoLogo(const std::vector<u8>& rom_header) noexcept;
     static void CheckHeader(const std::vector<u16>& rom_header);
@@ -48,6 +52,8 @@ private:
     const std::vector<u16>& rom;
 
     const Cpu* cpu;
+
+    u32 last_addr = 0x0;
 
     static constexpr unsigned int kbyte = 1024;
     static constexpr unsigned int mbyte = kbyte * kbyte;

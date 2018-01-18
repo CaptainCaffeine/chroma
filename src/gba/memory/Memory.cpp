@@ -211,4 +211,46 @@ template u8 Memory::ReadBios<u8>(const u32 addr) const;
 template u16 Memory::ReadBios<u16>(const u32 addr) const;
 template u32 Memory::ReadBios<u32>(const u32 addr) const;
 
+template <typename T>
+int Memory::AccessTime(const u32 addr) {
+    int u32_access = sizeof(T) / 4;
+    bool sequential = (addr - last_addr) <= 4;
+    last_addr = addr;
+
+    switch (GetRegion(addr)) {
+    case Region::Bios:
+        return 1;
+    case Region::XRam:
+        return 3 << u32_access;
+    case Region::IRam:
+        return 1;
+    case Region::IO:
+        return 1;
+    case Region::PRam:
+        return 1 << u32_access;
+    case Region::VRam:
+        return 1 << u32_access;
+    case Region::Oam:
+        return 1;
+    case Region::Rom0:
+        if (sequential) {
+            return 2 << u32_access;
+        } else {
+            return 4 + 2 * u32_access;
+        }
+    case Region::Rom1:
+        return 5 << u32_access;
+    case Region::Rom2:
+        return 9 << u32_access;
+    case Region::SRam:
+        return 9;
+    default:
+        return 1;
+    }
+}
+
+template int Memory::AccessTime<u8>(const u32 addr);
+template int Memory::AccessTime<u16>(const u32 addr);
+template int Memory::AccessTime<u32>(const u32 addr);
+
 } // End namespace Gba
