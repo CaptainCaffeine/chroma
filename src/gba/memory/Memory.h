@@ -17,6 +17,7 @@
 #pragma once
 
 #include <vector>
+#include <array>
 
 #include "common/CommonTypes.h"
 
@@ -45,7 +46,6 @@ private:
     const std::vector<u32>& bios;
     std::vector<u16> xram;
     std::vector<u32> iram;
-    std::vector<u32> io_regs;
     std::vector<u16> pram;
     std::vector<u16> vram;
     std::vector<u32> oam;
@@ -54,6 +54,10 @@ private:
     const Cpu* cpu;
 
     u32 last_addr = 0x0;
+
+    std::array<int, 3> wait_state_n;
+    std::array<int, 3> wait_state_s;
+    int wait_state_sram;
 
     static constexpr unsigned int kbyte = 1024;
     static constexpr unsigned int mbyte = kbyte * kbyte;
@@ -108,14 +112,7 @@ private:
     template <typename T>
     T ReadIRam(const u32 addr) const { return ReadRegion<T>(iram, iram_addr_mask, addr); }
     template <typename T>
-    T ReadIO(const u32 addr) const {
-        // The IO register region is not mirrored, with the exception of 0x0400'0800.
-        if (addr < io_max || addr == 0x0400'0800) {
-            return ReadRegion<T>(io_regs, io_addr_mask, addr);
-        } else {
-            return 0;
-        }
-    }
+    T ReadIO(const u32 addr) const;
     template <typename T>
     T ReadPRam(const u32 addr) const { return ReadRegion<T>(pram, pram_addr_mask, addr); }
     template <typename T>
@@ -132,12 +129,7 @@ private:
     template <typename T>
     void WriteIRam(const u32 addr, const T data) { WriteRegion(iram, iram_addr_mask, addr, data); }
     template <typename T>
-    void WriteIO(const u32 addr, const T data) {
-        // The IO register region is not mirrored, with the exception of 0x0400'0800.
-        if (addr < io_max || addr == 0x0400'0800) {
-            WriteRegion(io_regs, io_addr_mask, addr, data);
-        }
-    }
+    void WriteIO(const u32 addr, const T data, const u16 mask = 0xFFFF);
     template <typename T>
     void WritePRam(const u32 addr, const T data) { WriteRegion(pram, pram_addr_mask, addr, data); }
     template <typename T>
@@ -146,6 +138,25 @@ private:
     }
     template <typename T>
     void WriteOam(const u32 addr, const T data) { WriteRegion(oam, oam_addr_mask, addr, data); }
+
+    void UpdateWaitStates();
+
+    // IO registers
+    struct IOReg {
+        u16 v;
+        u16 read_mask;
+        u16 write_mask;
+
+        u16 Read() const { return v & read_mask; }
+        void Write(u16 data, u16 mask_8bit) { v = (v & ~(write_mask & mask_8bit)) | (data & write_mask); }
+    };
+
+    static constexpr u32 WAITCNT = 0x0400'0204;
+    IOReg waitcnt = {0x0000, 0x5FFF, 0x5FFF};
+
+    // Also POSTFLG.
+    static constexpr u32 HALTCNT = 0x0400'0300;
+    IOReg haltcnt = {0x0000, 0x0001, 0x8001};
 };
 
 } // End namespace Gba

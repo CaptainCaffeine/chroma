@@ -24,7 +24,6 @@ Memory::Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom)
         : bios(_bios)
         , xram(xram_size / sizeof(u16))
         , iram(iram_size / sizeof(u32))
-        , io_regs(io_size / sizeof(u32))
         , pram(pram_size / sizeof(u16))
         , vram(vram_size / sizeof(u16))
         , oam(oam_size / sizeof(u32))
@@ -75,6 +74,11 @@ u8 Memory::ReadRegion(const std::vector<u32>& region, const AddressMask region_m
     const u32 region_addr = (addr & region_mask) / sizeof(u32);
     return region[region_addr] >> (8 * (addr & 0x3));
 }
+
+// Forward declaring template specializations of ReadIO for ReadMem.
+template <> u32 Memory::ReadIO(const u32 addr) const;
+template <> u16 Memory::ReadIO(const u32 addr) const;
+template <> u8 Memory::ReadIO(const u32 addr) const;
 
 template <typename T>
 T Memory::ReadMem(const u32 addr) const {
@@ -157,6 +161,11 @@ void Memory::WriteRegion(std::vector<u32>& region, const AddressMask region_mask
     region[region_addr] = (region[region_addr] & ~(0xFF << hi_shift)) | (data << hi_shift);
 }
 
+// Forward declaring template specializations of WriteIO for WriteMem.
+template <> void Memory::WriteIO(const u32 addr, u32 data, u16 mask);
+template <> void Memory::WriteIO(const u32 addr, u16 data, u16 mask);
+template <> void Memory::WriteIO(const u32 addr, u8 data, u16 mask);
+
 template <typename T>
 void Memory::WriteMem(const u32 addr, const T data) {
     switch (GetRegion(addr)) {
@@ -217,6 +226,14 @@ int Memory::AccessTime(const u32 addr) {
     bool sequential = (addr - last_addr) <= 4;
     last_addr = addr;
 
+    auto RomTime = [this, u32_access, sequential](int i) -> int {
+        if (sequential) {
+            return wait_state_s[i] << u32_access;
+        } else {
+            return wait_state_n[i] + wait_state_s[i] * u32_access;
+        }
+    };
+
     switch (GetRegion(addr)) {
     case Region::Bios:
         return 1;
@@ -225,6 +242,8 @@ int Memory::AccessTime(const u32 addr) {
     case Region::IRam:
         return 1;
     case Region::IO:
+        // Despite being 16 bits wide, 32-bit accesses to IO registers do not incur an extra wait state.
+        // Apparently the 16-bit registers are packaged together in pairs.
         return 1;
     case Region::PRam:
         return 1 << u32_access;
@@ -233,17 +252,13 @@ int Memory::AccessTime(const u32 addr) {
     case Region::Oam:
         return 1;
     case Region::Rom0:
-        if (sequential) {
-            return 2 << u32_access;
-        } else {
-            return 4 + 2 * u32_access;
-        }
+        return RomTime(0);
     case Region::Rom1:
-        return 5 << u32_access;
+        return RomTime(1);
     case Region::Rom2:
-        return 9 << u32_access;
+        return RomTime(2);
     case Region::SRam:
-        return 9;
+        return wait_state_sram;
     default:
         return 1;
     }
@@ -252,5 +267,82 @@ int Memory::AccessTime(const u32 addr) {
 template int Memory::AccessTime<u8>(const u32 addr);
 template int Memory::AccessTime<u16>(const u32 addr);
 template int Memory::AccessTime<u32>(const u32 addr);
+
+void Memory::UpdateWaitStates() {
+    auto WaitStates = [this](int shift) {
+        u16 mask = 0x3 << shift;
+        if ((waitcnt.v & mask) == mask) {
+            return 8;
+        } else {
+            return 4 - ((waitcnt.v & mask) >> shift);
+        }
+    };
+
+    wait_state_sram = 1 + WaitStates(0);
+    wait_state_n[0] = 1 + WaitStates(2);
+    wait_state_s[0] = 1 + ((waitcnt.v & 0x010) ? 1 : 2);
+    wait_state_n[1] = 1 + WaitStates(5);
+    wait_state_s[1] = 1 + ((waitcnt.v & 0x080) ? 1 : 4);
+    wait_state_n[2] = 1 + WaitStates(8);
+    wait_state_s[2] = 1 + ((waitcnt.v & 0x400) ? 1 : 8);
+}
+
+template <>
+u32 Memory::ReadIO(const u32 addr) const {
+    // Unaligned accesses are rotated.
+    return RotateRight(ReadIO<u16>(addr & ~0x1) | (ReadIO<u16>((addr & ~0x1) + 2) << 16), (addr & 0x3) * 8);
+}
+
+template <>
+u8 Memory::ReadIO(const u32 addr) const {
+    return ReadIO<u16>(addr & ~0x1) >> (8 * (addr & 0x1));
+}
+
+template <>
+void Memory::WriteIO(const u32 addr, const u32 data, const u16) {
+    // 32 bit writes must be aligned.
+    WriteIO<u16>(addr & ~0x3, data);
+    WriteIO<u16>((addr & ~0x3) + 2, data >> 16);
+}
+
+template <>
+void Memory::WriteIO(const u32 addr, const u8 data, const u16) {
+    const u32 hi_shift = 8 * (addr & 0x1);
+    WriteIO<u16>(addr, data << hi_shift, 0xFF << hi_shift);
+}
+
+template <>
+u16 Memory::ReadIO(const u32 addr) const {
+    u16 value;
+    switch (addr & ~0x1) {
+    case WAITCNT:
+        value = waitcnt.Read();
+        break;
+    case HALTCNT:
+        value = haltcnt.Read();
+        break;
+    default:
+        value = 0x0000;
+        break;
+    }
+
+    // Unaligned accesses are rotated.
+    return RotateRight(value, (addr & 0x1) * 8);
+}
+
+template <>
+void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
+    switch (addr & ~0x1) {
+    case WAITCNT:
+        waitcnt.Write(data, mask);
+        UpdateWaitStates();
+        break;
+    case HALTCNT:
+        haltcnt.Write(data, mask);
+        break;
+    default:
+        break;
+    }
+}
 
 } // End namespace Gba
