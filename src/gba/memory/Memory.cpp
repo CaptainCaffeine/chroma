@@ -75,6 +75,20 @@ u8 Memory::ReadRegion(const std::vector<u32>& region, const AddressMask region_m
     return region[region_addr] >> (8 * (addr & 0x3));
 }
 
+template <typename T>
+T Memory::ReadBios(const u32 addr) const {
+    // The BIOS region is not mirrored, and can only be read if the PC is currently within the BIOS.
+    if (addr < bios_size && cpu->GetPc() < bios_size) {
+        return ReadRegion<T>(bios, bios_addr_mask, addr);
+    } else {
+        return 0;
+    }
+}
+
+template u8 Memory::ReadBios<u8>(const u32 addr) const;
+template u16 Memory::ReadBios<u16>(const u32 addr) const;
+template u32 Memory::ReadBios<u32>(const u32 addr) const;
+
 // Forward declaring template specializations of ReadIO for ReadMem.
 template <> u32 Memory::ReadIO(const u32 addr) const;
 template <> u16 Memory::ReadIO(const u32 addr) const;
@@ -161,6 +175,21 @@ void Memory::WriteRegion(std::vector<u32>& region, const AddressMask region_mask
     region[region_addr] = (region[region_addr] & ~(0xFF << hi_shift)) | (data << hi_shift);
 }
 
+// Specializing 8-bit writes to video memory.
+// BG and Palette RAM: write the byte to both the upper and lower byte of the halfword.
+// OBJ and OAM: ignore the write.
+template <>
+void Memory::WritePRam(const u32 addr, const u8 data) { WritePRam<u16>(addr & ~0x1, data * 0x0101); }
+template <>
+void Memory::WriteVRam(const u32 addr, const u8 data) {
+    // TODO: The starting address of the OBJ region changes in bitmap mode.
+    if ((addr & vram_addr_mask2) < 0x0001'0000) {
+        WriteVRam<u16>(addr & ~0x1, data * 0x0101);
+    }
+}
+template <>
+void Memory::WriteOam(const u32, const u8) {}
+
 // Forward declaring template specializations of WriteIO for WriteMem.
 template <> void Memory::WriteIO(const u32 addr, u32 data, u16 mask);
 template <> void Memory::WriteIO(const u32 addr, u16 data, u16 mask);
@@ -205,20 +234,6 @@ void Memory::WriteMem(const u32 addr, const T data) {
 template void Memory::WriteMem<u8>(const u32 addr, const u8 data);
 template void Memory::WriteMem<u16>(const u32 addr, const u16 data);
 template void Memory::WriteMem<u32>(const u32 addr, const u32 data);
-
-template <typename T>
-T Memory::ReadBios(const u32 addr) const {
-    // The BIOS region is not mirrored, and can only be read if the PC is currently within the BIOS.
-    if (addr < bios_size && cpu->GetPc() < bios_size) {
-        return ReadRegion<T>(bios, bios_addr_mask, addr);
-    } else {
-        return 0;
-    }
-}
-
-template u8 Memory::ReadBios<u8>(const u32 addr) const;
-template u16 Memory::ReadBios<u16>(const u32 addr) const;
-template u32 Memory::ReadBios<u32>(const u32 addr) const;
 
 template <typename T>
 int Memory::AccessTime(const u32 addr) {
