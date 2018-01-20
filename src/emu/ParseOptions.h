@@ -22,6 +22,7 @@
 #include <stdexcept>
 
 #include "common/CommonTypes.h"
+#include "common/CommonEnums.h"
 #include "gb/core/Enums.h"
 
 namespace Gb { class CartridgeHeader; }
@@ -34,7 +35,7 @@ std::string GetOptionParam(const std::vector<std::string>& tokens, const std::st
 
 void DisplayHelp();
 Gb::Console GetGameBoyType(const std::vector<std::string>& tokens);
-Gb::LogLevel GetLogLevel(const std::vector<std::string>& tokens);
+LogLevel GetLogLevel(const std::vector<std::string>& tokens);
 unsigned int GetPixelScale(const std::vector<std::string>& tokens);
 bool GetFilterEnable(const std::vector<std::string>& tokens);
 

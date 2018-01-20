@@ -21,10 +21,10 @@
 
 namespace Gba {
 
-Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom)
+Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom, LogLevel level)
         : sdl_context(context)
         , mem(std::make_unique<Memory>(bios, rom))
-        , cpu(std::make_unique<Cpu>(*mem)) {
+        , cpu(std::make_unique<Cpu>(*mem, level)) {
 
     mem->LinkToCpu(cpu.get());
 

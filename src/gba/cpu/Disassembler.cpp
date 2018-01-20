@@ -15,7 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <bitset>
+#include <stdexcept>
 #include <fmt/format.h>
+#include <fmt/ostream.h>
 
 #include "gba/cpu/Disassembler.h"
 #include "gba/cpu/Cpu.h"
@@ -23,37 +25,76 @@
 
 namespace Gba {
 
-Disassembler::Disassembler(const Memory& _mem, const Cpu* _cpu)
+Disassembler::Disassembler(const Memory& _mem, const Cpu* _cpu, LogLevel level)
         : mem(_mem)
         , cpu(_cpu)
         , thumb_instructions(Instruction<Thumb>::GetInstructionTable<Disassembler>())
-        , arm_instructions(Instruction<Arm>::GetInstructionTable<Disassembler>()) {}
+        , arm_instructions(Instruction<Arm>::GetInstructionTable<Disassembler>())
+        , log_level(level) {
+    // Leave log_stream unopened if logging disabled.
+    if (level != LogLevel::None) {
+        log_stream = std::ofstream("log.txt");
+
+        if (!log_stream) {
+            throw std::runtime_error("Error when attempting to open ./log.txt for writing.");
+        }
+    }
+}
 
 // Needed to declare std::vector with forward-declared type in the header file.
 Disassembler::~Disassembler() = default;
 
-std::string Disassembler::DisassembleThumb(Thumb opcode) {
+void Disassembler::DisassembleThumb(Thumb opcode, const std::array<u32, 16>& regs, u32 cpsr) {
+    if (log_level == LogLevel::None) {
+        return;
+    }
+
     for (const auto& instr : thumb_instructions) {
         if (instr.Match(opcode)) {
-            fmt::print("0x{:0>8X}, T:     {:0>4X}  {}\n", cpu->GetPc(), opcode, instr.disasm_func(*this, opcode));
-            return instr.disasm_func(*this, opcode);
+            fmt::print(log_stream, "0x{:0>8X}, T: {}\n", cpu->GetPc(), instr.disasm_func(*this, opcode));
+            break;
         }
     }
 
-    // Undefined instruction.
-    return thumb_instructions.back().disasm_func(*this, opcode);
+    if (log_level == LogLevel::Registers) {
+        LogRegisters(regs, cpsr);
+    }
 }
 
-std::string Disassembler::DisassembleArm(Arm opcode) {
+void Disassembler::DisassembleArm(Arm opcode, const std::array<u32, 16>& regs, u32 cpsr) {
+    if (log_level == LogLevel::None) {
+        return;
+    }
+
     for (const auto& instr : arm_instructions) {
         if (instr.Match(opcode)) {
-            fmt::print("0x{:0>8X}, A: {:0>8X}  {}\n", cpu->GetPc(), opcode, instr.disasm_func(*this, opcode));
-            return instr.disasm_func(*this, opcode);
+            fmt::print(log_stream, "0x{:0>8X}, A: {}\n", cpu->GetPc(), instr.disasm_func(*this, opcode));
+            break;
         }
     }
 
-    // Undefined instruction.
-    return arm_instructions.back().disasm_func(*this, opcode);
+    if (log_level == LogLevel::Registers) {
+        LogRegisters(regs, cpsr);
+    }
+}
+
+void Disassembler::LogRegisters(const std::array<u32, 16>& regs, u32 cpsr) {
+    fmt::MemoryWriter regs_str;
+    for (int i = 0; i < 13; ++i) {
+        regs_str.write("R{:X}=0x{:0>8X}, ", i, regs[i]);
+        if (i == 4 || i == 9) {
+            regs_str.write("\n");
+        }
+    }
+
+    regs_str.write("SP=0x{:0>8X}, ", regs[sp]);
+    regs_str.write("LR=0x{:0>8X}, ", regs[lr]);
+    regs_str.write("{}", (cpsr & 0x8000'0000) ? "N" : "");
+    regs_str.write("{}", (cpsr & 0x4000'0000) ? "Z" : "");
+    regs_str.write("{}", (cpsr & 0x2000'0000) ? "C" : "");
+    regs_str.write("{}\n\n", (cpsr & 0x1000'0000) ? "V" : "");
+
+    fmt::print(log_stream, regs_str.str());
 }
 
 std::string Disassembler::RegStr(Reg r) {

@@ -62,6 +62,7 @@ set(HEADERS
 
     common/CommonTypes.h
     common/CommonFuncs.h
+    common/CommonEnums.h
     common/Screenshot.h
 
     emu/SDLContext.h

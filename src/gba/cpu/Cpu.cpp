@@ -24,9 +24,9 @@
 
 namespace Gba {
 
-Cpu::Cpu(Memory& memory)
+Cpu::Cpu(Memory& memory, LogLevel level)
         : mem(memory)
-        , disasm(std::make_unique<Disassembler>(memory, this))
+        , disasm(std::make_unique<Disassembler>(memory, this, level))
         , thumb_instructions(Instruction<Thumb>::GetInstructionTable<Cpu>())
         , arm_instructions(Instruction<Arm>::GetInstructionTable<Cpu>()) {
 
@@ -44,7 +44,7 @@ void Cpu::Execute(int cycles) {
             pipeline[2] = mem.ReadMem<Thumb>(regs[pc]);
             cycles -= mem.AccessTime<Thumb>(regs[pc]);
 
-            disasm->DisassembleThumb(pipeline[0]);
+            disasm->DisassembleThumb(pipeline[0], regs, cpsr);
             auto impl = DecodeThumb(pipeline[0]);
             cycles -= impl(*this, pipeline[0]);
 
@@ -58,7 +58,7 @@ void Cpu::Execute(int cycles) {
             pipeline[2] = mem.ReadMem<Arm>(regs[pc]);
             cycles -= mem.AccessTime<Arm>(regs[pc]);
 
-            disasm->DisassembleArm(pipeline[0]);
+            disasm->DisassembleArm(pipeline[0], regs, cpsr);
             auto impl = DecodeArm(pipeline[0]);
             cycles -= impl(*this, pipeline[0]);
 

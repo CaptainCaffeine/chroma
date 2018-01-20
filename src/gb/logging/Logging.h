@@ -17,10 +17,18 @@
 #pragma once
 
 #include <fstream>
-#include <fmt/format.h>
 
 #include "common/CommonTypes.h"
-#include "gb/core/Enums.h"
+#include "common/CommonEnums.h"
+
+namespace fmt {
+
+template<typename Char, typename Allocator>
+class BasicMemoryWriter;
+
+typedef BasicMemoryWriter<char, std::allocator<char>> MemoryWriter;
+
+}
 
 namespace Gb {
 

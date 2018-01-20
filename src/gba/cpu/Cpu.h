@@ -24,6 +24,7 @@
 
 #include "common/CommonTypes.h"
 #include "common/CommonFuncs.h"
+#include "common/CommonEnums.h"
 #include "gba/core/Enums.h"
 
 namespace Gba {
@@ -42,7 +43,7 @@ struct ImmediateShift {
 
 class Cpu {
 public:
-    Cpu(Memory& memory);
+    Cpu(Memory& memory, LogLevel level);
     ~Cpu();
 
     void Execute(int cycles);

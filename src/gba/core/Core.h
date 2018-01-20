@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "common/CommonTypes.h"
+#include "common/CommonEnums.h"
 
 namespace Emu { class SDLContext; }
 
@@ -30,7 +31,7 @@ class Cpu;
 
 class Core {
 public:
-    Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom);
+    Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom, LogLevel level);
     ~Core();
 
     void EmulatorLoop();

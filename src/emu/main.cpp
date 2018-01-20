@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
     }
 
     Gb::Console gameboy_type;
-    Gb::LogLevel log_level;
+    LogLevel log_level;
     unsigned int pixel_scale;
     bool enable_iir;
     bool fullscreen;
@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
             Gba::Memory::CheckHeader(rom);
 
             Emu::SDLContext sdl_context{240, 160, pixel_scale, fullscreen};
-            Gba::Core gba_core{sdl_context, bios, rom};
+            Gba::Core gba_core{sdl_context, bios, rom, log_level};
 
             gba_core.EmulatorLoop();
         } else {

@@ -78,21 +78,24 @@ Gb::Console GetGameBoyType(const std::vector<std::string>& tokens) {
     }
 }
 
-Gb::LogLevel GetLogLevel(const std::vector<std::string>& tokens) {
+LogLevel GetLogLevel(const std::vector<std::string>& tokens) {
     const std::string log_string = Emu::GetOptionParam(tokens, "-l");
     if (!log_string.empty()) {
-        if (log_string == "regular") {
-            return Gb::LogLevel::Regular;
+        if (log_string == "trace") {
+            return LogLevel::Trace;
+        } else if (log_string == "regs") {
+            return LogLevel::Registers;
         } else if (log_string == "timer") {
-            return Gb::LogLevel::Timer;
+            return LogLevel::Timer;
         } else if (log_string == "lcd") {
-            return Gb::LogLevel::LCD;
+            return LogLevel::LCD;
         } else {
-            throw std::invalid_argument("Invalid log level specified: " + log_string);
+            // Passing the "-l" argument by itself defaults to instruction trace logging.
+            return LogLevel::Trace;
         }
     } else {
         // If no log level specified, then no logging by default.
-        return Gb::LogLevel::None;
+        return LogLevel::None;
     }
 }
 

@@ -15,8 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
-#include <iostream>
 #include <stdexcept>
+#include <fmt/format.h>
 
 #include "gb/logging/Logging.h"
 #include "gb/memory/Memory.h"
@@ -119,8 +119,10 @@ void Logging::SwitchLogLevel() {
         switch (log_level) {
         case LogLevel::None:
             return "None";
-        case LogLevel::Regular:
-            return "Regular";
+        case LogLevel::Trace:
+            return "Trace";
+        case LogLevel::Registers:
+            return "Registers";
         case LogLevel::LCD:
             return "LCD";
         case LogLevel::Timer:
@@ -133,7 +135,7 @@ void Logging::SwitchLogLevel() {
     const std::string switch_str{fmt::format("\nLog level changed to {}\n", LogLevelString())};
 
     log_stream << switch_str;
-    std::cout << switch_str;
+    fmt::print(switch_str);
 }
 
 } // End namespace Gb

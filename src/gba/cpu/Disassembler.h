@@ -18,9 +18,11 @@
 
 #include <vector>
 #include <string>
+#include <fstream>
 
 #include "common/CommonTypes.h"
 #include "common/CommonFuncs.h"
+#include "common/CommonEnums.h"
 #include "gba/core/Enums.h"
 
 namespace fmt {
@@ -45,11 +47,11 @@ struct ImmediateShift;
 
 class Disassembler {
 public:
-    Disassembler(const Memory& _mem, const Cpu* _cpu);
+    Disassembler(const Memory& _mem, const Cpu* _cpu, LogLevel level);
     ~Disassembler();
 
-    std::string DisassembleThumb(Thumb opcode);
-    std::string DisassembleArm(Arm opcode);
+    void DisassembleThumb(Thumb opcode, const std::array<u32, 16>& regs, u32 cpsr);
+    void DisassembleArm(Arm opcode, const std::array<u32, 16>& regs, u32 cpsr);
 
 private:
     const Memory& mem;
@@ -57,6 +59,9 @@ private:
 
     const std::vector<Instruction<Thumb>> thumb_instructions;
     const std::vector<Instruction<Arm>> arm_instructions;
+
+    LogLevel log_level;
+    std::ofstream log_stream;
 
     using Reg = std::size_t;
     static constexpr Reg sp = 13, lr = 14, pc = 15;
@@ -67,6 +72,8 @@ private:
     static std::string ListStr(u32 reg_list);
     static std::string AddrOffset(bool pre_indexed, bool add, bool wb, u32 imm);
     static std::string StatusReg(bool spsr, u32 mask);
+
+    void LogRegisters(const std::array<u32, 16>& regs, u32 cpsr);
 
     // Arm
     std::string AluImm(const char* name, Condition cond, bool sf, Reg n, Reg d, u32 imm);

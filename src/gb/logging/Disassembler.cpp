@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <fmt/format.h>
+
 #include "gb/logging/Logging.h"
 #include "gb/memory/Memory.h"
 
