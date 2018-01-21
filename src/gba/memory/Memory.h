@@ -38,6 +38,9 @@ public:
 
     void MakeNextAccessSequential(u32 addr) { last_addr = addr; }
 
+    bool InterruptMasterEnable() const { return master_enable.v; }
+    bool PendingInterrupts() const { return intr_flags.v & intr_enable.v; }
+
     static bool CheckNintendoLogo(const std::vector<u8>& rom_header) noexcept;
     static void CheckHeader(const std::vector<u16>& rom_header);
 
@@ -149,10 +152,20 @@ private:
 
         u16 Read() const { return v & read_mask; }
         void Write(u16 data, u16 mask_8bit) { v = (v & ~(write_mask & mask_8bit)) | (data & write_mask); }
+        void Clear(u16 data) { v &= ~(data & write_mask); }
     };
+
+    static constexpr u32 IE = 0x0400'0200;
+    IOReg intr_enable = {0x0000, 0x3FFF, 0x3FFF};
+
+    static constexpr u32 IF = 0x0400'0202;
+    IOReg intr_flags = {0x0000, 0x3FFF, 0x3FFF};
 
     static constexpr u32 WAITCNT = 0x0400'0204;
     IOReg waitcnt = {0x0000, 0x5FFF, 0x5FFF};
+
+    static constexpr u32 IME = 0x0400'0208;
+    IOReg master_enable = {0x0000, 0x0001, 0x0001};
 
     // Also POSTFLG.
     static constexpr u32 HALTCNT = 0x0400'0300;

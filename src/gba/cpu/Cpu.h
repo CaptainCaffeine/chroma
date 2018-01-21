@@ -114,6 +114,8 @@ private:
     bool ThumbMode() const { return cpsr & thumb_mode; }
     bool ArmMode() const { return !(cpsr & thumb_mode); }
 
+    bool InterruptsEnabled() const;
+
     CpuMode CurrentCpuMode() const { return static_cast<CpuMode>(cpsr & cpu_mode); }
     // Since bit 4 is 1 for all valid CPU modes, we ignore it when indexing banked registers.
     std::size_t CurrentCpuModeIndex() const { return cpsr & 0xF; }

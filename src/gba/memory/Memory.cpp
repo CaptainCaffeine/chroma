@@ -330,8 +330,17 @@ template <>
 u16 Memory::ReadIO(const u32 addr) const {
     u16 value;
     switch (addr & ~0x1) {
+    case IE:
+        value = intr_enable.Read();
+        break;
+    case IF:
+        value = intr_flags.Read();
+        break;
     case WAITCNT:
         value = waitcnt.Read();
+        break;
+    case IME:
+        value = master_enable.Read();
         break;
     case HALTCNT:
         value = haltcnt.Read();
@@ -348,9 +357,19 @@ u16 Memory::ReadIO(const u32 addr) const {
 template <>
 void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
     switch (addr & ~0x1) {
+    case IE:
+        intr_enable.Write(data, mask);
+        break;
+    case IF:
+        // Writing "1" to a bit in IF clears that bit.
+        intr_flags.Clear(data);
+        break;
     case WAITCNT:
         waitcnt.Write(data, mask);
         UpdateWaitStates();
+        break;
+    case IME:
+        master_enable.Write(data, mask);
         break;
     case HALTCNT:
         haltcnt.Write(data, mask);

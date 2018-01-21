@@ -38,6 +38,10 @@ Cpu::~Cpu() = default;
 
 void Cpu::Execute(int cycles) {
     while (cycles > 0) {
+        if (InterruptsEnabled() && mem.PendingInterrupts()) {
+            TakeException(CpuMode::Irq);
+        }
+
         if (ThumbMode()) {
             pipeline[0] = pipeline[1];
             pipeline[1] = pipeline[2];
@@ -92,6 +96,10 @@ std::function<int(Cpu& cpu, Arm opcode)> Cpu::DecodeArm(Arm opcode) const {
 
     // Undefined instruction.
     return arm_instructions.back().impl_func;
+}
+
+bool Cpu::InterruptsEnabled() const {
+    return !(cpsr & irq_disable) && mem.InterruptMasterEnable();
 }
 
 bool Cpu::ValidCpuMode(u32 new_mode) const {
