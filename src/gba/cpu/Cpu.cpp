@@ -39,7 +39,7 @@ Cpu::~Cpu() = default;
 void Cpu::Execute(int cycles) {
     while (cycles > 0) {
         if (InterruptsEnabled() && mem.PendingInterrupts()) {
-            TakeException(CpuMode::Irq);
+            cycles -= TakeException(CpuMode::Irq);
         }
 
         if (ThumbMode()) {
