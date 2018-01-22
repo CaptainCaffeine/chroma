@@ -18,6 +18,7 @@
 #include <stdexcept>
 #include <iostream>
 
+#include "common/CommonFuncs.h"
 #include "gb/memory/CartridgeHeader.h"
 
 namespace Gb {
@@ -240,24 +241,22 @@ void CartridgeHeader::HeaderChecksum(const std::vector<u8>& rom) const {
 }
 
 bool CartridgeHeader::CheckNintendoLogo(const Console console, const std::vector<u8>& rom) noexcept {
-    static constexpr std::array<u8, 48> logo{{
-        0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D,
-        0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99,
-        0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E
-    }};
+    // Calculate the FNV-1a hash of the first or second half of the region in the ROM header where the Nintendo logo
+    // is supposed to be (0x0104-0x0133) and compare it to a precalculated hash of the expected logo.
+    static constexpr u32 logo_first_half_hash = 0x14bddd1b;
+    static constexpr u32 logo_second_half_hash = 0x9fd20031;
+    static constexpr u16 logo_offset = 0x0104;
 
-    // DMG boot ROM checks all 48 bytes, but the CGB boot ROM only checks the first 24 bytes.
-    // Since we always check the first 24 bytes during cart detection, check only the last 24 bytes on DMG.
-    const std::size_t start_addr = 0x0104 + ((console == Console::DMG) ? 24 : 0);
-    const std::size_t end_addr = start_addr + 24;
-    auto logo_iter = logo.cbegin() + ((console == Console::DMG) ? 24 : 0);
-    for (std::size_t addr = start_addr; addr < end_addr; ++addr) {
-        if (rom[addr] != *logo_iter++) {
-            return false;
-        }
+    if (console == Console::CGB) {
+        // The CGB boot ROM only checks the first half (24 bytes) of the logo.
+        u32 header_first_half_hash = Fnv1aHash(rom.cbegin() + logo_offset, rom.cbegin() + logo_offset + 24);
+        return header_first_half_hash == logo_first_half_hash;
+    } else {
+        // The DMG boot ROM checks all 48 bytes, but since we always check the first 24 bytes during cart detection,
+        // here we only check the last 24 bytes.
+        u32 header_second_half_hash = Fnv1aHash(rom.cbegin() + logo_offset + 24, rom.cbegin() + logo_offset + 48);
+        return header_second_half_hash == logo_second_half_hash;
     }
-
-    return true;
 }
 
 } // End namespace Gb

@@ -63,3 +63,16 @@ constexpr unsigned int HighestSetBit(u32 value) noexcept {
 
     return DeBruijnHashTable[(value * 0x07C4ACDD) >> 27];
 }
+
+template<class ByteIter>
+constexpr u32 Fnv1aHash(ByteIter addr, ByteIter end) noexcept {
+    constexpr u32 fnv_prime = 0x01000193;
+    u32 hash_val = 0x811C9DC5;
+
+    for (; addr != end; ++addr) {
+        hash_val ^= *addr;
+        hash_val *= fnv_prime;
+    }
+
+    return hash_val;
+}
