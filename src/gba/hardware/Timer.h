@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2017 Matthew Murray
+// Copyright (C) 2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,38 +16,33 @@
 
 #pragma once
 
-#include <memory>
-#include <vector>
-
 #include "common/CommonTypes.h"
-#include "common/CommonEnums.h"
-
-namespace Emu { class SDLContext; }
 
 namespace Gba {
 
-class Timer;
-class Memory;
-class Cpu;
+class Core;
 
-class Core {
+class Timer {
 public:
-    Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom, LogLevel level);
-    ~Core();
+    Timer(int _id, Core& _core);
 
-    std::vector<Timer> timers;
-    std::unique_ptr<Memory> mem;
-    std::unique_ptr<Cpu> cpu;
+    IOReg counter = {0x0000, 0xFFFF, 0x0000};
+    IOReg reload = {0x0000, 0x0000, 0xFFFF};
+    IOReg control = {0x0000, 0x00C7, 0x00C7};
 
-    void EmulatorLoop();
-    void UpdateHardware(int cycles);
+    void Tick(int cycles);
+    void CounterTick();
+    void WriteControl(const u16 data, const u16 mask);
+    bool CascadeEnabled() const { return control.v & 0x0004; }
 private:
-    Emu::SDLContext& sdl_context;
+    const int id;
+    Core& core;
 
-    bool quit = false;
-    bool pause = false;
+    int cycle_count = 1;
 
-    void RegisterCallbacks();
+    bool TimerRunning() const { return control.v & 0x0080; }
+    bool InterruptEnabled() const { return control.v & 0x0040; }
+    int CyclesPerTick() const;
 };
 
 } // End namespace Gba

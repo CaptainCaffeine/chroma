@@ -25,7 +25,7 @@
 
 namespace Gba {
 
-Disassembler::Disassembler(const Memory& _mem, const Cpu* _cpu, LogLevel level)
+Disassembler::Disassembler(const Memory& _mem, const Cpu& _cpu, LogLevel level)
         : mem(_mem)
         , cpu(_cpu)
         , thumb_instructions(Instruction<Thumb>::GetInstructionTable<Disassembler>())
@@ -51,7 +51,7 @@ void Disassembler::DisassembleThumb(Thumb opcode, const std::array<u32, 16>& reg
 
     for (const auto& instr : thumb_instructions) {
         if (instr.Match(opcode)) {
-            fmt::print(log_stream, "0x{:0>8X}, T: {}\n", cpu->GetPc(), instr.disasm_func(*this, opcode));
+            fmt::print(log_stream, "0x{:0>8X}, T: {}\n", cpu.GetPc(), instr.disasm_func(*this, opcode));
             break;
         }
     }
@@ -68,7 +68,7 @@ void Disassembler::DisassembleArm(Arm opcode, const std::array<u32, 16>& regs, u
 
     for (const auto& instr : arm_instructions) {
         if (instr.Match(opcode)) {
-            fmt::print(log_stream, "0x{:0>8X}, A: {}\n", cpu->GetPc(), instr.disasm_func(*this, opcode));
+            fmt::print(log_stream, "0x{:0>8X}, A: {}\n", cpu.GetPc(), instr.disasm_func(*this, opcode));
             break;
         }
     }

@@ -20,13 +20,15 @@
 #include "gba/cpu/Cpu.h"
 #include "gba/cpu/Instruction.h"
 #include "gba/cpu/Disassembler.h"
+#include "gba/core/Core.h"
 #include "gba/memory/Memory.h"
 
 namespace Gba {
 
-Cpu::Cpu(Memory& memory, LogLevel level)
-        : mem(memory)
-        , disasm(std::make_unique<Disassembler>(memory, this, level))
+Cpu::Cpu(Memory& _mem, Core& _core, LogLevel level)
+        : mem(_mem)
+        , core(_core)
+        , disasm(std::make_unique<Disassembler>(_mem, *this, level))
         , thumb_instructions(Instruction<Thumb>::GetInstructionTable<Cpu>())
         , arm_instructions(Instruction<Arm>::GetInstructionTable<Cpu>()) {
 
@@ -38,19 +40,26 @@ Cpu::~Cpu() = default;
 
 void Cpu::Execute(int cycles) {
     while (cycles > 0) {
+        int cycles_taken = 0;
+
         if (InterruptsEnabled() && mem.PendingInterrupts()) {
-            cycles -= TakeException(CpuMode::Irq);
+            cycles_taken += TakeException(CpuMode::Irq);
         }
 
         if (ThumbMode()) {
             pipeline[0] = pipeline[1];
             pipeline[1] = pipeline[2];
             pipeline[2] = mem.ReadMem<Thumb>(regs[pc]);
-            cycles -= mem.AccessTime<Thumb>(regs[pc]);
+            cycles_taken += mem.AccessTime<Thumb>(regs[pc]);
+
+            // Sync hardware after the prefetch.
+            core.UpdateHardware(cycles_taken);
+            cycles -= cycles_taken;
+            cycles_taken = 0;
 
             disasm->DisassembleThumb(pipeline[0], regs, cpsr);
             auto impl = DecodeThumb(pipeline[0]);
-            cycles -= impl(*this, pipeline[0]);
+            cycles_taken += impl(*this, pipeline[0]);
 
             if (!pc_written) {
                 // Only increment the PC if the executing instruction didn't change it.
@@ -60,17 +69,26 @@ void Cpu::Execute(int cycles) {
             pipeline[0] = pipeline[1];
             pipeline[1] = pipeline[2];
             pipeline[2] = mem.ReadMem<Arm>(regs[pc]);
-            cycles -= mem.AccessTime<Arm>(regs[pc]);
+            cycles_taken += mem.AccessTime<Arm>(regs[pc]);
+
+            // Sync hardware after the prefetch.
+            core.UpdateHardware(cycles_taken);
+            cycles -= cycles_taken;
+            cycles_taken = 0;
 
             disasm->DisassembleArm(pipeline[0], regs, cpsr);
             auto impl = DecodeArm(pipeline[0]);
-            cycles -= impl(*this, pipeline[0]);
+            cycles_taken += impl(*this, pipeline[0]);
 
             if (!pc_written) {
                 // Only increment the PC if the executing instruction didn't change it.
                 regs[pc] += 4;
             }
         }
+
+        // Sync hardware again after the rest of the instruction has executed.
+        core.UpdateHardware(cycles_taken);
+        cycles -= cycles_taken;
 
         pc_written = false;
     }

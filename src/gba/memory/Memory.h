@@ -23,11 +23,11 @@
 
 namespace Gba {
 
-class Cpu;
+class Core;
 
 class Memory {
 public:
-    Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom);
+    Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom, Core& _core);
 
     template <typename T>
     T ReadMem(const u32 addr) const;
@@ -40,11 +40,10 @@ public:
 
     bool InterruptMasterEnable() const { return master_enable.v; }
     bool PendingInterrupts() const { return intr_flags.v & intr_enable.v; }
+    void RequestInterrupt(u16 intr) { intr_flags.v |= intr; };
 
     static bool CheckNintendoLogo(const std::vector<u8>& rom_header) noexcept;
     static void CheckHeader(const std::vector<u16>& rom_header);
-
-    void LinkToCpu(Cpu* _cpu) { cpu = _cpu; }
 private:
     const std::vector<u32>& bios;
     std::vector<u16> xram;
@@ -54,7 +53,7 @@ private:
     std::vector<u32> oam;
     const std::vector<u16>& rom;
 
-    const Cpu* cpu;
+    Core& core;
 
     u32 last_addr = 0x0;
 
@@ -145,15 +144,14 @@ private:
     void UpdateWaitStates();
 
     // IO registers
-    struct IOReg {
-        u16 v;
-        u16 read_mask;
-        u16 write_mask;
-
-        u16 Read() const { return v & read_mask; }
-        void Write(u16 data, u16 mask_8bit) { v = (v & ~(write_mask & mask_8bit)) | (data & write_mask); }
-        void Clear(u16 data) { v &= ~(data & write_mask); }
-    };
+    static constexpr u32 TM0CNT_L = 0x0400'0100;
+    static constexpr u32 TM0CNT_H = 0x0400'0102;
+    static constexpr u32 TM1CNT_L = 0x0400'0104;
+    static constexpr u32 TM1CNT_H = 0x0400'0106;
+    static constexpr u32 TM2CNT_L = 0x0400'0108;
+    static constexpr u32 TM2CNT_H = 0x0400'010A;
+    static constexpr u32 TM3CNT_L = 0x0400'010C;
+    static constexpr u32 TM3CNT_H = 0x0400'010E;
 
     static constexpr u32 IE = 0x0400'0200;
     IOReg intr_enable = {0x0000, 0x3FFF, 0x3FFF};

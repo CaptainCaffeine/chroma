@@ -16,18 +16,21 @@
 
 #include "common/CommonFuncs.h"
 #include "gba/memory/Memory.h"
+#include "gba/core/Core.h"
 #include "gba/cpu/Cpu.h"
+#include "gba/hardware/Timer.h"
 
 namespace Gba {
 
-Memory::Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom)
+Memory::Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom, Core& _core)
         : bios(_bios)
         , xram(xram_size / sizeof(u16))
         , iram(iram_size / sizeof(u32))
         , pram(pram_size / sizeof(u16))
         , vram(vram_size / sizeof(u16))
         , oam(oam_size / sizeof(u32))
-        , rom(_rom) {}
+        , rom(_rom)
+        , core(_core) {}
 
 // Bus width 16.
 template <>
@@ -78,7 +81,7 @@ u8 Memory::ReadRegion(const std::vector<u32>& region, const AddressMask region_m
 template <typename T>
 T Memory::ReadBios(const u32 addr) const {
     // The BIOS region is not mirrored, and can only be read if the PC is currently within the BIOS.
-    if (addr < bios_size && cpu->GetPc() < bios_size) {
+    if (addr < bios_size && core.cpu->GetPc() < bios_size) {
         return ReadRegion<T>(bios, bios_addr_mask, addr);
     } else {
         return 0;
@@ -330,6 +333,30 @@ template <>
 u16 Memory::ReadIO(const u32 addr) const {
     u16 value;
     switch (addr & ~0x1) {
+    case TM0CNT_L:
+        value = core.timers[0].counter.Read();
+        break;
+    case TM0CNT_H:
+        value = core.timers[0].control.Read();
+        break;
+    case TM1CNT_L:
+        value = core.timers[1].counter.Read();
+        break;
+    case TM1CNT_H:
+        value = core.timers[1].control.Read();
+        break;
+    case TM2CNT_L:
+        value = core.timers[2].counter.Read();
+        break;
+    case TM2CNT_H:
+        value = core.timers[2].control.Read();
+        break;
+    case TM3CNT_L:
+        value = core.timers[3].counter.Read();
+        break;
+    case TM3CNT_H:
+        value = core.timers[3].control.Read();
+        break;
     case IE:
         value = intr_enable.Read();
         break;
@@ -357,6 +384,30 @@ u16 Memory::ReadIO(const u32 addr) const {
 template <>
 void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
     switch (addr & ~0x1) {
+    case TM0CNT_L:
+        core.timers[0].reload.Write(data, mask);
+        break;
+    case TM0CNT_H:
+        core.timers[0].WriteControl(data, mask);
+        break;
+    case TM1CNT_L:
+        core.timers[1].reload.Write(data, mask);
+        break;
+    case TM1CNT_H:
+        core.timers[1].WriteControl(data, mask);
+        break;
+    case TM2CNT_L:
+        core.timers[2].reload.Write(data, mask);
+        break;
+    case TM2CNT_H:
+        core.timers[2].WriteControl(data, mask);
+        break;
+    case TM3CNT_L:
+        core.timers[3].reload.Write(data, mask);
+        break;
+    case TM3CNT_H:
+        core.timers[3].WriteControl(data, mask);
+        break;
     case IE:
         intr_enable.Write(data, mask);
         break;

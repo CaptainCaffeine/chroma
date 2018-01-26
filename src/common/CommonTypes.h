@@ -32,3 +32,13 @@ using s64 = std::int64_t;
 
 using Arm = u32;
 using Thumb = u16;
+
+struct IOReg {
+    u16 v;
+    u16 read_mask;
+    u16 write_mask;
+
+    u16 Read() const { return v & read_mask; }
+    void Write(u16 data, u16 mask_8bit) { v = (v & ~(write_mask & mask_8bit)) | (data & write_mask); }
+    void Clear(u16 data) { v &= ~(data & write_mask); }
+};

@@ -47,7 +47,7 @@ struct ImmediateShift;
 
 class Disassembler {
 public:
-    Disassembler(const Memory& _mem, const Cpu* _cpu, LogLevel level);
+    Disassembler(const Memory& _mem, const Cpu& _cpu, LogLevel level);
     ~Disassembler();
 
     void DisassembleThumb(Thumb opcode, const std::array<u32, 16>& regs, u32 cpsr);
@@ -55,7 +55,7 @@ public:
 
 private:
     const Memory& mem;
-    const Cpu* cpu;
+    const Cpu& cpu;
 
     const std::vector<Instruction<Thumb>> thumb_instructions;
     const std::vector<Instruction<Arm>> arm_instructions;

@@ -15,18 +15,19 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "gba/core/Core.h"
+#include "gba/core/Enums.h"
 #include "gba/memory/Memory.h"
 #include "gba/cpu/Cpu.h"
+#include "gba/hardware/Timer.h"
 #include "emu/SDLContext.h"
 
 namespace Gba {
 
 Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom, LogLevel level)
-        : sdl_context(context)
-        , mem(std::make_unique<Memory>(bios, rom))
-        , cpu(std::make_unique<Cpu>(*mem, level)) {
-
-    mem->LinkToCpu(cpu.get());
+        : timers{{0, *this}, {1, *this}, {2, *this}, {3, *this}}
+        , mem(std::make_unique<Memory>(bios, rom, *this))
+        , cpu(std::make_unique<Cpu>(*mem, *this, level))
+        , sdl_context(context) {
 
     RegisterCallbacks();
 }
@@ -41,6 +42,16 @@ void Core::EmulatorLoop() {
 
     //    SDL_Delay(40);
     //}
+}
+
+void Core::UpdateHardware(int cycles) {
+    if (cycles == 0) {
+        return;
+    }
+
+    for (auto& timer : timers) {
+        timer.Tick(cycles);
+    }
 }
 
 void Core::RegisterCallbacks() {

@@ -31,6 +31,7 @@ namespace Gba {
 
 class Memory;
 class Disassembler;
+class Core;
 
 template<typename T>
 class Instruction;
@@ -43,7 +44,7 @@ struct ImmediateShift {
 
 class Cpu {
 public:
-    Cpu(Memory& memory, LogLevel level);
+    Cpu(Memory& _mem, Core& _core, LogLevel level);
     ~Cpu();
 
     void Execute(int cycles);
@@ -60,6 +61,7 @@ public:
 
 private:
     Memory& mem;
+    Core& core;
     std::unique_ptr<Disassembler> disasm;
 
     std::array<u32, 16> regs{};

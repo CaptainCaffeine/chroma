@@ -30,6 +30,7 @@ set(SOURCES
     gba/cpu/Disassembler.cpp
     gba/cpu/ArmDisasm.cpp
     gba/cpu/ThumbDisasm.cpp
+    gba/hardware/Timer.cpp
 
     common/Screenshot.cpp
 
@@ -59,6 +60,7 @@ set(HEADERS
     gba/cpu/Cpu.h
     gba/cpu/Instruction.h
     gba/cpu/Disassembler.h
+    gba/hardware/Timer.h
 
     common/CommonTypes.h
     common/CommonFuncs.h

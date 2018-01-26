@@ -40,4 +40,21 @@ enum class ShiftType {LSL = 0,
                       ROR = 3,
                       RRX = 4};
 
+namespace Interrupt {
+enum Interrupt {VBlank  = 0x0001,
+                HBlank  = 0x0002,
+                VCount  = 0x0004,
+                Timer0  = 0x0008,
+                Timer1  = 0x0010,
+                Timer2  = 0x0020,
+                Timer3  = 0x0040,
+                Serial  = 0x0080,
+                Dma0    = 0x0100,
+                Dma1    = 0x0200,
+                Dma2    = 0x0400,
+                Dma3    = 0x0800,
+                Keypad  = 0x1000,
+                Gamepak = 0x2000};
+}
+
 } // End namespace Gba
