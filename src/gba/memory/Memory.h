@@ -20,6 +20,7 @@
 #include <array>
 
 #include "common/CommonTypes.h"
+#include "gba/memory/IOReg.h"
 
 namespace Gba {
 

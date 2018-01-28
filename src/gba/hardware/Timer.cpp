@@ -36,12 +36,12 @@ void Timer::Tick(int cycles) {
 
     if (CyclesPerTick() == 1) {
         // Don't bother manipulating `cycle_count` when the timer count increments every cycle.
-        int remaining_ticks = 0x10000 - counter.v;
+        int remaining_ticks = 0x10000 - counter;
 
         while (cycles > remaining_ticks) {
             cycles -= remaining_ticks;
-            counter.v = reload.v;
-            remaining_ticks = 0x10000 - counter.v;
+            counter = reload;
+            remaining_ticks = 0x10000 - counter;
 
             if (InterruptEnabled()) {
                 core.mem->RequestInterrupt(Interrupt::Timer0 << id);
@@ -52,7 +52,7 @@ void Timer::Tick(int cycles) {
             }
         }
 
-        counter.v += cycles;
+        counter += cycles;
         cycle_count = 0;
     } else {
         int remaining_cycles = CyclesPerTick() - cycle_count;
@@ -69,7 +69,7 @@ void Timer::Tick(int cycles) {
 }
 
 int Timer::CyclesPerTick() const {
-    const int prescaler_select = control.v & 0x0003;
+    const int prescaler_select = control & 0x0003;
     
     if (prescaler_select == 0) {
         return 1;
@@ -79,8 +79,8 @@ int Timer::CyclesPerTick() const {
 }
 
 void Timer::CounterTick() {
-    if (++counter.v == 0) {
-        counter.v = reload.v;
+    if (++counter == 0) {
+        counter = reload;
 
         if (InterruptEnabled()) {
             core.mem->RequestInterrupt(Interrupt::Timer0 << id);
@@ -98,7 +98,7 @@ void Timer::WriteControl(const u16 data, const u16 mask) {
 
     if (was_stopped && TimerRunning()) {
         // The counter is reloaded when a timer is enabled.
-        counter.v = reload.v;
+        counter = reload;
     }
 }
 
