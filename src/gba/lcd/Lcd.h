@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2017-2018 Matthew Murray
+// Copyright (C) 2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,40 +16,36 @@
 
 #pragma once
 
-#include <memory>
-#include <vector>
-
 #include "common/CommonTypes.h"
-#include "common/CommonEnums.h"
-
-namespace Emu { class SDLContext; }
+#include "gba/memory/IOReg.h"
 
 namespace Gba {
 
-class Timer;
-class Lcd;
-class Memory;
-class Cpu;
+class Core;
 
-class Core {
+class Lcd {
 public:
-    Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom, LogLevel level);
-    ~Core();
+    Lcd(Core& _core);
 
-    std::vector<Timer> timers;
-    std::unique_ptr<Lcd> lcd;
-    std::unique_ptr<Memory> mem;
-    std::unique_ptr<Cpu> cpu;
+    IOReg dispcnt = {0x0000, 0xFFF7, 0xFFF7};
+    IOReg dispstat = {0x0000, 0xFF3F, 0xFF38};
+    IOReg vcount = {0x0000, 0x00FF, 0x0000};
 
-    void EmulatorLoop();
-    void UpdateHardware(int cycles);
+    void Update(int cycles);
 private:
-    Emu::SDLContext& sdl_context;
+    Core& core;
 
-    bool quit = false;
-    bool pause = false;
+    int scanline_cycles = 0;
 
-    void RegisterCallbacks();
+    // Dispstat flags
+    static constexpr u16 vblank_flag = 0x01;
+    static constexpr u16 hblank_flag = 0x02;
+    static constexpr u16 vcount_flag = 0x04;
+    static constexpr u16 vblank_irq  = 0x08;
+    static constexpr u16 hblank_irq  = 0x10;
+    static constexpr u16 vcount_irq  = 0x20;
+
+    int VTrigger() const { return dispstat >> 8; }
 };
 
 } // End namespace Gba

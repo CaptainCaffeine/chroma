@@ -145,6 +145,10 @@ private:
     void UpdateWaitStates();
 
     // IO registers
+    static constexpr u32 DISPCNT  = 0x0400'0000;
+    static constexpr u32 DISPSTAT = 0x0400'0004;
+    static constexpr u32 VCOUNT   = 0x0400'0006;
+
     static constexpr u32 TM0CNT_L = 0x0400'0100;
     static constexpr u32 TM0CNT_H = 0x0400'0102;
     static constexpr u32 TM1CNT_L = 0x0400'0104;

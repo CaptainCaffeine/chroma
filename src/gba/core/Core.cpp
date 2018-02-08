@@ -19,12 +19,14 @@
 #include "gba/memory/Memory.h"
 #include "gba/cpu/Cpu.h"
 #include "gba/hardware/Timer.h"
+#include "gba/lcd/Lcd.h"
 #include "emu/SDLContext.h"
 
 namespace Gba {
 
 Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom, LogLevel level)
         : timers{{0, *this}, {1, *this}, {2, *this}, {3, *this}}
+        , lcd(std::make_unique<Lcd>(*this))
         , mem(std::make_unique<Memory>(bios, rom, *this))
         , cpu(std::make_unique<Cpu>(*mem, *this, level))
         , sdl_context(context) {
@@ -36,7 +38,7 @@ Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::ve
 Core::~Core() = default;
 
 void Core::EmulatorLoop() {
-    cpu->Execute(0x2000);
+    cpu->Execute(0x76000);
     //while (!quit) {
     //    sdl_context.PollEvents();
 
@@ -48,6 +50,8 @@ void Core::UpdateHardware(int cycles) {
     if (cycles == 0) {
         return;
     }
+
+    lcd->Update(cycles);
 
     for (auto& timer : timers) {
         timer.Tick(cycles);

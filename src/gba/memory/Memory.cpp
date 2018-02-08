@@ -18,6 +18,7 @@
 #include "gba/memory/Memory.h"
 #include "gba/core/Core.h"
 #include "gba/cpu/Cpu.h"
+#include "gba/lcd/Lcd.h"
 #include "gba/hardware/Timer.h"
 
 namespace Gba {
@@ -333,6 +334,15 @@ template <>
 u16 Memory::ReadIO(const u32 addr) const {
     u16 value;
     switch (addr & ~0x1) {
+    case DISPCNT:
+        value = core.lcd->dispcnt.Read();
+        break;
+    case DISPSTAT:
+        value = core.lcd->dispstat.Read();
+        break;
+    case VCOUNT:
+        value = core.lcd->vcount.Read();
+        break;
     case TM0CNT_L:
         value = core.timers[0].counter.Read();
         break;
@@ -384,6 +394,15 @@ u16 Memory::ReadIO(const u32 addr) const {
 template <>
 void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
     switch (addr & ~0x1) {
+    case DISPCNT:
+        core.lcd->dispcnt.Write(data, mask);
+        break;
+    case DISPSTAT:
+        core.lcd->dispstat.Write(data, mask);
+        break;
+    case VCOUNT:
+        core.lcd->vcount.Write(data, mask);
+        break;
     case TM0CNT_L:
         core.timers[0].reload.Write(data, mask);
         break;

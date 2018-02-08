@@ -21,7 +21,9 @@
 
 namespace Gba {
 
-Timer::Timer(int _id, Core& _core) : id(_id), core(_core) {
+Timer::Timer(int _id, Core& _core)
+        : id(_id)
+        , core(_core) {
     if (id == 0) {
         // Cascade timing cannot be used for timer 0.
         control.read_mask = 0x00C3;
