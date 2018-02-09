@@ -321,8 +321,9 @@ int Cpu::Arm_LoadImm(Condition cond, bool pre_indexed, bool add, bool writeback,
         return 0;
     }
 
+    assert(t != pc); // Unpredictable
+
     writeback = writeback || !pre_indexed;
-    assert(t != pc && !(writeback && n == t)); // Unpredictable
 
     if (!add) {
         imm = -imm;
@@ -333,14 +334,14 @@ int Cpu::Arm_LoadImm(Condition cond, bool pre_indexed, bool add, bool writeback,
         addr += imm;
     }
 
+    if (writeback) {
+        regs[n] += imm;
+    }
+
     int cycles;
     std::tie(regs[t], cycles) = op(mem, addr);
     // Plus one internal cycle to transfer the loaded value to Rt.
     cycles += 1;
-
-    if (writeback) {
-        regs[n] += imm;
-    }
 
     // The next opcode fetch after an LDR is a sequential access, despite the data load.
     // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
@@ -356,7 +357,7 @@ int Cpu::Arm_LoadReg(Condition cond, bool pre_indexed, bool add, bool writeback,
     }
 
     writeback = writeback || !pre_indexed;
-    assert(m != pc && t != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
+    assert(m != pc && t != pc && !(writeback && (n == pc || n == m))); // Unpredictable
 
     ImmediateShift shift = DecodeImmShift(type, imm);
 
@@ -371,14 +372,14 @@ int Cpu::Arm_LoadReg(Condition cond, bool pre_indexed, bool add, bool writeback,
         addr += offset;
     }
 
+    if (writeback) {
+        regs[n] += offset;
+    }
+
     int cycles;
     std::tie(regs[t], cycles) = op(mem, addr);
     // Plus one internal cycle to transfer the loaded value to Rt.
     cycles += 1;
-
-    if (writeback) {
-        regs[n] += offset;
-    }
 
     // The next opcode fetch after an LDR is a sequential access, despite the data load.
     // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
@@ -852,7 +853,6 @@ int Cpu::Arm_LdrImm(Condition cond, bool pre_indexed, bool add, bool writeback, 
     }
 
     writeback = writeback || !pre_indexed;
-    assert(!(writeback && n == t)); // Unpredictable
 
     if (!add) {
         imm = -imm;
@@ -863,13 +863,13 @@ int Cpu::Arm_LdrImm(Condition cond, bool pre_indexed, bool add, bool writeback, 
         addr += imm;
     }
 
-    u32 data = mem.ReadMem<u32>(addr);
-    // Plus one internal cycle to transfer the loaded value to Rt.
-    int cycles = 1 + mem.AccessTime<u32>(addr);
-
     if (writeback) {
         regs[n] += imm;
     }
+
+    u32 data = mem.ReadMem<u32>(addr);
+    // Plus one internal cycle to transfer the loaded value to Rt.
+    int cycles = 1 + mem.AccessTime<u32>(addr);
 
     if (t == pc) {
         assert((addr & 0x3) == 0x0); // Unpredictable
@@ -892,7 +892,7 @@ int Cpu::Arm_LdrReg(Condition cond, bool pre_indexed, bool add, bool writeback, 
     }
 
     writeback = writeback || !pre_indexed;
-    assert(m != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
+    assert(m != pc && !(writeback && (n == pc || n == m))); // Unpredictable
 
     ImmediateShift shift = DecodeImmShift(type, imm);
 
@@ -907,13 +907,13 @@ int Cpu::Arm_LdrReg(Condition cond, bool pre_indexed, bool add, bool writeback, 
         addr += offset;
     }
 
-    u32 data = mem.ReadMem<u32>(addr);
-    // Plus one internal cycle to transfer the loaded value to Rt.
-    int cycles = 1 + mem.AccessTime<u32>(addr);
-
     if (writeback) {
         regs[n] += offset;
     }
+
+    u32 data = mem.ReadMem<u32>(addr);
+    // Plus one internal cycle to transfer the loaded value to Rt.
+    int cycles = 1 + mem.AccessTime<u32>(addr);
 
     if (t == pc) {
         assert((addr & 0x3) == 0x0); // Unpredictable
