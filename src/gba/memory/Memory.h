@@ -40,8 +40,8 @@ public:
     void MakeNextAccessSequential(u32 addr) { last_addr = addr; }
 
     bool InterruptMasterEnable() const { return master_enable.v; }
-    bool PendingInterrupts() const { return intr_flags.v & intr_enable.v; }
-    void RequestInterrupt(u16 intr) { intr_flags.v |= intr; };
+    bool PendingInterrupts() const { return intr_flags & intr_enable; }
+    void RequestInterrupt(u16 intr) { intr_flags |= intr; };
 
     static bool CheckNintendoLogo(const std::vector<u8>& rom_header) noexcept;
     static void CheckHeader(const std::vector<u16>& rom_header);

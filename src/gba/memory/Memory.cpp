@@ -401,7 +401,7 @@ void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
         core.lcd->dispstat.Write(data, mask);
         break;
     case VCOUNT:
-        core.lcd->vcount.Write(data, mask);
+        // This register is read-only.
         break;
     case TM0CNT_L:
         core.timers[0].reload.Write(data, mask);
@@ -443,6 +443,9 @@ void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
         break;
     case HALTCNT:
         haltcnt.Write(data, mask);
+        if ((mask & 0xFF00) == 0xFF00 && (data & 0x8000) == 0) {
+            core.cpu->Halt();
+        }
         break;
     default:
         break;

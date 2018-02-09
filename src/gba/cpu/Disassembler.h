@@ -53,6 +53,9 @@ public:
     void DisassembleThumb(Thumb opcode, const std::array<u32, 16>& regs, u32 cpsr);
     void DisassembleArm(Arm opcode, const std::array<u32, 16>& regs, u32 cpsr);
 
+    void IncHaltCycles() { ++halt_cycles; }
+    void LogHalt();
+
 private:
     const Memory& mem;
     const Cpu& cpu;
@@ -62,6 +65,8 @@ private:
 
     LogLevel log_level;
     std::ofstream log_stream;
+
+    int halt_cycles = 0;
 
     using Reg = std::size_t;
     static constexpr Reg sp = 13, lr = 14, pc = 15;

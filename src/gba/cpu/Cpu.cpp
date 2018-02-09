@@ -42,8 +42,21 @@ void Cpu::Execute(int cycles) {
     while (cycles > 0) {
         int cycles_taken = 0;
 
-        if (InterruptsEnabled() && mem.PendingInterrupts()) {
-            cycles_taken += TakeException(CpuMode::Irq);
+        if (mem.PendingInterrupts()) {
+            if (halted) {
+                halted = false;
+                disasm->LogHalt();
+            }
+
+            if (InterruptsEnabled()) {
+                cycles_taken += TakeException(CpuMode::Irq);
+            }
+        }
+
+        if (halted) {
+            core.UpdateHardware(1);
+            disasm->IncHaltCycles();
+            continue;
         }
 
         if (ThumbMode()) {

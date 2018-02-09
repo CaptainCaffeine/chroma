@@ -97,6 +97,11 @@ void Disassembler::LogRegisters(const std::array<u32, 16>& regs, u32 cpsr) {
     fmt::print(log_stream, regs_str.str());
 }
 
+void Disassembler::LogHalt() {
+    fmt::print(log_stream, "Halted for {} cycles\n", halt_cycles);
+    halt_cycles = 0;
+}
+
 std::string Disassembler::RegStr(Reg r) {
     switch (r) {
     case sp:

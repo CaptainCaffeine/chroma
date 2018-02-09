@@ -49,6 +49,8 @@ public:
 
     void Execute(int cycles);
 
+    void Halt() { halted = true; }
+
     // Public for Disassembler.
     u32 GetPc() const { return regs[pc]; };
     static ImmediateShift DecodeImmShift(ShiftType type, u32 imm5);
@@ -77,6 +79,8 @@ private:
 
     std::array<u32, 3> pipeline{};
     bool pc_written = false;
+
+    bool halted = false;
 
     // Constants
     using Reg = std::size_t;
