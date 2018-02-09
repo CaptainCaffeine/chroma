@@ -977,14 +977,20 @@ int Cpu::Arm_LdrsbReg(Condition cond, bool pre_indexed, bool add, bool writeback
 int Cpu::Arm_LdrshImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm_hi,
                       u32 imm_lo) {
     auto ldrsh_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
-        return std::make_tuple(SignExtend(static_cast<u32>(_mem.ReadMem<u16>(addr)), 16), _mem.AccessTime<u16>(addr));
+        // LDRSH only sign-extends the first byte after an unaligned access.
+        int num_source_bits = 16 >> (addr & 0x1);
+        return std::make_tuple(SignExtend(static_cast<u32>(_mem.ReadMem<u16>(addr)), num_source_bits),
+                               _mem.AccessTime<u16>(addr));
     };
     return Arm_LoadImm(cond, pre_indexed, add, writeback, n, t, (imm_hi << 4) | imm_lo, ldrsh_op);
 }
 
 int Cpu::Arm_LdrshReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, Reg m) {
     auto ldrsh_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
-        return std::make_tuple(SignExtend(static_cast<u32>(_mem.ReadMem<u16>(addr)), 16), _mem.AccessTime<u16>(addr));
+        // LDRSH only sign-extends the first byte after an unaligned access.
+        int num_source_bits = 16 >> (addr & 0x1);
+        return std::make_tuple(SignExtend(static_cast<u32>(_mem.ReadMem<u16>(addr)), num_source_bits),
+                               _mem.AccessTime<u16>(addr));
     };
     return Arm_LoadReg(cond, pre_indexed, add, writeback, n, t, 0, ShiftType::LSL, m, ldrsh_op);
 }

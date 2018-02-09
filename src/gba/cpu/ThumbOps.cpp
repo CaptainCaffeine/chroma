@@ -469,7 +469,10 @@ int Cpu::Thumb_LdrsbReg(Reg m, Reg n, Reg t) {
 
 int Cpu::Thumb_LdrshReg(Reg m, Reg n, Reg t) {
     auto ldrsh_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
-        return std::make_tuple(SignExtend(static_cast<u32>(_mem.ReadMem<u16>(addr)), 16), _mem.AccessTime<u16>(addr));
+        // LDRSH only sign-extends the first byte after an unaligned access.
+        int num_source_bits = 16 >> (addr & 0x1);
+        return std::make_tuple(SignExtend(static_cast<u32>(_mem.ReadMem<u16>(addr)), num_source_bits),
+                               _mem.AccessTime<u16>(addr));
     };
     return Thumb_Load(regs[m], n, t, ldrsh_op);
 }
