@@ -36,9 +36,9 @@ Memory::Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom, Core
 // Bus width 16.
 template <>
 u32 Memory::ReadRegion(const std::vector<u16>& region, const AddressMask region_mask, const u32 addr) const {
-    const u32 region_addr = (addr & region_mask) / sizeof(u16);
+    const u32 region_addr = ((addr & region_mask) / sizeof(u16)) & ~0x1;
 
-    // Unaligned accesses are rotated.
+    // Unaligned accesses are word-aligned and then rotated.
     return RotateRight(region[region_addr] | (region[region_addr + 1] << 16), (addr & 0x3) * 8);
 }
 
@@ -69,8 +69,8 @@ template <>
 u16 Memory::ReadRegion(const std::vector<u32>& region, const AddressMask region_mask, const u32 addr) const {
     const u32 region_addr = (addr & region_mask) / sizeof(u32);
 
-    // Unaligned accesses are rotated.
-    return RotateRight(region[region_addr] >> (8 * (addr & 0x2)), (addr & 0x1) * 8);
+    // Unaligned accesses are halfword-aligned and then rotated.
+    return RotateRight((region[region_addr] >> (8 * (addr & 0x2))) & 0xFFFF, (addr & 0x1) * 8);
 }
 
 template <>
@@ -308,8 +308,8 @@ void Memory::UpdateWaitStates() {
 
 template <>
 u32 Memory::ReadIO(const u32 addr) const {
-    // Unaligned accesses are rotated.
-    return RotateRight(ReadIO<u16>(addr & ~0x1) | (ReadIO<u16>((addr & ~0x1) + 2) << 16), (addr & 0x3) * 8);
+    // Unaligned accesses are word-aligned and then rotated.
+    return RotateRight(ReadIO<u16>(addr & ~0x3) | (ReadIO<u16>((addr & ~0x3) + 2) << 16), (addr & 0x3) * 8);
 }
 
 template <>
