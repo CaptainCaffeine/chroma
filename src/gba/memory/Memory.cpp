@@ -20,6 +20,7 @@
 #include "gba/cpu/Cpu.h"
 #include "gba/lcd/Lcd.h"
 #include "gba/hardware/Timer.h"
+#include "gba/hardware/Dma.h"
 
 namespace Gba {
 
@@ -240,9 +241,9 @@ template void Memory::WriteMem<u16>(const u32 addr, const u16 data);
 template void Memory::WriteMem<u32>(const u32 addr, const u32 data);
 
 template <typename T>
-int Memory::AccessTime(const u32 addr) {
+int Memory::AccessTime(const u32 addr, const bool force_sequential) {
     int u32_access = sizeof(T) / 4;
-    bool sequential = (addr - last_addr) <= 4;
+    bool sequential = force_sequential || (addr - last_addr) <= 4;
     last_addr = addr;
 
     auto RomTime = [this, u32_access, sequential](int i) -> int {
@@ -283,9 +284,9 @@ int Memory::AccessTime(const u32 addr) {
     }
 }
 
-template int Memory::AccessTime<u8>(const u32 addr);
-template int Memory::AccessTime<u16>(const u32 addr);
-template int Memory::AccessTime<u32>(const u32 addr);
+template int Memory::AccessTime<u8>(const u32 addr, const bool force_sequential);
+template int Memory::AccessTime<u16>(const u32 addr, const bool force_sequential);
+template int Memory::AccessTime<u32>(const u32 addr, const bool force_sequential);
 
 void Memory::UpdateWaitStates() {
     auto WaitStates = [this](int shift) {
@@ -342,6 +343,18 @@ u16 Memory::ReadIO(const u32 addr) const {
         break;
     case VCOUNT:
         value = core.lcd->vcount.Read();
+        break;
+    case DMA0CNT_H:
+        value = core.dma[0].control.Read();
+        break;
+    case DMA1CNT_H:
+        value = core.dma[1].control.Read();
+        break;
+    case DMA2CNT_H:
+        value = core.dma[2].control.Read();
+        break;
+    case DMA3CNT_H:
+        value = core.dma[3].control.Read();
         break;
     case TM0CNT_L:
         value = core.timers[0].counter.Read();
@@ -400,8 +413,77 @@ void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
     case DISPSTAT:
         core.lcd->dispstat.Write(data, mask);
         break;
-    case VCOUNT:
-        // This register is read-only.
+    case DMA0SAD_L:
+        core.dma[0].source_l.Write(data, mask);
+        break;
+    case DMA0SAD_H:
+        core.dma[0].source_h.Write(data, mask);
+        break;
+    case DMA0DAD_L:
+        core.dma[0].dest_l.Write(data, mask);
+        break;
+    case DMA0DAD_H:
+        core.dma[0].dest_h.Write(data, mask);
+        break;
+    case DMA0CNT_L:
+        core.dma[0].word_count.Write(data, mask);
+        break;
+    case DMA0CNT_H:
+        core.dma[0].WriteControl(data, mask);
+        break;
+    case DMA1SAD_L:
+        core.dma[1].source_l.Write(data, mask);
+        break;
+    case DMA1SAD_H:
+        core.dma[1].source_h.Write(data, mask);
+        break;
+    case DMA1DAD_L:
+        core.dma[1].dest_l.Write(data, mask);
+        break;
+    case DMA1DAD_H:
+        core.dma[1].dest_h.Write(data, mask);
+        break;
+    case DMA1CNT_L:
+        core.dma[1].word_count.Write(data, mask);
+        break;
+    case DMA1CNT_H:
+        core.dma[1].WriteControl(data, mask);
+        break;
+    case DMA2SAD_L:
+        core.dma[2].source_l.Write(data, mask);
+        break;
+    case DMA2SAD_H:
+        core.dma[2].source_h.Write(data, mask);
+        break;
+    case DMA2DAD_L:
+        core.dma[2].dest_l.Write(data, mask);
+        break;
+    case DMA2DAD_H:
+        core.dma[2].dest_h.Write(data, mask);
+        break;
+    case DMA2CNT_L:
+        core.dma[2].word_count.Write(data, mask);
+        break;
+    case DMA2CNT_H:
+        core.dma[2].WriteControl(data, mask);
+        break;
+    case DMA3SAD_L:
+        core.dma[3].source_l.Write(data, mask);
+        break;
+    case DMA3SAD_H:
+        core.dma[3].source_h.Write(data, mask);
+        break;
+    case DMA3DAD_L:
+        core.dma[3].dest_l.Write(data, mask);
+        break;
+    case DMA3DAD_H:
+        core.dma[3].dest_h.Write(data, mask);
+        break;
+    case DMA3CNT_L:
+        core.dma[3].word_count.Write(data, mask);
+        break;
+    case DMA3CNT_H:
+        core.dma[3].WriteControl(data, mask);
         break;
     case TM0CNT_L:
         core.timers[0].reload.Write(data, mask);

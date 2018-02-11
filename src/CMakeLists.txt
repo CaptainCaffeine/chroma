@@ -32,6 +32,7 @@ set(SOURCES
     gba/cpu/ThumbDisasm.cpp
     gba/lcd/Lcd.cpp
     gba/hardware/Timer.cpp
+    gba/hardware/Dma.cpp
 
     common/Screenshot.cpp
 
@@ -63,6 +64,7 @@ set(HEADERS
     gba/cpu/Disassembler.h
     gba/lcd/Lcd.h
     gba/hardware/Timer.h
+    gba/hardware/Dma.h
 
     common/CommonTypes.h
     common/CommonFuncs.h

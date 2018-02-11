@@ -47,8 +47,9 @@ public:
     Cpu(Memory& _mem, Core& _core, LogLevel level);
     ~Cpu();
 
-    void Execute(int cycles);
+    bool dma_active = false;
 
+    void Execute(int cycles);
     void Halt() { halted = true; }
 
     // Public for Disassembler.

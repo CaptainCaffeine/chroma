@@ -35,7 +35,7 @@ public:
     template <typename T>
     void WriteMem(const u32 addr, const T data);
     template <typename T>
-    int AccessTime(const u32 addr);
+    int AccessTime(const u32 addr, const bool force_sequential = false);
 
     void MakeNextAccessSequential(u32 addr) { last_addr = addr; }
 
@@ -145,18 +145,46 @@ private:
     void UpdateWaitStates();
 
     // IO registers
-    static constexpr u32 DISPCNT  = 0x0400'0000;
-    static constexpr u32 DISPSTAT = 0x0400'0004;
-    static constexpr u32 VCOUNT   = 0x0400'0006;
+    static constexpr u32 DISPCNT   = 0x0400'0000;
+    static constexpr u32 DISPSTAT  = 0x0400'0004;
+    static constexpr u32 VCOUNT    = 0x0400'0006;
 
-    static constexpr u32 TM0CNT_L = 0x0400'0100;
-    static constexpr u32 TM0CNT_H = 0x0400'0102;
-    static constexpr u32 TM1CNT_L = 0x0400'0104;
-    static constexpr u32 TM1CNT_H = 0x0400'0106;
-    static constexpr u32 TM2CNT_L = 0x0400'0108;
-    static constexpr u32 TM2CNT_H = 0x0400'010A;
-    static constexpr u32 TM3CNT_L = 0x0400'010C;
-    static constexpr u32 TM3CNT_H = 0x0400'010E;
+    static constexpr u32 DMA0SAD_L = 0x0400'00B0;
+    static constexpr u32 DMA0SAD_H = 0x0400'00B2;
+    static constexpr u32 DMA0DAD_L = 0x0400'00B4;
+    static constexpr u32 DMA0DAD_H = 0x0400'00B6;
+    static constexpr u32 DMA0CNT_L = 0x0400'00B8;
+    static constexpr u32 DMA0CNT_H = 0x0400'00BA;
+
+    static constexpr u32 DMA1SAD_L = 0x0400'00BC;
+    static constexpr u32 DMA1SAD_H = 0x0400'00BE;
+    static constexpr u32 DMA1DAD_L = 0x0400'00C0;
+    static constexpr u32 DMA1DAD_H = 0x0400'00C2;
+    static constexpr u32 DMA1CNT_L = 0x0400'00C4;
+    static constexpr u32 DMA1CNT_H = 0x0400'00C6;
+
+    static constexpr u32 DMA2SAD_L = 0x0400'00C8;
+    static constexpr u32 DMA2SAD_H = 0x0400'00CA;
+    static constexpr u32 DMA2DAD_L = 0x0400'00CC;
+    static constexpr u32 DMA2DAD_H = 0x0400'00CE;
+    static constexpr u32 DMA2CNT_L = 0x0400'00D0;
+    static constexpr u32 DMA2CNT_H = 0x0400'00D2;
+
+    static constexpr u32 DMA3SAD_L = 0x0400'00D4;
+    static constexpr u32 DMA3SAD_H = 0x0400'00D6;
+    static constexpr u32 DMA3DAD_L = 0x0400'00D8;
+    static constexpr u32 DMA3DAD_H = 0x0400'00DA;
+    static constexpr u32 DMA3CNT_L = 0x0400'00DC;
+    static constexpr u32 DMA3CNT_H = 0x0400'00DE;
+
+    static constexpr u32 TM0CNT_L  = 0x0400'0100;
+    static constexpr u32 TM0CNT_H  = 0x0400'0102;
+    static constexpr u32 TM1CNT_L  = 0x0400'0104;
+    static constexpr u32 TM1CNT_H  = 0x0400'0106;
+    static constexpr u32 TM2CNT_L  = 0x0400'0108;
+    static constexpr u32 TM2CNT_H  = 0x0400'010A;
+    static constexpr u32 TM3CNT_L  = 0x0400'010C;
+    static constexpr u32 TM3CNT_H  = 0x0400'010E;
 
     static constexpr u32 IE = 0x0400'0200;
     IOReg intr_enable = {0x0000, 0x3FFF, 0x3FFF};

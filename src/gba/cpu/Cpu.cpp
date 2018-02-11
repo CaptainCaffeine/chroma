@@ -22,6 +22,7 @@
 #include "gba/cpu/Disassembler.h"
 #include "gba/core/Core.h"
 #include "gba/memory/Memory.h"
+#include "gba/hardware/Dma.h"
 
 namespace Gba {
 
@@ -42,6 +43,21 @@ void Cpu::Execute(int cycles) {
     while (cycles > 0) {
         int cycles_taken = 0;
 
+        if (dma_active) {
+            // The CPU is blocked while DMA is active.
+            // Higher priority DMAs preempt lower priority ones, where DMA0 is the highest priority.
+            for (auto& dma : core.dma) {
+                if (dma.Active()) {
+                    cycles_taken = dma.Run();
+                    break;
+                }
+            }
+
+            core.UpdateHardware(cycles_taken);
+            cycles -= cycles_taken;
+            continue;
+        }
+
         if (mem.PendingInterrupts()) {
             if (halted) {
                 halted = false;
@@ -56,6 +72,7 @@ void Cpu::Execute(int cycles) {
         if (halted) {
             core.UpdateHardware(1);
             disasm->IncHaltCycles();
+            cycles -= 1;
             continue;
         }
 

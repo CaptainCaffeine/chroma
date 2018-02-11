@@ -18,6 +18,7 @@
 #include "gba/core/Core.h"
 #include "gba/core/Enums.h"
 #include "gba/memory/Memory.h"
+#include "gba/hardware/Dma.h"
 
 namespace Gba {
 
@@ -32,9 +33,22 @@ void Lcd::Update(int cycles) {
         if (dispstat & hblank_irq) {
             core.mem->RequestInterrupt(Interrupt::HBlank);
         }
+
+        // Trigger the HBlank and Video Capture DMAs, if any are pending.
+        if (vcount < 160) {
+            for (auto& dma : core.dma) {
+                dma.Trigger(Dma::HBlank);
+            }
+        }
+
+        if (vcount > 1 && vcount < 162) {
+            core.dma[3].Trigger(Dma::Special);
+        }
     } else if (scanline_cycles < 1006 && updated_cycles >= 1006) {
         // The hblank flag isn't set until 46 cycles into the hblank period.
         dispstat |= hblank_flag;
+        // TODO: mGBA triggers the HBlank IRQ and DMAs at this point instead of at 960 cycles, but higan does not.
+        // Need to do more research on the correct timing.
     } else if (updated_cycles >= 1232) {
         updated_cycles -= 1232;
 
@@ -46,6 +60,10 @@ void Lcd::Update(int cycles) {
 
             if (dispstat & vblank_irq) {
                 core.mem->RequestInterrupt(Interrupt::VBlank);
+            }
+
+            for (auto& dma : core.dma) {
+                dma.Trigger(Dma::VBlank);
             }
         } else if (vcount == 227) {
             // Vblank flag is unset one scanline before vblank ends.

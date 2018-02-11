@@ -26,20 +26,22 @@ namespace Emu { class SDLContext; }
 
 namespace Gba {
 
-class Timer;
-class Lcd;
 class Memory;
 class Cpu;
+class Lcd;
+class Timer;
+class Dma;
 
 class Core {
 public:
     Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom, LogLevel level);
     ~Core();
 
-    std::vector<Timer> timers;
-    std::unique_ptr<Lcd> lcd;
     std::unique_ptr<Memory> mem;
     std::unique_ptr<Cpu> cpu;
+    std::unique_ptr<Lcd> lcd;
+    std::vector<Timer> timers;
+    std::vector<Dma> dma;
 
     void EmulatorLoop();
     void UpdateHardware(int cycles);
