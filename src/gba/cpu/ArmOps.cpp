@@ -37,12 +37,12 @@ int Cpu::Arm_ArithImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Ari
 
     imm = ArmExpandImmediate(imm);
 
-    u64 result = op(regs[n], imm, carry);
+    ArithResult result = op(regs[n], imm, carry);
 
     if (d == pc) {
-        return AluWritePC(set_flags, result);
+        return AluWritePC(set_flags, result.value);
     } else {
-        regs[d] = result;
+        regs[d] = result.value;
         ConditionalSetAllFlags(set_flags, result);
     }
 
@@ -58,12 +58,12 @@ int Cpu::Arm_ArithReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, Shi
     ImmediateShift shift = DecodeImmShift(type, imm);
 
     u32 shifted_reg = Shift(regs[m], shift.type, shift.imm);
-    u64 result = op(regs[n], shifted_reg, carry);
+    ArithResult result = op(regs[n], shifted_reg, carry);
 
     if (d == pc) {
-        return AluWritePC(set_flags, result);
+        return AluWritePC(set_flags, result.value);
     } else {
-        regs[d] = result;
+        regs[d] = result.value;
         ConditionalSetAllFlags(set_flags, result);
     }
 
@@ -79,9 +79,9 @@ int Cpu::Arm_ArithRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s
     assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
 
     u32 shifted_reg = Shift(regs[m], type, regs[s] & 0xFF);
-    u64 result = op(regs[n], shifted_reg, carry);
+    ArithResult result = op(regs[n], shifted_reg, carry);
 
-    regs[d] = result;
+    regs[d] = result.value;
     ConditionalSetAllFlags(set_flags, result);
 
     // One internal cycle for shifting by register.
@@ -95,7 +95,7 @@ int Cpu::Arm_CompareImm(Condition cond, Reg n, u32 imm, ArithOp op, u32 carry) {
 
     imm = ArmExpandImmediate(imm);
 
-    u64 result = op(regs[n], imm, carry);
+    ArithResult result = op(regs[n], imm, carry);
     SetAllFlags(result);
 
     return 0;
@@ -109,7 +109,7 @@ int Cpu::Arm_CompareReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m, A
     ImmediateShift shift = DecodeImmShift(type, imm);
 
     u32 shifted_reg = Shift(regs[m], shift.type, shift.imm);
-    u64 result = op(regs[n], shifted_reg, carry);
+    ArithResult result = op(regs[n], shifted_reg, carry);
 
     SetAllFlags(result);
 
@@ -124,7 +124,7 @@ int Cpu::Arm_CompareRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg
     assert(n != pc && m != pc && s != pc); // Unpredictable
 
     u32 shifted_reg = Shift(regs[m], type, regs[s] & 0xFF);
-    u64 result = op(regs[n], shifted_reg, carry);
+    ArithResult result = op(regs[n], shifted_reg, carry);
 
     SetAllFlags(result);
 

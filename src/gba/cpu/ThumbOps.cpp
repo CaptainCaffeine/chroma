@@ -23,18 +23,18 @@
 namespace Gba {
 
 int Cpu::Thumb_ArithImm(u32 imm, Reg n, Reg d, ArithOp op, u32 carry) {
-    u64 result = op(regs[n], imm, carry);
+    ArithResult result = op(regs[n], imm, carry);
 
-    regs[d] = result;
+    regs[d] = result.value;
     SetAllFlags(result);
 
     return 0;
 }
 
 int Cpu::Thumb_ArithReg(Reg m, Reg n, Reg d, ArithOp op, u32 carry) {
-    u64 result = op(regs[n], regs[m], carry);
+    ArithResult result = op(regs[n], regs[m], carry);
 
-    regs[d] = result;
+    regs[d] = result.value;
     SetAllFlags(result);
 
     return 0;
@@ -43,7 +43,7 @@ int Cpu::Thumb_ArithReg(Reg m, Reg n, Reg d, ArithOp op, u32 carry) {
 int Cpu::Thumb_ArithImmSp(Reg d, u32 imm, ArithOp op, u32 carry) {
     imm <<= 2;
 
-    u64 result = op(regs[sp], imm, carry);
+    u64 result = op(regs[sp], imm, carry).value;
 
     regs[d] = result;
     // Don't set flags.
@@ -52,7 +52,7 @@ int Cpu::Thumb_ArithImmSp(Reg d, u32 imm, ArithOp op, u32 carry) {
 }
 
 int Cpu::Thumb_Compare(u32 imm, Reg n, ArithOp op, u32 carry) {
-    u64 result = op(regs[n], imm, carry);
+    ArithResult result = op(regs[n], imm, carry);
 
     SetAllFlags(result);
 
@@ -133,7 +133,7 @@ int Cpu::Thumb_AddRegT2(Reg d1, Reg m, Reg d2) {
     assert(d >= 8 || m >= 8);
     assert(d != pc || m != pc);
 
-    u64 result = AddWithCarry(regs[d], regs[m], 0);
+    u64 result = AddWithCarry(regs[d], regs[m], 0).value;
 
     if (d == pc) {
         return Thumb_BranchWritePC(result);
@@ -156,7 +156,7 @@ int Cpu::Thumb_AddSpImmT2(u32 imm) {
 int Cpu::Thumb_AddPcImm(Reg d, u32 imm) {
     imm <<= 2;
 
-    u64 result = AddWithCarry(regs[pc] & ~0x3, imm, 0);
+    u64 result = AddWithCarry(regs[pc] & ~0x3, imm, 0).value;
 
     regs[d] = result;
     // Don't set flags.
@@ -183,7 +183,7 @@ int Cpu::Thumb_CmpRegT2(Reg n1, Reg m, Reg n2) {
     assert(n >= 8 || m >= 8);
     assert(n != pc && m != pc);
 
-    u64 result = AddWithCarry(regs[n], ~regs[m], 1);
+    ArithResult result = AddWithCarry(regs[n], ~regs[m], 1);
     SetAllFlags(result);
 
     return 0;

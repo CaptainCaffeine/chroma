@@ -396,11 +396,11 @@ bool Cpu::ConditionPassed(Condition cond) const {
     }
 }
 
-void Cpu::SetAllFlags(u64 result) {
-    SetSign(result & sign_bit);
-    SetZero(static_cast<u32>(result) == 0);
-    SetCarry(result & carry_bit);
-    SetOverflow(((result & carry_bit) >> 1) ^ (result & sign_bit));
+void Cpu::SetAllFlags(ArithResult result) {
+    SetSign(result.value & sign_bit);
+    SetZero(static_cast<u32>(result.value) == 0);
+    SetCarry(result.value & carry_bit);
+    SetOverflow(result.overflow);
 }
 
 void Cpu::SetSignZeroCarryFlags(u32 result, u32 carry) {
@@ -414,7 +414,7 @@ void Cpu::SetSignZeroFlags(u32 result) {
     SetZero(result == 0);
 }
 
-void Cpu::ConditionalSetAllFlags(bool set_flags, u64 result) {
+void Cpu::ConditionalSetAllFlags(bool set_flags, ArithResult result) {
     if (set_flags) {
         SetAllFlags(result);
     }

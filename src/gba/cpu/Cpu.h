@@ -106,16 +106,21 @@ private:
                               System = 0x1F};
 
     // Types
-    using ArithOp = u64(*)(u32,u32,u32);
-    using MullOp = s64(*)(u32,u32,u32,u32);
-    using LogicOp = u32(*)(u32,u32);
-    using LoadOp = std::tuple<u32,int>(*)(Memory&,u32);
-    using StoreOp = int(*)(Memory&,u32,u32);
-
     struct ResultWithCarry {
         u32 result;
         u32 carry;
     };
+
+    struct ArithResult {
+        u64 value;
+        bool overflow;
+    };
+
+    using ArithOp = ArithResult(*)(u32,u32,u32);
+    using MullOp = s64(*)(u32,u32,u32,u32);
+    using LogicOp = u32(*)(u32,u32);
+    using LoadOp = std::tuple<u32,int>(*)(Memory&,u32);
+    using StoreOp = int(*)(Memory&,u32,u32);
 
     // Functions
     bool ThumbMode() const { return cpsr & thumb_mode; }
@@ -165,8 +170,11 @@ private:
     static ResultWithCarry RotateRight_C(u32 value, int shift_amount);
     static ResultWithCarry RotateRightExtend_C(u32 value, u32 carry_in);
 
-    static constexpr u64 AddWithCarry(u32 value1, u32 value2, u32 carry) {
-        return static_cast<u64>(value1) + static_cast<u64>(value2) + static_cast<u64>(carry);
+    static constexpr ArithResult AddWithCarry(u64 value1, u64 value2, u64 carry) {
+        value2 = value2 + carry;
+        u64 result = value1 + value2;
+        bool overflow = (value1 & sign_bit) == (value2 & sign_bit) && (value1 & sign_bit) != (result & sign_bit);
+        return {result, overflow};
     }
 
     int Thumb_BranchWritePC(u32 addr) {
@@ -181,10 +189,10 @@ private:
 
     int BxWritePC(u32 addr);
 
-    void SetAllFlags(u64 result);
+    void SetAllFlags(ArithResult result);
     void SetSignZeroCarryFlags(u32 result, u32 carry);
     void SetSignZeroFlags(u32 result);
-    void ConditionalSetAllFlags(bool set_flags, u64 result);
+    void ConditionalSetAllFlags(bool set_flags, ArithResult result);
     void ConditionalSetSignZeroCarryFlags(bool set_flags, u32 result, u32 carry);
     void ConditionalSetSignZeroFlags(bool set_flags, u32 result);
     void ConditionalSetMultiplyLongFlags(bool set_flags, u64 result);
@@ -194,15 +202,15 @@ private:
     static int MultiplyCycles(u32 operand);
 
     // Implementation Helpers
-    ArithOp add_op = [](u32 value1, u32 value2, u32 carry) -> u64 { return AddWithCarry(value1, value2, carry); };
-    ArithOp sub_op = [](u32 value1, u32 value2, u32 carry) -> u64 { return AddWithCarry(value1, ~value2, carry); };
-    ArithOp rsb_op = [](u32 value1, u32 value2, u32 carry) -> u64 { return AddWithCarry(~value1, value2, carry); };
+    ArithOp add_op = [](u32 value1, u32 value2, u32 carry) { return AddWithCarry(value1, value2, carry); };
+    ArithOp sub_op = [](u32 value1, u32 value2, u32 carry) { return AddWithCarry(value1, ~value2, carry); };
+    ArithOp rsb_op = [](u32 value1, u32 value2, u32 carry) { return AddWithCarry(~value1, value2, carry); };
 
-    LogicOp and_op = [](u32 value1, u32 value2) -> u32 { return value1 & value2; };
-    LogicOp bic_op = [](u32 value1, u32 value2) -> u32 { return value1 & ~value2; };
-    LogicOp eor_op = [](u32 value1, u32 value2) -> u32 { return value1 ^ value2; };
-    LogicOp orr_op = [](u32 value1, u32 value2) -> u32 { return value1 | value2; };
-    LogicOp mvn_op = [](u32, u32 value) -> u32 { return ~value; };
+    LogicOp and_op = [](u32 value1, u32 value2) { return value1 & value2; };
+    LogicOp bic_op = [](u32 value1, u32 value2) { return value1 & ~value2; };
+    LogicOp eor_op = [](u32 value1, u32 value2) { return value1 ^ value2; };
+    LogicOp orr_op = [](u32 value1, u32 value2) { return value1 | value2; };
+    LogicOp mvn_op = [](u32, u32 value) { return ~value; };
 
     int Thumb_ArithImm(u32 imm, Reg n, Reg d, ArithOp op, u32 carry);
     int Thumb_ArithReg(Reg m, Reg n, Reg d, ArithOp op, u32 carry);
