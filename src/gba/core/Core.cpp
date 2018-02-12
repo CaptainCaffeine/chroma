@@ -21,6 +21,7 @@
 #include "gba/lcd/Lcd.h"
 #include "gba/hardware/Timer.h"
 #include "gba/hardware/Dma.h"
+#include "gba/hardware/Keypad.h"
 #include "emu/SDLContext.h"
 
 namespace Gba {
@@ -31,6 +32,7 @@ Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::ve
         , lcd(std::make_unique<Lcd>(*this))
         , timers{{0, *this}, {1, *this}, {2, *this}, {3, *this}}
         , dma{{0, *this}, {1, *this}, {2, *this}, {3, *this}}
+        , keypad(std::make_unique<Keypad>(*this))
         , sdl_context(context) {
 
     RegisterCallbacks();
@@ -40,11 +42,18 @@ Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::ve
 Core::~Core() = default;
 
 void Core::EmulatorLoop() {
-    cpu->Execute(0x200000);
+    cpu->Execute(0x2000000);
+
     //while (!quit) {
     //    sdl_context.PollEvents();
 
-    //    SDL_Delay(40);
+    //    if (pause) {
+    //        SDL_Delay(40);
+    //        continue;
+    //    }
+
+    //    keypad->CheckKeypadInterrupt();
+    //    cpu->Execute(0x1000000);
     //}
 }
 
@@ -69,16 +78,16 @@ void Core::RegisterCallbacks() {
     sdl_context.RegisterCallback(InputEvent::Fullscreen, [this](bool) { sdl_context.ToggleFullscreen(); });
     sdl_context.RegisterCallback(InputEvent::Screenshot, [](bool) { });
     sdl_context.RegisterCallback(InputEvent::LcdDebug,   [](bool) { });
-    sdl_context.RegisterCallback(InputEvent::Up,         [](bool) { });
-    sdl_context.RegisterCallback(InputEvent::Left,       [](bool) { });
-    sdl_context.RegisterCallback(InputEvent::Down,       [](bool) { });
-    sdl_context.RegisterCallback(InputEvent::Right,      [](bool) { });
-    sdl_context.RegisterCallback(InputEvent::A,          [](bool) { });
-    sdl_context.RegisterCallback(InputEvent::B,          [](bool) { });
-    sdl_context.RegisterCallback(InputEvent::L,          [](bool) { });
-    sdl_context.RegisterCallback(InputEvent::R,          [](bool) { });
-    sdl_context.RegisterCallback(InputEvent::Start,      [](bool) { });
-    sdl_context.RegisterCallback(InputEvent::Select,     [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::Up,         [this](bool press) { keypad->Press(Keypad::Up, press); });
+    sdl_context.RegisterCallback(InputEvent::Left,       [this](bool press) { keypad->Press(Keypad::Left, press); });
+    sdl_context.RegisterCallback(InputEvent::Down,       [this](bool press) { keypad->Press(Keypad::Down, press); });
+    sdl_context.RegisterCallback(InputEvent::Right,      [this](bool press) { keypad->Press(Keypad::Right, press); });
+    sdl_context.RegisterCallback(InputEvent::A,          [this](bool press) { keypad->Press(Keypad::A, press); });
+    sdl_context.RegisterCallback(InputEvent::B,          [this](bool press) { keypad->Press(Keypad::B, press); });
+    sdl_context.RegisterCallback(InputEvent::L,          [this](bool press) { keypad->Press(Keypad::L, press); });
+    sdl_context.RegisterCallback(InputEvent::R,          [this](bool press) { keypad->Press(Keypad::R, press); });
+    sdl_context.RegisterCallback(InputEvent::Start,      [this](bool press) { keypad->Press(Keypad::Start, press); });
+    sdl_context.RegisterCallback(InputEvent::Select,     [this](bool press) { keypad->Press(Keypad::Select, press); });
 }
 
 } // End namespace Gba

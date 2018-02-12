@@ -21,6 +21,7 @@
 #include "gba/lcd/Lcd.h"
 #include "gba/hardware/Timer.h"
 #include "gba/hardware/Dma.h"
+#include "gba/hardware/Keypad.h"
 
 namespace Gba {
 
@@ -380,6 +381,12 @@ u16 Memory::ReadIO(const u32 addr) const {
     case TM3CNT_H:
         value = core.timers[3].control.Read();
         break;
+    case KEYINPUT:
+        value = core.keypad->input.Read();
+        break;
+    case KEYCNT:
+        value = core.keypad->control.Read();
+        break;
     case IE:
         value = intr_enable.Read();
         break;
@@ -508,6 +515,9 @@ void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
         break;
     case TM3CNT_H:
         core.timers[3].WriteControl(data, mask);
+        break;
+    case KEYCNT:
+        core.keypad->control.Write(data, mask);
         break;
     case IE:
         intr_enable.Write(data, mask);

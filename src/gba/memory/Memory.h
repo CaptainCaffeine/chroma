@@ -186,6 +186,9 @@ private:
     static constexpr u32 TM3CNT_L  = 0x0400'010C;
     static constexpr u32 TM3CNT_H  = 0x0400'010E;
 
+    static constexpr u32 KEYINPUT  = 0x0400'0130;
+    static constexpr u32 KEYCNT    = 0x0400'0132;
+
     static constexpr u32 IE = 0x0400'0200;
     IOReg intr_enable = {0x0000, 0x3FFF, 0x3FFF};
 

@@ -31,6 +31,7 @@ class Cpu;
 class Lcd;
 class Timer;
 class Dma;
+class Keypad;
 
 class Core {
 public:
@@ -42,6 +43,7 @@ public:
     std::unique_ptr<Lcd> lcd;
     std::vector<Timer> timers;
     std::vector<Dma> dma;
+    std::unique_ptr<Keypad> keypad;
 
     void EmulatorLoop();
     void UpdateHardware(int cycles);

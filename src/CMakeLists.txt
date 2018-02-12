@@ -33,6 +33,7 @@ set(SOURCES
     gba/lcd/Lcd.cpp
     gba/hardware/Timer.cpp
     gba/hardware/Dma.cpp
+    gba/hardware/Keypad.cpp
 
     common/Screenshot.cpp
 
@@ -65,6 +66,7 @@ set(HEADERS
     gba/lcd/Lcd.h
     gba/hardware/Timer.h
     gba/hardware/Dma.h
+    gba/hardware/Keypad.h
 
     common/CommonTypes.h
     common/CommonFuncs.h
