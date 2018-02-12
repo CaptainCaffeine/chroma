@@ -345,6 +345,9 @@ u16 Memory::ReadIO(const u32 addr) const {
     case VCOUNT:
         value = core.lcd->vcount.Read();
         break;
+    case SOUNDBIAS:
+        value = soundbias.Read();
+        break;
     case DMA0CNT_H:
         value = core.dma[0].control.Read();
         break;
@@ -419,6 +422,9 @@ void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
         break;
     case DISPSTAT:
         core.lcd->dispstat.Write(data, mask);
+        break;
+    case SOUNDBIAS:
+        soundbias.Write(data, mask);
         break;
     case DMA0SAD_L:
         core.dma[0].source_l.Write(data, mask);

@@ -149,6 +149,9 @@ private:
     static constexpr u32 DISPSTAT  = 0x0400'0004;
     static constexpr u32 VCOUNT    = 0x0400'0006;
 
+    static constexpr u32 SOUNDBIAS  = 0x0400'0088;
+    IOReg soundbias = {0x0000, 0xC3FE, 0xC3FE};
+
     static constexpr u32 DMA0SAD_L = 0x0400'00B0;
     static constexpr u32 DMA0SAD_H = 0x0400'00B2;
     static constexpr u32 DMA0DAD_L = 0x0400'00B4;
