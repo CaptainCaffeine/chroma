@@ -293,20 +293,20 @@ template int Memory::AccessTime<u32>(const u32 addr, const bool force_sequential
 void Memory::UpdateWaitStates() {
     auto WaitStates = [this](int shift) {
         u16 mask = 0x3 << shift;
-        if ((waitcnt.v & mask) == mask) {
+        if ((waitcnt & mask) == mask) {
             return 8;
         } else {
-            return 4 - ((waitcnt.v & mask) >> shift);
+            return 4 - ((waitcnt & mask) >> shift);
         }
     };
 
     wait_state_sram = 1 + WaitStates(0);
     wait_state_n[0] = 1 + WaitStates(2);
-    wait_state_s[0] = 1 + ((waitcnt.v & 0x010) ? 1 : 2);
+    wait_state_s[0] = 1 + ((waitcnt & 0x010) ? 1 : 2);
     wait_state_n[1] = 1 + WaitStates(5);
-    wait_state_s[1] = 1 + ((waitcnt.v & 0x080) ? 1 : 4);
+    wait_state_s[1] = 1 + ((waitcnt & 0x080) ? 1 : 4);
     wait_state_n[2] = 1 + WaitStates(8);
-    wait_state_s[2] = 1 + ((waitcnt.v & 0x400) ? 1 : 8);
+    wait_state_s[2] = 1 + ((waitcnt & 0x400) ? 1 : 8);
 }
 
 template <>
@@ -338,13 +338,40 @@ u16 Memory::ReadIO(const u32 addr) const {
     u16 value;
     switch (addr & ~0x1) {
     case DISPCNT:
-        value = core.lcd->dispcnt.Read();
+        value = core.lcd->control.Read();
+        break;
+    case GREENSWAP:
+        value = core.lcd->green_swap.Read();
         break;
     case DISPSTAT:
-        value = core.lcd->dispstat.Read();
+        value = core.lcd->status.Read();
         break;
     case VCOUNT:
         value = core.lcd->vcount.Read();
+        break;
+    case BG0CNT:
+        value = core.lcd->bg[0].control.Read();
+        break;
+    case BG1CNT:
+        value = core.lcd->bg[1].control.Read();
+        break;
+    case BG2CNT:
+        value = core.lcd->bg[2].control.Read();
+        break;
+    case BG3CNT:
+        value = core.lcd->bg[3].control.Read();
+        break;
+    case WININ:
+        value = core.lcd->winin.Read();
+        break;
+    case WINOUT:
+        value = core.lcd->winout.Read();
+        break;
+    case BLDCNT:
+        value = core.lcd->blend_control.Read();
+        break;
+    case BLDALPHA:
+        value = core.lcd->blend_alpha.Read();
         break;
     case SOUNDBIAS:
         value = soundbias.Read();
@@ -460,10 +487,127 @@ template <>
 void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
     switch (addr & ~0x1) {
     case DISPCNT:
-        core.lcd->dispcnt.Write(data, mask);
+        core.lcd->control.Write(data, mask);
+        break;
+    case GREENSWAP:
+        core.lcd->green_swap.Write(data, mask);
         break;
     case DISPSTAT:
-        core.lcd->dispstat.Write(data, mask);
+        core.lcd->status.Write(data, mask);
+        break;
+    case BG0CNT:
+        core.lcd->bg[0].control.Write(data, mask);
+        break;
+    case BG1CNT:
+        core.lcd->bg[1].control.Write(data, mask);
+        break;
+    case BG2CNT:
+        core.lcd->bg[2].control.Write(data, mask);
+        break;
+    case BG3CNT:
+        core.lcd->bg[3].control.Write(data, mask);
+        break;
+    case BG0HOFS:
+        core.lcd->bg[0].scroll_x.Write(data, mask);
+        break;
+    case BG0VOFS:
+        core.lcd->bg[0].scroll_y.Write(data, mask);
+        break;
+    case BG1HOFS:
+        core.lcd->bg[1].scroll_x.Write(data, mask);
+        break;
+    case BG1VOFS:
+        core.lcd->bg[1].scroll_y.Write(data, mask);
+        break;
+    case BG2HOFS:
+        core.lcd->bg[2].scroll_x.Write(data, mask);
+        break;
+    case BG2VOFS:
+        core.lcd->bg[2].scroll_y.Write(data, mask);
+        break;
+    case BG3HOFS:
+        core.lcd->bg[3].scroll_x.Write(data, mask);
+        break;
+    case BG3VOFS:
+        core.lcd->bg[3].scroll_y.Write(data, mask);
+        break;
+    case BG2PA:
+        core.lcd->bg[2].affine_a.Write(data, mask);
+        break;
+    case BG2PB:
+        core.lcd->bg[2].affine_b.Write(data, mask);
+        break;
+    case BG2PC:
+        core.lcd->bg[2].affine_c.Write(data, mask);
+        break;
+    case BG2PD:
+        core.lcd->bg[2].affine_d.Write(data, mask);
+        break;
+    case BG2X_L:
+        core.lcd->bg[2].offset_x_l.Write(data, mask);
+        break;
+    case BG2X_H:
+        core.lcd->bg[2].offset_x_h.Write(data, mask);
+        break;
+    case BG2Y_L:
+        core.lcd->bg[2].offset_y_l.Write(data, mask);
+        break;
+    case BG2Y_H:
+        core.lcd->bg[2].offset_y_h.Write(data, mask);
+        break;
+    case BG3PA:
+        core.lcd->bg[3].affine_a.Write(data, mask);
+        break;
+    case BG3PB:
+        core.lcd->bg[3].affine_b.Write(data, mask);
+        break;
+    case BG3PC:
+        core.lcd->bg[3].affine_c.Write(data, mask);
+        break;
+    case BG3PD:
+        core.lcd->bg[3].affine_d.Write(data, mask);
+        break;
+    case BG3X_L:
+        core.lcd->bg[3].offset_x_l.Write(data, mask);
+        break;
+    case BG3X_H:
+        core.lcd->bg[3].offset_x_h.Write(data, mask);
+        break;
+    case BG3Y_L:
+        core.lcd->bg[3].offset_y_l.Write(data, mask);
+        break;
+    case BG3Y_H:
+        core.lcd->bg[3].offset_y_h.Write(data, mask);
+        break;
+    case WIN0H:
+        core.lcd->win0_width.Write(data, mask);
+        break;
+    case WIN1H:
+        core.lcd->win1_width.Write(data, mask);
+        break;
+    case WIN0V:
+        core.lcd->win0_height.Write(data, mask);
+        break;
+    case WIN1V:
+        core.lcd->win1_height.Write(data, mask);
+        break;
+    case WININ:
+        core.lcd->winin.Write(data, mask);
+        break;
+    case WINOUT:
+        core.lcd->winout.Write(data, mask);
+        break;
+    case MOSAIC:
+        core.lcd->mosaic.Write(data, mask);
+        break;
+    case BLDCNT:
+        core.lcd->blend_control.Write(data, mask);
+        break;
+    case BLDALPHA:
+        core.lcd->blend_alpha.Write(data, mask);
+        break;
+    case BLDY:
+        core.lcd->blend_fade.Write(data, mask);
         break;
     case SOUNDBIAS:
         soundbias.Write(data, mask);

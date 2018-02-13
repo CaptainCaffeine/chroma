@@ -146,8 +146,52 @@ private:
 
     // IO registers
     static constexpr u32 DISPCNT    = 0x0400'0000;
+    static constexpr u32 GREENSWAP  = 0x0400'0002;
     static constexpr u32 DISPSTAT   = 0x0400'0004;
     static constexpr u32 VCOUNT     = 0x0400'0006;
+
+    static constexpr u32 BG0CNT     = 0x0400'0008;
+    static constexpr u32 BG1CNT     = 0x0400'000A;
+    static constexpr u32 BG2CNT     = 0x0400'000C;
+    static constexpr u32 BG3CNT     = 0x0400'000E;
+    static constexpr u32 BG0HOFS    = 0x0400'0010;
+    static constexpr u32 BG0VOFS    = 0x0400'0012;
+    static constexpr u32 BG1HOFS    = 0x0400'0014;
+    static constexpr u32 BG1VOFS    = 0x0400'0016;
+    static constexpr u32 BG2HOFS    = 0x0400'0018;
+    static constexpr u32 BG2VOFS    = 0x0400'001A;
+    static constexpr u32 BG3HOFS    = 0x0400'001C;
+    static constexpr u32 BG3VOFS    = 0x0400'001E;
+
+    static constexpr u32 BG2PA      = 0x0400'0020;
+    static constexpr u32 BG2PB      = 0x0400'0022;
+    static constexpr u32 BG2PC      = 0x0400'0024;
+    static constexpr u32 BG2PD      = 0x0400'0026;
+    static constexpr u32 BG2X_L     = 0x0400'0028;
+    static constexpr u32 BG2X_H     = 0x0400'002A;
+    static constexpr u32 BG2Y_L     = 0x0400'002C;
+    static constexpr u32 BG2Y_H     = 0x0400'002E;
+
+    static constexpr u32 BG3PA      = 0x0400'0030;
+    static constexpr u32 BG3PB      = 0x0400'0032;
+    static constexpr u32 BG3PC      = 0x0400'0034;
+    static constexpr u32 BG3PD      = 0x0400'0036;
+    static constexpr u32 BG3X_L     = 0x0400'0038;
+    static constexpr u32 BG3X_H     = 0x0400'003A;
+    static constexpr u32 BG3Y_L     = 0x0400'003C;
+    static constexpr u32 BG3Y_H     = 0x0400'003E;
+
+    static constexpr u32 WIN0H      = 0x0400'0040;
+    static constexpr u32 WIN1H      = 0x0400'0042;
+    static constexpr u32 WIN0V      = 0x0400'0044;
+    static constexpr u32 WIN1V      = 0x0400'0046;
+    static constexpr u32 WININ      = 0x0400'0048;
+    static constexpr u32 WINOUT     = 0x0400'004A;
+
+    static constexpr u32 MOSAIC     = 0x0400'004C;
+    static constexpr u32 BLDCNT     = 0x0400'0050;
+    static constexpr u32 BLDALPHA   = 0x0400'0052;
+    static constexpr u32 BLDY       = 0x0400'0054;
 
     static constexpr u32 SOUNDBIAS  = 0x0400'0088;
     IOReg soundbias = {0x0000, 0xC3FE, 0xC3FE};

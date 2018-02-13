@@ -30,7 +30,7 @@ void Lcd::Update(int cycles) {
 
     if (scanline_cycles < 960 && updated_cycles >= 960) {
         // Begin hblank.
-        if (dispstat & hblank_irq) {
+        if (status & hblank_irq) {
             core.mem->RequestInterrupt(Interrupt::HBlank);
         }
 
@@ -46,19 +46,19 @@ void Lcd::Update(int cycles) {
         }
     } else if (scanline_cycles < 1006 && updated_cycles >= 1006) {
         // The hblank flag isn't set until 46 cycles into the hblank period.
-        dispstat |= hblank_flag;
+        status |= hblank_flag;
         // TODO: mGBA triggers the HBlank IRQ and DMAs at this point instead of at 960 cycles, but higan does not.
         // Need to do more research on the correct timing.
     } else if (updated_cycles >= 1232) {
         updated_cycles -= 1232;
 
-        dispstat &= ~hblank_flag;
+        status &= ~hblank_flag;
 
         if (++vcount == 160) {
             // Begin vblank.
-            dispstat |= vblank_flag;
+            status |= vblank_flag;
 
-            if (dispstat & vblank_irq) {
+            if (status & vblank_irq) {
                 core.mem->RequestInterrupt(Interrupt::VBlank);
             }
 
@@ -67,20 +67,20 @@ void Lcd::Update(int cycles) {
             }
         } else if (vcount == 227) {
             // Vblank flag is unset one scanline before vblank ends.
-            dispstat &= ~vblank_flag;
+            status &= ~vblank_flag;
         } else if (vcount == 228) {
             // Start new frame.
             vcount = 0;
         }
 
         if (vcount == VTrigger()) {
-            dispstat |= vcount_flag;
+            status |= vcount_flag;
 
-            if (dispstat & vcount_irq) {
+            if (status & vcount_irq) {
                 core.mem->RequestInterrupt(Interrupt::VCount);
             }
         } else {
-            dispstat &= ~vcount_flag;
+            status &= ~vcount_flag;
         }
     }
 
