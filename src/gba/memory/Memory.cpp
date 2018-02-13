@@ -22,6 +22,7 @@
 #include "gba/hardware/Timer.h"
 #include "gba/hardware/Dma.h"
 #include "gba/hardware/Keypad.h"
+#include "gba/hardware/Serial.h"
 
 namespace Gba {
 
@@ -384,11 +385,52 @@ u16 Memory::ReadIO(const u32 addr) const {
     case TM3CNT_H:
         value = core.timers[3].control.Read();
         break;
+    case SIOMULTI0:
+        value = core.serial->data0.Read();
+        break;
+    case SIOMULTI1:
+        value = core.serial->data1.Read();
+        break;
+    case SIOMULTI2:
+        value = core.serial->data2.Read();
+        break;
+    case SIOMULTI3:
+        value = core.serial->data3.Read();
+        break;
+    case SIOCNT:
+        value = core.serial->control.Read();
+        break;
+    case SIOMLTSEND:
+        value = core.serial->send.Read();
+        break;
     case KEYINPUT:
         value = core.keypad->input.Read();
         break;
     case KEYCNT:
         value = core.keypad->control.Read();
+        break;
+    case RCNT:
+        value = core.serial->mode.Read();
+        break;
+    case JOYCNT:
+        value = core.serial->joybus_control.Read();
+        break;
+    case JOYRECV_L:
+        value = core.serial->joybus_recv_l.Read();
+        core.serial->joybus_status &= ~Serial::joystat_recv;
+        break;
+    case JOYRECV_H:
+        value = core.serial->joybus_recv_h.Read();
+        core.serial->joybus_status &= ~Serial::joystat_recv;
+        break;
+    case JOYTRANS_L:
+        value = core.serial->joybus_trans_l.Read();
+        break;
+    case JOYTRANS_H:
+        value = core.serial->joybus_trans_h.Read();
+        break;
+    case JOYSTAT:
+        value = core.serial->joybus_status.Read();
         break;
     case IE:
         value = intr_enable.Read();
@@ -522,8 +564,51 @@ void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
     case TM3CNT_H:
         core.timers[3].WriteControl(data, mask);
         break;
+    case SIOMULTI0:
+        core.serial->data0.Write(data, mask);
+        break;
+    case SIOMULTI1:
+        core.serial->data1.Write(data, mask);
+        break;
+    case SIOMULTI2:
+        core.serial->data2.Write(data, mask);
+        break;
+    case SIOMULTI3:
+        core.serial->data3.Write(data, mask);
+        break;
+    case SIOCNT:
+        core.serial->control.Write(data, mask);
+        break;
+    case SIOMLTSEND:
+        core.serial->send.Write(data, mask);
+        break;
     case KEYCNT:
         core.keypad->control.Write(data, mask);
+        break;
+    case RCNT:
+        core.serial->mode.Write(data, mask);
+        break;
+    case JOYCNT:
+        // Bits 0-2 of JOYCNT behave like IF. The IRQ enable bit is normally writeable.
+        core.serial->joybus_control.Clear(data & Serial::joycnt_ack_mask);
+        core.serial->joybus_control.Write(data & Serial::joycnt_irq_enable, mask);
+        break;
+    case JOYRECV_L:
+        core.serial->joybus_recv_l.Write(data, mask);
+        break;
+    case JOYRECV_H:
+        core.serial->joybus_recv_h.Write(data, mask);
+        break;
+    case JOYTRANS_L:
+        core.serial->joybus_trans_l.Write(data, mask);
+        core.serial->joybus_status |= Serial::joystat_trans;
+        break;
+    case JOYTRANS_H:
+        core.serial->joybus_trans_h.Write(data, mask);
+        core.serial->joybus_status |= Serial::joystat_trans;
+        break;
+    case JOYSTAT:
+        core.serial->joybus_status.Write(data, mask);
         break;
     case IE:
         intr_enable.Write(data, mask);

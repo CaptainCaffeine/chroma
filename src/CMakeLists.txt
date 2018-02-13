@@ -67,6 +67,7 @@ set(HEADERS
     gba/hardware/Timer.h
     gba/hardware/Dma.h
     gba/hardware/Keypad.h
+    gba/hardware/Serial.h
 
     common/CommonTypes.h
     common/CommonFuncs.h

@@ -22,6 +22,7 @@
 #include "gba/hardware/Timer.h"
 #include "gba/hardware/Dma.h"
 #include "gba/hardware/Keypad.h"
+#include "gba/hardware/Serial.h"
 #include "emu/SDLContext.h"
 
 namespace Gba {
@@ -33,6 +34,7 @@ Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::ve
         , timers{{0, *this}, {1, *this}, {2, *this}, {3, *this}}
         , dma{{0, *this}, {1, *this}, {2, *this}, {3, *this}}
         , keypad(std::make_unique<Keypad>(*this))
+        , serial(std::make_unique<Serial>(*this))
         , sdl_context(context) {
 
     RegisterCallbacks();
@@ -42,7 +44,7 @@ Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::ve
 Core::~Core() = default;
 
 void Core::EmulatorLoop() {
-    cpu->Execute(0x2000000);
+    cpu->Execute(0x500'0000);
 
     //while (!quit) {
     //    sdl_context.PollEvents();
