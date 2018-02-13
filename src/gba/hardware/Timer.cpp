@@ -64,6 +64,8 @@ void Timer::Tick(int cycles) {
             cycle_count = 0;
 
             CounterTick();
+
+            remaining_cycles = CyclesPerTick();
         }
 
         cycle_count += cycles;
