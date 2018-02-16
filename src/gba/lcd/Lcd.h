@@ -71,7 +71,7 @@ private:
 
     // Control flags
     int BgMode() const { return control & 0x7; }
-    int DisplayFrame() const { return (control >> 4) & 0x1; }
+    bool DisplayFrame1() const { return control & 0x10; }
     bool HBlankFree() const { return control & 0x20; }
     bool ObjMapping1D() const { return control & 0x40; }
     bool ForcedBlank() const { return control & 0x80; }

@@ -104,46 +104,60 @@ void Lcd::Update(int cycles) {
 }
 
 void Lcd::DrawScanline() {
-    if (ForcedBlank() || (BgMode() != 0 && BgMode() != 1)) {
+    if (ForcedBlank() || BgMode() == 2 || BgMode() == 5) {
         // Other BG modes unimplemented for now.
         std::fill_n(back_buffer.begin() + vcount * h_pixels, h_pixels, 0x7FFF);
         return;
     }
 
-    for (int b = 0; b < 4; ++b) {
-        if (!BgEnabled(b)) {
-            continue;
-        }
-
-        if (BgMode() == 1 && b > 1) {
-            // Affine backgrounds are not implemented yet, so only draw the first two backgrounds in mode 1.
-            break;
-        }
-
-        bgs[b].GetRowMapInfo();
-        bgs[b].GetTileData();
-        bgs[b].DrawScanline();
-    }
-
-    // Compose the background scanlines together based on their priorities. 0 is the highest priority value, and 3
-    // is the lowest. If multiple backgrounds have the same priority value, then the lower-numbered background has 
-    // higher priority.
-    std::array<const Bg*, 4> sorted_bgs{{&bgs[0], &bgs[1], &bgs[2], &bgs[3]}};
-    std::stable_sort(sorted_bgs.begin(), sorted_bgs.end(), [](const auto& bg1, const auto& bg2) {
-            return bg1->Priority() < bg2->Priority();
-    });
-
-    // The first palette entry is the backdrop colour.
-    std::fill_n(back_buffer.begin() + vcount * h_pixels, h_pixels, pram[0] & 0x7FFF);
-    for (int b = 3; b >= 0; --b) {
-        if (!BgEnabled(b)) {
-            continue;
-        }
-
-        for (int i = 0; i < h_pixels; ++i) {
-            if ((sorted_bgs[b]->scanline[i] & alpha_bit) == 0) {
-                back_buffer[vcount * h_pixels + i] = sorted_bgs[b]->scanline[i];
+    if (BgMode() == 0 || BgMode() == 1) {
+        for (int b = 0; b < 4; ++b) {
+            if (!BgEnabled(b)) {
+                continue;
             }
+
+            if (BgMode() == 1 && b > 1) {
+                // Affine backgrounds are not implemented yet, so only draw the first two backgrounds in mode 1.
+                break;
+            }
+
+            bgs[b].GetRowMapInfo();
+            bgs[b].GetTileData();
+            bgs[b].DrawScanline();
+        }
+
+        // Compose the background scanlines together based on their priorities. 0 is the highest priority value, and 3
+        // is the lowest. If multiple backgrounds have the same priority value, then the lower-numbered background has
+        // higher priority.
+        std::array<const Bg*, 4> sorted_bgs{{&bgs[0], &bgs[1], &bgs[2], &bgs[3]}};
+        std::stable_sort(sorted_bgs.begin(), sorted_bgs.end(), [](const auto& bg1, const auto& bg2) {
+                return bg1->Priority() < bg2->Priority();
+        });
+
+        // The first palette entry is the backdrop colour.
+        std::fill_n(back_buffer.begin() + vcount * h_pixels, h_pixels, pram[0] & 0x7FFF);
+        for (int b = 3; b >= 0; --b) {
+            if (!BgEnabled(b)) {
+                continue;
+            }
+
+            for (int i = 0; i < h_pixels; ++i) {
+                if ((sorted_bgs[b]->scanline[i] & alpha_bit) == 0) {
+                    back_buffer[vcount * h_pixels + i] = sorted_bgs[b]->scanline[i];
+                }
+            }
+        }
+    } else if (BgMode() == 3) {
+        for (int i = 0; i < h_pixels; ++i) {
+            back_buffer[vcount * h_pixels + i] = vram[vcount * h_pixels + i];
+        }
+    } else if (BgMode() == 4) {
+        const int base_addr = vcount * h_pixels + (DisplayFrame1() ? 0xA000 : 0);
+        for (int i = 0; i < h_pixels; ++i) {
+            // The lower byte is the palette index for even pixels, and the upper byte is for odd pixels.
+            const int odd_shift = 8 * (i & 0x1);
+            u8 palette_entry = vram[(base_addr + i) / 2] >> odd_shift;
+            back_buffer[vcount * h_pixels + i] = pram[palette_entry];
         }
     }
 }
