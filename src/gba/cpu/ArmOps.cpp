@@ -603,7 +603,7 @@ int Cpu::Arm_SubRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s, 
 int Cpu::Arm_UmlalReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg m, Reg n) {
     auto umlal_op = [](u32 value1, u32 value2, u32 acc_hi, u32 acc_lo) -> s64 {
         u64 result = static_cast<u64>(value1) * static_cast<u64>(value2);
-        return result + (static_cast<u64>(acc_hi) << 32) | acc_lo;
+        return result + ((static_cast<u64>(acc_hi) << 32) | acc_lo);
     };
     return Arm_MultiplyLongReg(cond, set_flags, dh, dl, m, n, umlal_op, true);
 }
