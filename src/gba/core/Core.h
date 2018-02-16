@@ -49,8 +49,10 @@ public:
 
     void EmulatorLoop();
     void UpdateHardware(int cycles);
+    void SwapBuffers(std::vector<u16>& back_buffer) { front_buffer.swap(back_buffer); }
 private:
     Emu::SDLContext& sdl_context;
+    std::vector<u16> front_buffer;
 
     bool quit = false;
     bool pause = false;

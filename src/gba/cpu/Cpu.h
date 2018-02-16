@@ -49,7 +49,7 @@ public:
 
     bool dma_active = false;
 
-    void Execute(int cycles);
+    int Execute(int cycles);
     void Halt() { halted = true; }
 
     // Public for Disassembler.

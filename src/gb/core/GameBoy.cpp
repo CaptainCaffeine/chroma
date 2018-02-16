@@ -69,7 +69,7 @@ void GameBoy::EmulatorLoop() {
         sdl_context.PollEvents();
 
         if (pause) {
-            SDL_Delay(40);
+            SDL_Delay(48);
             continue;
         }
 

@@ -27,7 +27,7 @@ class Keypad {
 public:
     Keypad(Core& _core);
 
-    IOReg input = {0x03FF, 0x03FF, 0x0000};
+    IOReg input   = {0x03FF, 0x03FF, 0x0000};
     IOReg control = {0x0000, 0xC3FF, 0xC3FF};
 
     enum Button : u16 {A      = 0x0001,

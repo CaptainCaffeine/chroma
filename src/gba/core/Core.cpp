@@ -30,12 +30,13 @@ namespace Gba {
 Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom, LogLevel level)
         : mem(std::make_unique<Memory>(bios, rom, *this))
         , cpu(std::make_unique<Cpu>(*mem, *this, level))
-        , lcd(std::make_unique<Lcd>(*this))
+        , lcd(std::make_unique<Lcd>(mem->PramReference(), mem->VramReference(), mem->OamReference(), *this))
         , timers{{0, *this}, {1, *this}, {2, *this}, {3, *this}}
         , dma{{0, *this}, {1, *this}, {2, *this}, {3, *this}}
         , keypad(std::make_unique<Keypad>(*this))
         , serial(std::make_unique<Serial>(*this))
-        , sdl_context(context) {
+        , sdl_context(context)
+        , front_buffer(Lcd::h_pixels * Lcd::v_pixels, 0x7FFF) {
 
     RegisterCallbacks();
 }
@@ -44,19 +45,25 @@ Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::ve
 Core::~Core() = default;
 
 void Core::EmulatorLoop() {
-    cpu->Execute(0x500'0000);
+    constexpr int cycles_per_frame = 280896;
+    int overspent_cycles = 0;
 
-    //while (!quit) {
-    //    sdl_context.PollEvents();
+    while (!quit) {
+        sdl_context.PollEvents();
 
-    //    if (pause) {
-    //        SDL_Delay(40);
-    //        continue;
-    //    }
+        if (pause) {
+            SDL_Delay(48);
+            continue;
+        }
 
-    //    keypad->CheckKeypadInterrupt();
-    //    cpu->Execute(0x1000000);
-    //}
+        keypad->CheckKeypadInterrupt();
+
+        // Overspent cycles is always zero or negative.
+        int target_cycles = cycles_per_frame + overspent_cycles;
+        overspent_cycles = cpu->Execute(target_cycles);
+
+        sdl_context.RenderFrame(front_buffer.data());
+    }
 }
 
 void Core::UpdateHardware(int cycles) {

@@ -43,6 +43,10 @@ public:
     bool PendingInterrupts() const { return intr_flags & intr_enable; }
     void RequestInterrupt(u16 intr) { intr_flags |= intr; };
 
+    const std::vector<u16>& PramReference() const { return pram; }
+    const std::vector<u16>& VramReference() const { return vram; }
+    const std::vector<u32>& OamReference() const { return oam; }
+
     static bool CheckNintendoLogo(const std::vector<u8>& rom_header) noexcept;
     static void CheckHeader(const std::vector<u16>& rom_header);
 private:

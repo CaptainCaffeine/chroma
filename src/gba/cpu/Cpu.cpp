@@ -39,7 +39,7 @@ Cpu::Cpu(Memory& _mem, Core& _core, LogLevel level)
 // Needed to declare std::vector with forward-declared type in the header file.
 Cpu::~Cpu() = default;
 
-void Cpu::Execute(int cycles) {
+int Cpu::Execute(int cycles) {
     while (cycles > 0) {
         int cycles_taken = 0;
 
@@ -122,6 +122,9 @@ void Cpu::Execute(int cycles) {
 
         pc_written = false;
     }
+
+    // Return the number of overspent cycles.
+    return cycles;
 }
 
 std::function<int(Cpu& cpu, Thumb opcode)> Cpu::DecodeThumb(Thumb opcode) const {

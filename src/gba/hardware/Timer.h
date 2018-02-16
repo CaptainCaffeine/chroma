@@ -28,7 +28,7 @@ public:
     Timer(int _id, Core& _core);
 
     IOReg counter = {0x0000, 0xFFFF, 0x0000};
-    IOReg reload = {0x0000, 0x0000, 0xFFFF};
+    IOReg reload  = {0x0000, 0x0000, 0xFFFF};
     IOReg control = {0x0000, 0x00C7, 0x00C7};
 
     void Tick(int cycles);

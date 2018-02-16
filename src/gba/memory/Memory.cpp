@@ -350,16 +350,16 @@ u16 Memory::ReadIO(const u32 addr) const {
         value = core.lcd->vcount.Read();
         break;
     case BG0CNT:
-        value = core.lcd->bg[0].control.Read();
+        value = core.lcd->bgs[0].control.Read();
         break;
     case BG1CNT:
-        value = core.lcd->bg[1].control.Read();
+        value = core.lcd->bgs[1].control.Read();
         break;
     case BG2CNT:
-        value = core.lcd->bg[2].control.Read();
+        value = core.lcd->bgs[2].control.Read();
         break;
     case BG3CNT:
-        value = core.lcd->bg[3].control.Read();
+        value = core.lcd->bgs[3].control.Read();
         break;
     case WININ:
         value = core.lcd->winin.Read();
@@ -496,88 +496,88 @@ void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
         core.lcd->status.Write(data, mask);
         break;
     case BG0CNT:
-        core.lcd->bg[0].control.Write(data, mask);
+        core.lcd->bgs[0].control.Write(data, mask);
         break;
     case BG1CNT:
-        core.lcd->bg[1].control.Write(data, mask);
+        core.lcd->bgs[1].control.Write(data, mask);
         break;
     case BG2CNT:
-        core.lcd->bg[2].control.Write(data, mask);
+        core.lcd->bgs[2].control.Write(data, mask);
         break;
     case BG3CNT:
-        core.lcd->bg[3].control.Write(data, mask);
+        core.lcd->bgs[3].control.Write(data, mask);
         break;
     case BG0HOFS:
-        core.lcd->bg[0].scroll_x.Write(data, mask);
+        core.lcd->bgs[0].scroll_x.Write(data, mask);
         break;
     case BG0VOFS:
-        core.lcd->bg[0].scroll_y.Write(data, mask);
+        core.lcd->bgs[0].scroll_y.Write(data, mask);
         break;
     case BG1HOFS:
-        core.lcd->bg[1].scroll_x.Write(data, mask);
+        core.lcd->bgs[1].scroll_x.Write(data, mask);
         break;
     case BG1VOFS:
-        core.lcd->bg[1].scroll_y.Write(data, mask);
+        core.lcd->bgs[1].scroll_y.Write(data, mask);
         break;
     case BG2HOFS:
-        core.lcd->bg[2].scroll_x.Write(data, mask);
+        core.lcd->bgs[2].scroll_x.Write(data, mask);
         break;
     case BG2VOFS:
-        core.lcd->bg[2].scroll_y.Write(data, mask);
+        core.lcd->bgs[2].scroll_y.Write(data, mask);
         break;
     case BG3HOFS:
-        core.lcd->bg[3].scroll_x.Write(data, mask);
+        core.lcd->bgs[3].scroll_x.Write(data, mask);
         break;
     case BG3VOFS:
-        core.lcd->bg[3].scroll_y.Write(data, mask);
+        core.lcd->bgs[3].scroll_y.Write(data, mask);
         break;
     case BG2PA:
-        core.lcd->bg[2].affine_a.Write(data, mask);
+        core.lcd->bgs[2].affine_a.Write(data, mask);
         break;
     case BG2PB:
-        core.lcd->bg[2].affine_b.Write(data, mask);
+        core.lcd->bgs[2].affine_b.Write(data, mask);
         break;
     case BG2PC:
-        core.lcd->bg[2].affine_c.Write(data, mask);
+        core.lcd->bgs[2].affine_c.Write(data, mask);
         break;
     case BG2PD:
-        core.lcd->bg[2].affine_d.Write(data, mask);
+        core.lcd->bgs[2].affine_d.Write(data, mask);
         break;
     case BG2X_L:
-        core.lcd->bg[2].offset_x_l.Write(data, mask);
+        core.lcd->bgs[2].offset_x_l.Write(data, mask);
         break;
     case BG2X_H:
-        core.lcd->bg[2].offset_x_h.Write(data, mask);
+        core.lcd->bgs[2].offset_x_h.Write(data, mask);
         break;
     case BG2Y_L:
-        core.lcd->bg[2].offset_y_l.Write(data, mask);
+        core.lcd->bgs[2].offset_y_l.Write(data, mask);
         break;
     case BG2Y_H:
-        core.lcd->bg[2].offset_y_h.Write(data, mask);
+        core.lcd->bgs[2].offset_y_h.Write(data, mask);
         break;
     case BG3PA:
-        core.lcd->bg[3].affine_a.Write(data, mask);
+        core.lcd->bgs[3].affine_a.Write(data, mask);
         break;
     case BG3PB:
-        core.lcd->bg[3].affine_b.Write(data, mask);
+        core.lcd->bgs[3].affine_b.Write(data, mask);
         break;
     case BG3PC:
-        core.lcd->bg[3].affine_c.Write(data, mask);
+        core.lcd->bgs[3].affine_c.Write(data, mask);
         break;
     case BG3PD:
-        core.lcd->bg[3].affine_d.Write(data, mask);
+        core.lcd->bgs[3].affine_d.Write(data, mask);
         break;
     case BG3X_L:
-        core.lcd->bg[3].offset_x_l.Write(data, mask);
+        core.lcd->bgs[3].offset_x_l.Write(data, mask);
         break;
     case BG3X_H:
-        core.lcd->bg[3].offset_x_h.Write(data, mask);
+        core.lcd->bgs[3].offset_x_h.Write(data, mask);
         break;
     case BG3Y_L:
-        core.lcd->bg[3].offset_y_l.Write(data, mask);
+        core.lcd->bgs[3].offset_y_l.Write(data, mask);
         break;
     case BG3Y_H:
-        core.lcd->bg[3].offset_y_h.Write(data, mask);
+        core.lcd->bgs[3].offset_y_h.Write(data, mask);
         break;
     case WIN0H:
         core.lcd->win0_width.Write(data, mask);
