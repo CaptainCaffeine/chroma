@@ -16,7 +16,6 @@
 
 #pragma once
 
-#include <array>
 #include <vector>
 
 #include "common/CommonTypes.h"
@@ -25,68 +24,12 @@
 namespace Gba {
 
 class Core;
-
-struct BgTile {
-    BgTile(u16 map_entry)
-            : num(map_entry & 0x3FF)
-            , h_flip(map_entry & 0x400)
-            , v_flip(map_entry & 0x800)
-            , palette(map_entry >> 12) {}
-
-    int num;
-    bool h_flip;
-    bool v_flip;
-    int palette;
-
-    std::array<u8, 64> data;
-};
-
-class Bg {
-public:
-    IOReg control    = {0x0000, 0xFFCF, 0xFFCF};
-    IOReg scroll_x   = {0x0000, 0x0000, 0x01FF};
-    IOReg scroll_y   = {0x0000, 0x0000, 0x01FF};
-
-    IOReg affine_a   = {0x0000, 0x0000, 0xFFFF};
-    IOReg affine_b   = {0x0000, 0x0000, 0xFFFF};
-    IOReg affine_c   = {0x0000, 0x0000, 0xFFFF};
-    IOReg affine_d   = {0x0000, 0x0000, 0xFFFF};
-
-    IOReg offset_x_l = {0x0000, 0x0000, 0xFFFF};
-    IOReg offset_x_h = {0x0000, 0x0000, 0x0FFF};
-    IOReg offset_y_l = {0x0000, 0x0000, 0xFFFF};
-    IOReg offset_y_h = {0x0000, 0x0000, 0x0FFF};
-
-    std::vector<BgTile> tiles;
-    std::array<u16, 240> scanline;
-
-    // Control flags
-    static constexpr int kbyte = 1024;
-
-    int Priority() const { return control & 0x3; }
-    int TileBase() const { return ((control >> 2) & 0x3) * 16 * kbyte; }
-    bool Mosaic() const { return control & 0x40; }
-    bool SinglePalette() const { return control & 0x80; }
-    int MapBase() const { return ((control >> 8) & 0x1F) * 2 * kbyte; }
-    bool Wraparound() const { return control & 0x2000; }
-
-    enum class Regular {Size32x32 = 0,
-                        Size64x32 = 1,
-                        Size32x64 = 2,
-                        Size64x64 = 3};
-
-    enum class Affine {Size16x16   = 0,
-                       Size32x32   = 1,
-                       Size64x64   = 2,
-                       Size128x128 = 3};
-
-    template<typename T>
-    T ScreenSize() const { return static_cast<T>(control >> 14); }
-};
+class Bg;
 
 class Lcd {
 public:
     Lcd(const std::vector<u16>& _pram, const std::vector<u16>& _vram, const std::vector<u32>& _oam, Core& _core);
+    ~Lcd();
 
     IOReg control       = {0x0000, 0xFFF7, 0xFFF7};
     IOReg green_swap    = {0x0000, 0x0001, 0x0001};
@@ -105,7 +48,11 @@ public:
     IOReg blend_alpha   = {0x0000, 0x1F1F, 0x1F1F};
     IOReg blend_fade    = {0x0000, 0x0000, 0x001F};
 
-    std::array<Bg, 4> bgs{};
+    std::vector<Bg> bgs;
+
+    const std::vector<u16>& pram;
+    const std::vector<u16>& vram;
+    const std::vector<u32>& oam;
 
     static constexpr int h_pixels = 240;
     static constexpr int v_pixels = 160;
@@ -114,10 +61,6 @@ public:
     void Update(int cycles);
 
 private:
-    const std::vector<u16>& pram;
-    const std::vector<u16>& vram;
-    const std::vector<u32>& oam;
-
     Core& core;
 
     std::vector<u16> back_buffer;
@@ -125,10 +68,6 @@ private:
     int scanline_cycles = 0;
 
     void DrawScanline();
-
-    void GetRowMapInfo(Bg& bg);
-    void GetTileData(Bg& bg);
-    void DrawBgScanline(Bg& bg);
 
     // Control flags
     int BgMode() const { return control & 0x7; }

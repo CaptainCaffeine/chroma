@@ -19,6 +19,7 @@
 #include "gba/core/Core.h"
 #include "gba/cpu/Cpu.h"
 #include "gba/lcd/Lcd.h"
+#include "gba/lcd/Bg.h"
 #include "gba/hardware/Timer.h"
 #include "gba/hardware/Dma.h"
 #include "gba/hardware/Keypad.h"

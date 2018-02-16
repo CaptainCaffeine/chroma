@@ -31,6 +31,7 @@ set(SOURCES
     gba/cpu/ArmDisasm.cpp
     gba/cpu/ThumbDisasm.cpp
     gba/lcd/Lcd.cpp
+    gba/lcd/Bg.cpp
     gba/hardware/Timer.cpp
     gba/hardware/Dma.cpp
     gba/hardware/Keypad.cpp
@@ -64,6 +65,7 @@ set(HEADERS
     gba/cpu/Instruction.h
     gba/cpu/Disassembler.h
     gba/lcd/Lcd.h
+    gba/lcd/Bg.h
     gba/hardware/Timer.h
     gba/hardware/Dma.h
     gba/hardware/Keypad.h
