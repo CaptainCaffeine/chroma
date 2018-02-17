@@ -22,9 +22,8 @@
 
 #include "common/CommonTypes.h"
 
-template <typename T>
-constexpr T RotateRight(T value, unsigned int rotation) noexcept {
-    return (value >> rotation) | (value << (-rotation & (sizeof(T) * 8 - 1)));
+constexpr u32 RotateRight(u32 value, unsigned int rotation) noexcept {
+    return (value >> rotation) | (value << (-rotation & (sizeof(u32) * 8 - 1)));
 }
 
 template <typename T>

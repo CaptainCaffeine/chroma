@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "common/CommonFuncs.h"
 #include "gba/memory/Memory.h"
 #include "gba/core/Core.h"
 #include "gba/cpu/Cpu.h"
@@ -40,18 +39,15 @@ Memory::Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom, Core
 // Bus width 16.
 template <>
 u32 Memory::ReadRegion(const std::vector<u16>& region, const AddressMask region_mask, const u32 addr) const {
+    // Unaligned accesses are word-aligned.
     const u32 region_addr = ((addr & region_mask) / sizeof(u16)) & ~0x1;
-
-    // Unaligned accesses are word-aligned and then rotated.
-    return RotateRight(region[region_addr] | (region[region_addr + 1] << 16), (addr & 0x3) * 8);
+    return region[region_addr] | (region[region_addr + 1] << 16);
 }
 
 template <>
 u16 Memory::ReadRegion(const std::vector<u16>& region, const AddressMask region_mask, const u32 addr) const {
     const u32 region_addr = (addr & region_mask) / sizeof(u16);
-
-    // Unaligned accesses are rotated.
-    return RotateRight(region[region_addr], (addr & 0x1) * 8);
+    return region[region_addr];
 }
 
 template <>
@@ -64,17 +60,13 @@ u8 Memory::ReadRegion(const std::vector<u16>& region, const AddressMask region_m
 template <>
 u32 Memory::ReadRegion(const std::vector<u32>& region, const AddressMask region_mask, const u32 addr) const {
     const u32 region_addr = (addr & region_mask) / sizeof(u32);
-
-    // Unaligned accesses are rotated.
-    return RotateRight(region[region_addr], (addr & 0x3) * 8);
+    return region[region_addr];
 }
 
 template <>
 u16 Memory::ReadRegion(const std::vector<u32>& region, const AddressMask region_mask, const u32 addr) const {
     const u32 region_addr = (addr & region_mask) / sizeof(u32);
-
-    // Unaligned accesses are halfword-aligned and then rotated.
-    return RotateRight((region[region_addr] >> (8 * (addr & 0x2))) & 0xFFFF, (addr & 0x1) * 8);
+    return region[region_addr] >> (8 * (addr & 0x2));
 }
 
 template <>
@@ -312,13 +304,13 @@ void Memory::UpdateWaitStates() {
 
 template <>
 u32 Memory::ReadIO(const u32 addr) const {
-    // Unaligned accesses are word-aligned and then rotated.
-    return RotateRight(ReadIO<u16>(addr & ~0x3) | (ReadIO<u16>((addr & ~0x3) + 2) << 16), (addr & 0x3) * 8);
+    // Unaligned accesses are word-aligned.
+    return ReadIO<u16>(addr & ~0x3) | (ReadIO<u16>((addr & ~0x3) + 2) << 16);
 }
 
 template <>
 u8 Memory::ReadIO(const u32 addr) const {
-    return ReadIO<u16>(addr & ~0x1) >> (8 * (addr & 0x1));
+    return ReadIO<u16>(addr) >> (8 * (addr & 0x1));
 }
 
 template <>
@@ -336,152 +328,102 @@ void Memory::WriteIO(const u32 addr, const u8 data, const u16) {
 
 template <>
 u16 Memory::ReadIO(const u32 addr) const {
-    u16 value;
     switch (addr & ~0x1) {
     case DISPCNT:
-        value = core.lcd->control.Read();
-        break;
+        return core.lcd->control.Read();
     case GREENSWAP:
-        value = core.lcd->green_swap.Read();
-        break;
+        return core.lcd->green_swap.Read();
     case DISPSTAT:
-        value = core.lcd->status.Read();
-        break;
+        return core.lcd->status.Read();
     case VCOUNT:
-        value = core.lcd->vcount.Read();
-        break;
+        return core.lcd->vcount.Read();
     case BG0CNT:
-        value = core.lcd->bgs[0].control.Read();
-        break;
+        return core.lcd->bgs[0].control.Read();
     case BG1CNT:
-        value = core.lcd->bgs[1].control.Read();
-        break;
+        return core.lcd->bgs[1].control.Read();
     case BG2CNT:
-        value = core.lcd->bgs[2].control.Read();
-        break;
+        return core.lcd->bgs[2].control.Read();
     case BG3CNT:
-        value = core.lcd->bgs[3].control.Read();
-        break;
+        return core.lcd->bgs[3].control.Read();
     case WININ:
-        value = core.lcd->winin.Read();
-        break;
+        return core.lcd->winin.Read();
     case WINOUT:
-        value = core.lcd->winout.Read();
-        break;
+        return core.lcd->winout.Read();
     case BLDCNT:
-        value = core.lcd->blend_control.Read();
-        break;
+        return core.lcd->blend_control.Read();
     case BLDALPHA:
-        value = core.lcd->blend_alpha.Read();
-        break;
+        return core.lcd->blend_alpha.Read();
     case SOUNDBIAS:
-        value = soundbias.Read();
-        break;
+        return soundbias.Read();
     case DMA0CNT_H:
-        value = core.dma[0].control.Read();
-        break;
+        return core.dma[0].control.Read();
     case DMA1CNT_H:
-        value = core.dma[1].control.Read();
-        break;
+        return core.dma[1].control.Read();
     case DMA2CNT_H:
-        value = core.dma[2].control.Read();
-        break;
+        return core.dma[2].control.Read();
     case DMA3CNT_H:
-        value = core.dma[3].control.Read();
-        break;
+        return core.dma[3].control.Read();
     case TM0CNT_L:
-        value = core.timers[0].counter.Read();
-        break;
+        return core.timers[0].counter.Read();
     case TM0CNT_H:
-        value = core.timers[0].control.Read();
-        break;
+        return core.timers[0].control.Read();
     case TM1CNT_L:
-        value = core.timers[1].counter.Read();
-        break;
+        return core.timers[1].counter.Read();
     case TM1CNT_H:
-        value = core.timers[1].control.Read();
-        break;
+        return core.timers[1].control.Read();
     case TM2CNT_L:
-        value = core.timers[2].counter.Read();
-        break;
+        return core.timers[2].counter.Read();
     case TM2CNT_H:
-        value = core.timers[2].control.Read();
-        break;
+        return core.timers[2].control.Read();
     case TM3CNT_L:
-        value = core.timers[3].counter.Read();
-        break;
+        return core.timers[3].counter.Read();
     case TM3CNT_H:
-        value = core.timers[3].control.Read();
-        break;
+        return core.timers[3].control.Read();
     case SIOMULTI0:
-        value = core.serial->data0.Read();
-        break;
+        return core.serial->data0.Read();
     case SIOMULTI1:
-        value = core.serial->data1.Read();
-        break;
+        return core.serial->data1.Read();
     case SIOMULTI2:
-        value = core.serial->data2.Read();
-        break;
+        return core.serial->data2.Read();
     case SIOMULTI3:
-        value = core.serial->data3.Read();
-        break;
+        return core.serial->data3.Read();
     case SIOCNT:
-        value = core.serial->control.Read();
-        break;
+        return core.serial->control.Read();
     case SIOMLTSEND:
-        value = core.serial->send.Read();
-        break;
+        return core.serial->send.Read();
     case KEYINPUT:
-        value = core.keypad->input.Read();
-        break;
+        return core.keypad->input.Read();
     case KEYCNT:
-        value = core.keypad->control.Read();
-        break;
+        return core.keypad->control.Read();
     case RCNT:
-        value = core.serial->mode.Read();
-        break;
+        return core.serial->mode.Read();
     case JOYCNT:
-        value = core.serial->joybus_control.Read();
-        break;
+        return core.serial->joybus_control.Read();
     case JOYRECV_L:
-        value = core.serial->joybus_recv_l.Read();
         core.serial->joybus_status &= ~Serial::joystat_recv;
-        break;
+        return core.serial->joybus_recv_l.Read();
     case JOYRECV_H:
-        value = core.serial->joybus_recv_h.Read();
         core.serial->joybus_status &= ~Serial::joystat_recv;
-        break;
+        return core.serial->joybus_recv_h.Read();
     case JOYTRANS_L:
-        value = core.serial->joybus_trans_l.Read();
-        break;
+        return core.serial->joybus_trans_l.Read();
     case JOYTRANS_H:
-        value = core.serial->joybus_trans_h.Read();
-        break;
+        return core.serial->joybus_trans_h.Read();
     case JOYSTAT:
-        value = core.serial->joybus_status.Read();
-        break;
+        return core.serial->joybus_status.Read();
     case IE:
-        value = intr_enable.Read();
-        break;
+        return intr_enable.Read();
     case IF:
-        value = intr_flags.Read();
-        break;
+        return intr_flags.Read();
     case WAITCNT:
-        value = waitcnt.Read();
-        break;
+        return waitcnt.Read();
     case IME:
-        value = master_enable.Read();
-        break;
+        return master_enable.Read();
     case HALTCNT:
-        value = haltcnt.Read();
-        break;
+        return haltcnt.Read();
     default:
-        value = 0x0000;
-        break;
+        return 0x0000;
     }
-
-    // Unaligned accesses are rotated.
-    return RotateRight(value, (addr & 0x1) * 8);
 }
 
 template <>

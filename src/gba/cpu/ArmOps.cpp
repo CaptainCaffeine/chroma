@@ -821,8 +821,8 @@ int Cpu::Arm_Ldm(Condition cond, bool pre_indexed, bool increment, bool exceptio
     for (Reg i = 0; i < 15; ++i) {
         if (rlist[i]) {
             // Reads must be aligned.
-            regs[i] = mem.ReadMem<u32>(addr & ~0x3);
-            cycles += mem.AccessTime<u32>(addr & ~0x3);
+            regs[i] = mem.ReadMem<u32>(addr);
+            cycles += mem.AccessTime<u32>(addr);
             addr += 4;
         }
     }
@@ -837,7 +837,7 @@ int Cpu::Arm_Ldm(Condition cond, bool pre_indexed, bool increment, bool exceptio
     }
 
     if (rlist[pc]) {
-        return cycles + AluWritePC(exception_return, mem.ReadMem<u32>(addr & ~0x3));
+        return cycles + AluWritePC(exception_return, mem.ReadMem<u32>(addr));
     }
 
     // The next opcode fetch after an LDM is a sequential access, despite the data load.
@@ -867,7 +867,7 @@ int Cpu::Arm_LdrImm(Condition cond, bool pre_indexed, bool add, bool writeback, 
         regs[n] += imm;
     }
 
-    u32 data = mem.ReadMem<u32>(addr);
+    u32 data = RotateRight(mem.ReadMem<u32>(addr), (addr & 0x3) * 8);
     // Plus one internal cycle to transfer the loaded value to Rt.
     int cycles = 1 + mem.AccessTime<u32>(addr);
 
@@ -911,7 +911,7 @@ int Cpu::Arm_LdrReg(Condition cond, bool pre_indexed, bool add, bool writeback, 
         regs[n] += offset;
     }
 
-    u32 data = mem.ReadMem<u32>(addr);
+    u32 data = RotateRight(mem.ReadMem<u32>(addr), (addr & 0x3) * 8);
     // Plus one internal cycle to transfer the loaded value to Rt.
     int cycles = 1 + mem.AccessTime<u32>(addr);
 
@@ -947,14 +947,14 @@ int Cpu::Arm_LdrbReg(Condition cond, bool pre_indexed, bool add, bool writeback,
 int Cpu::Arm_LdrhImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm_hi,
                      u32 imm_lo) {
     auto ldrh_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
-        return std::make_tuple(_mem.ReadMem<u16>(addr), _mem.AccessTime<u16>(addr));
+        return std::make_tuple(RotateRight(_mem.ReadMem<u16>(addr), (addr & 0x1) * 8), _mem.AccessTime<u16>(addr));
     };
     return Arm_LoadImm(cond, pre_indexed, add, writeback, n, t, (imm_hi << 4) | imm_lo, ldrh_op);
 }
 
 int Cpu::Arm_LdrhReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, Reg m) {
     auto ldrh_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
-        return std::make_tuple(_mem.ReadMem<u16>(addr), _mem.AccessTime<u16>(addr));
+        return std::make_tuple(RotateRight(_mem.ReadMem<u16>(addr), (addr & 0x1) * 8), _mem.AccessTime<u16>(addr));
     };
     return Arm_LoadReg(cond, pre_indexed, add, writeback, n, t, 0, ShiftType::LSL, m, ldrh_op);
 }
@@ -979,7 +979,7 @@ int Cpu::Arm_LdrshImm(Condition cond, bool pre_indexed, bool add, bool writeback
     auto ldrsh_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
         // LDRSH only sign-extends the first byte after an unaligned access.
         int num_source_bits = 16 >> (addr & 0x1);
-        return std::make_tuple(SignExtend(static_cast<u32>(_mem.ReadMem<u16>(addr)), num_source_bits),
+        return std::make_tuple(SignExtend(RotateRight(_mem.ReadMem<u16>(addr), (addr & 0x1) * 8), num_source_bits),
                                _mem.AccessTime<u16>(addr));
     };
     return Arm_LoadImm(cond, pre_indexed, add, writeback, n, t, (imm_hi << 4) | imm_lo, ldrsh_op);
@@ -989,7 +989,7 @@ int Cpu::Arm_LdrshReg(Condition cond, bool pre_indexed, bool add, bool writeback
     auto ldrsh_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
         // LDRSH only sign-extends the first byte after an unaligned access.
         int num_source_bits = 16 >> (addr & 0x1);
-        return std::make_tuple(SignExtend(static_cast<u32>(_mem.ReadMem<u16>(addr)), num_source_bits),
+        return std::make_tuple(SignExtend(RotateRight(_mem.ReadMem<u16>(addr), (addr & 0x1) * 8), num_source_bits),
                                _mem.AccessTime<u16>(addr));
     };
     return Arm_LoadReg(cond, pre_indexed, add, writeback, n, t, 0, ShiftType::LSL, m, ldrsh_op);
@@ -1006,11 +1006,13 @@ int Cpu::Arm_PopA2(Condition cond, Reg t) {
 
     // Plus one internal cycle to transfer the loaded value to Rt.
     int cycles = 1 + mem.AccessTime<u32>(regs[sp]);
+
+    // Unaligned reads are allowed.
+    u32 data = RotateRight(mem.ReadMem<u32>(regs[sp]), (regs[sp] & 0x3) * 8);
     if (t == pc) {
-        cycles += Arm_BranchWritePC(mem.ReadMem<u32>(regs[sp]));
+        cycles += Arm_BranchWritePC(data);
     } else {
-        // Unaligned reads are allowed.
-        regs[t] = mem.ReadMem<u32>(regs[sp]);
+        regs[t] = data;
     }
 
     // Only write back to SP if it wasn't in the register list (ARM7TDMI behaviour).
@@ -1175,10 +1177,10 @@ int Cpu::Arm_SwpReg(Condition cond, bool byte, Reg n, Reg t, Reg t2) {
     if (byte) {
         data = mem.ReadMem<u8>(regs[n]);
         mem.WriteMem<u8>(regs[n], regs[t2]);
-        // Two N-cycles (sequential reads must be in the same direction).
+        // Two N-cycles (sequential accesses must be in the same direction).
         cycles += mem.AccessTime<u8>(regs[n]) * 2;
     } else {
-        data = mem.ReadMem<u32>(regs[n]);
+        data = RotateRight(mem.ReadMem<u32>(regs[n]), (regs[n] & 0x3) * 8);
         mem.WriteMem<u32>(regs[n], regs[t2]);
         cycles += mem.AccessTime<u32>(regs[n]) * 2;
     }

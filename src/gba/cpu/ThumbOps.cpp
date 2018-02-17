@@ -377,9 +377,9 @@ int Cpu::Thumb_Ldm(Reg n, u32 reg_list) {
 
     for (Reg i = 0; i < 8; ++i) {
         if (rlist[i]) {
-            // Reads must be aligned.
-            regs[i] = mem.ReadMem<u32>(addr & ~0x3);
-            cycles += mem.AccessTime<u32>(addr & ~0x3);
+            // Reads are aligned.
+            regs[i] = mem.ReadMem<u32>(addr);
+            cycles += mem.AccessTime<u32>(addr);
             addr += 4;
         }
     }
@@ -398,14 +398,14 @@ int Cpu::Thumb_Ldm(Reg n, u32 reg_list) {
 
 int Cpu::Thumb_LdrImm(u32 imm, Reg n, Reg t) {
     auto ldr_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
-        return std::make_tuple(_mem.ReadMem<u32>(addr), _mem.AccessTime<u32>(addr));
+        return std::make_tuple(RotateRight(_mem.ReadMem<u32>(addr), (addr & 0x3) * 8), _mem.AccessTime<u32>(addr));
     };
     return Thumb_Load(imm << 2, n, t, ldr_op);
 }
 
 int Cpu::Thumb_LdrSpImm(Reg t, u32 imm) {
     auto ldr_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
-        return std::make_tuple(_mem.ReadMem<u32>(addr), _mem.AccessTime<u32>(addr));
+        return std::make_tuple(RotateRight(_mem.ReadMem<u32>(addr), (addr & 0x3) * 8), _mem.AccessTime<u32>(addr));
     };
     return Thumb_Load(imm << 2, sp, t, ldr_op);
 }
@@ -414,6 +414,7 @@ int Cpu::Thumb_LdrPcImm(Reg t, u32 imm) {
     imm <<= 2;
 
     u32 addr = (regs[pc] & ~0x3) + imm;
+    // No need for a rotation, addr is always 4-byte aligned.
     regs[t] = mem.ReadMem<u32>(addr);
     // Plus one internal cycle to transfer the loaded value to Rt.
     int cycles = 1 + mem.AccessTime<u32>(addr);
@@ -427,7 +428,7 @@ int Cpu::Thumb_LdrPcImm(Reg t, u32 imm) {
 
 int Cpu::Thumb_LdrReg(Reg m, Reg n, Reg t) {
     auto ldr_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
-        return std::make_tuple(_mem.ReadMem<u32>(addr), _mem.AccessTime<u32>(addr));
+        return std::make_tuple(RotateRight(_mem.ReadMem<u32>(addr), (addr & 0x3) * 8), _mem.AccessTime<u32>(addr));
     };
     return Thumb_Load(regs[m], n, t, ldr_op);
 }
@@ -448,14 +449,14 @@ int Cpu::Thumb_LdrbReg(Reg m, Reg n, Reg t) {
 
 int Cpu::Thumb_LdrhImm(u32 imm, Reg n, Reg t) {
     auto ldrh_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
-        return std::make_tuple(_mem.ReadMem<u16>(addr), _mem.AccessTime<u16>(addr));
+        return std::make_tuple(RotateRight(_mem.ReadMem<u16>(addr), (addr & 0x1) * 8), _mem.AccessTime<u16>(addr));
     };
     return Thumb_Load(imm << 1, n, t, ldrh_op);
 }
 
 int Cpu::Thumb_LdrhReg(Reg m, Reg n, Reg t) {
     auto ldrh_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
-        return std::make_tuple(_mem.ReadMem<u16>(addr), _mem.AccessTime<u16>(addr));
+        return std::make_tuple(RotateRight(_mem.ReadMem<u16>(addr), (addr & 0x1) * 8), _mem.AccessTime<u16>(addr));
     };
     return Thumb_Load(regs[m], n, t, ldrh_op);
 }
@@ -471,7 +472,7 @@ int Cpu::Thumb_LdrshReg(Reg m, Reg n, Reg t) {
     auto ldrsh_op = [](Memory& _mem, u32 addr) -> std::tuple<u32, int> {
         // LDRSH only sign-extends the first byte after an unaligned access.
         int num_source_bits = 16 >> (addr & 0x1);
-        return std::make_tuple(SignExtend(static_cast<u32>(_mem.ReadMem<u16>(addr)), num_source_bits),
+        return std::make_tuple(SignExtend(RotateRight(_mem.ReadMem<u16>(addr), (addr & 0x1) * 8), num_source_bits),
                                _mem.AccessTime<u16>(addr));
     };
     return Thumb_Load(regs[m], n, t, ldrsh_op);
@@ -488,15 +489,15 @@ int Cpu::Thumb_Pop(bool p, u32 reg_list) {
 
     for (Reg i = 0; i < 8; ++i) {
         if (rlist[i]) {
-            // Reads must be aligned.
-            regs[i] = mem.ReadMem<u32>(addr & ~0x3);
-            cycles += mem.AccessTime<u32>(addr & ~0x3);
+            // Reads are aligned.
+            regs[i] = mem.ReadMem<u32>(addr);
+            cycles += mem.AccessTime<u32>(addr);
             addr += 4;
         }
     }
 
     if (p) {
-        cycles += Thumb_BranchWritePC(mem.ReadMem<u32>(addr & ~0x3));
+        cycles += Thumb_BranchWritePC(mem.ReadMem<u32>(addr));
         addr += 4;
     }
 
