@@ -39,6 +39,11 @@ Disassembler::Disassembler(const Memory& _mem, const Cpu& _cpu, LogLevel level)
             throw std::runtime_error("Error when attempting to open ./log.txt for writing.");
         }
     }
+
+    if (level == LogLevel::LCD || level == LogLevel::Timer) {
+        // Not implemented in GBA mode.
+        log_level = LogLevel::Trace;
+    }
 }
 
 // Needed to declare std::vector with forward-declared type in the header file.
@@ -98,8 +103,40 @@ void Disassembler::LogRegisters(const std::array<u32, 16>& regs, u32 cpsr) {
 }
 
 void Disassembler::LogHalt() {
-    fmt::print(log_stream, "Halted for {} cycles\n", halt_cycles);
+    if (log_level != LogLevel::None) {
+        fmt::print(log_stream, "Halted for {} cycles\n", halt_cycles);
+    }
     halt_cycles = 0;
+}
+
+void Disassembler::SwitchLogLevel() {
+    if (log_level == alt_level) {
+        return;
+    }
+
+    std::swap(log_level, alt_level);
+
+    auto LogLevelString = [](LogLevel level) {
+        switch (level) {
+        case LogLevel::None:
+            return "None";
+        case LogLevel::Trace:
+            return "Trace";
+        case LogLevel::Registers:
+            return "Registers";
+        case LogLevel::LCD:
+            return "LCD";
+        case LogLevel::Timer:
+            return "Timer";
+        default:
+            return "";
+        }
+    };
+
+    const std::string switch_str{fmt::format("Log level changed to {}\n", LogLevelString(log_level))};
+
+    fmt::print(log_stream, switch_str);
+    fmt::print(switch_str);
 }
 
 std::string Disassembler::RegStr(Reg r) {

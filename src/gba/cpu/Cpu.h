@@ -47,13 +47,15 @@ public:
     Cpu(Memory& _mem, Core& _core, LogLevel level);
     ~Cpu();
 
+    std::unique_ptr<Disassembler> disasm;
+
     bool dma_active = false;
 
     int Execute(int cycles);
     void Halt() { halted = true; }
+    u32 GetPc() const { return regs[pc]; };
 
     // Public for Disassembler.
-    u32 GetPc() const { return regs[pc]; };
     static ImmediateShift DecodeImmShift(ShiftType type, u32 imm5);
     static constexpr u32 ArmExpandImmediate(u32 value) noexcept {
         const u32 base_value = value & 0xFF;
@@ -65,7 +67,6 @@ public:
 private:
     Memory& mem;
     Core& core;
-    std::unique_ptr<Disassembler> disasm;
 
     std::array<u32, 16> regs{};
     u32 cpsr = irq_disable | fiq_disable | static_cast<u32>(CpuMode::Svc);

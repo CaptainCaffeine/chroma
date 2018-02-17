@@ -18,6 +18,7 @@
 #include "gba/core/Enums.h"
 #include "gba/memory/Memory.h"
 #include "gba/cpu/Cpu.h"
+#include "gba/cpu/Disassembler.h"
 #include "gba/lcd/Lcd.h"
 #include "gba/hardware/Timer.h"
 #include "gba/hardware/Dma.h"
@@ -47,6 +48,9 @@ Core::~Core() = default;
 void Core::EmulatorLoop() {
     constexpr int cycles_per_frame = 280896;
     int overspent_cycles = 0;
+
+    // Start with logging disabled.
+    cpu->disasm->SwitchLogLevel();
 
     while (!quit) {
         sdl_context.PollEvents();
@@ -83,7 +87,7 @@ void Core::RegisterCallbacks() {
 
     sdl_context.RegisterCallback(InputEvent::Quit,       [this](bool) { quit = true; });
     sdl_context.RegisterCallback(InputEvent::Pause,      [this](bool) { pause = !pause; });
-    sdl_context.RegisterCallback(InputEvent::LogLevel,   [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::LogLevel,   [this](bool) { cpu->disasm->SwitchLogLevel(); });
     sdl_context.RegisterCallback(InputEvent::Fullscreen, [this](bool) { sdl_context.ToggleFullscreen(); });
     sdl_context.RegisterCallback(InputEvent::Screenshot, [](bool) { });
     sdl_context.RegisterCallback(InputEvent::LcdDebug,   [](bool) { });

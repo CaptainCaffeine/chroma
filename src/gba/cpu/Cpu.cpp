@@ -27,14 +27,11 @@
 namespace Gba {
 
 Cpu::Cpu(Memory& _mem, Core& _core, LogLevel level)
-        : mem(_mem)
+        : disasm(std::make_unique<Disassembler>(_mem, *this, level))
+        , mem(_mem)
         , core(_core)
-        , disasm(std::make_unique<Disassembler>(_mem, *this, level))
         , thumb_instructions(Instruction<Thumb>::GetInstructionTable<Cpu>())
-        , arm_instructions(Instruction<Arm>::GetInstructionTable<Cpu>()) {
-
-    regs[pc] = 0x0000'0000;
-}
+        , arm_instructions(Instruction<Arm>::GetInstructionTable<Cpu>()) {}
 
 // Needed to declare std::vector with forward-declared type in the header file.
 Cpu::~Cpu() = default;

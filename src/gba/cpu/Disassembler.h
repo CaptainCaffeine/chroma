@@ -56,6 +56,8 @@ public:
     void IncHaltCycles() { ++halt_cycles; }
     void LogHalt();
 
+    void SwitchLogLevel();
+
 private:
     const Memory& mem;
     const Cpu& cpu;
@@ -64,6 +66,7 @@ private:
     const std::vector<Instruction<Arm>> arm_instructions;
 
     LogLevel log_level;
+    LogLevel alt_level = LogLevel::None;
     std::ofstream log_stream;
 
     int halt_cycles = 0;
