@@ -353,14 +353,14 @@ int Cpu::Thumb_MovRegT1(Reg d1, Reg m, Reg d2) {
 
 int Cpu::Thumb_MovRegT2(Reg m, Reg d) {
     regs[d] = regs[m];
-    SetSignZeroFlags(regs[m]);
+    SetSignZeroFlags(regs[d]);
 
     return 0;
 }
 
 int Cpu::Thumb_MvnReg(Reg m, Reg d) {
     regs[d] = ~regs[m];
-    SetSignZeroFlags(~regs[m]);
+    SetSignZeroFlags(regs[d]);
 
     return 0;
 }
