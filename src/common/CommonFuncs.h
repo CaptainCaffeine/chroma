@@ -23,7 +23,8 @@
 #include "common/CommonTypes.h"
 
 constexpr u32 RotateRight(u32 value, unsigned int rotation) noexcept {
-    return (value >> rotation) | (value << (-rotation & (sizeof(u32) * 8 - 1)));
+    rotation &= 0x1F;
+    return (value >> rotation) | (value << (-rotation & 0x1F));
 }
 
 template <typename T>
