@@ -89,14 +89,14 @@ private:
     static constexpr Reg sp = 13, lr = 14, pc = 15;
     static constexpr u64 carry_bit = 0x1'0000'0000, sign_bit = 0x8000'0000;
 
-    enum CpsrMasks : u32 {sign        = 0x8000'0000,
-                          zero        = 0x4000'0000,
-                          carry       = 0x2000'0000,
-                          overflow    = 0x1000'0000,
-                          irq_disable = 0x0000'0080,
-                          fiq_disable = 0x0000'0040,
-                          thumb_mode  = 0x0000'0020,
-                          cpu_mode    = 0x0000'001F};
+    enum CpsrMasks : u32 {sign_flag     = 0x8000'0000,
+                          zero_flag     = 0x4000'0000,
+                          carry_flag    = 0x2000'0000,
+                          overflow_flag = 0x1000'0000,
+                          irq_disable   = 0x0000'0080,
+                          fiq_disable   = 0x0000'0040,
+                          thumb_mode    = 0x0000'0020,
+                          cpu_mode      = 0x0000'001F};
 
     enum class CpuMode : u32 {User   = 0x10,
                               Fiq    = 0x11,
@@ -143,15 +143,15 @@ private:
     int TakeException(CpuMode exception_type);
     int ReturnFromException(u32 address);
 
-    void SetSign(bool val)     { (val) ? (cpsr |= sign)     : (cpsr &= ~sign); }
-    void SetZero(bool val)     { (val) ? (cpsr |= zero)     : (cpsr &= ~zero); }
-    void SetCarry(bool val)    { (val) ? (cpsr |= carry)    : (cpsr &= ~carry); }
-    void SetOverflow(bool val) { (val) ? (cpsr |= overflow) : (cpsr &= ~overflow); }
+    void SetSign(bool val)     { (val) ? (cpsr |= sign_flag)     : (cpsr &= ~sign_flag); }
+    void SetZero(bool val)     { (val) ? (cpsr |= zero_flag)     : (cpsr &= ~zero_flag); }
+    void SetCarry(bool val)    { (val) ? (cpsr |= carry_flag)    : (cpsr &= ~carry_flag); }
+    void SetOverflow(bool val) { (val) ? (cpsr |= overflow_flag) : (cpsr &= ~overflow_flag); }
 
-    u32 GetSign()     const { return (cpsr & sign)     >> 31; }
-    u32 GetZero()     const { return (cpsr & zero)     >> 30; }
-    u32 GetCarry()    const { return (cpsr & carry)    >> 29; }
-    u32 GetOverflow() const { return (cpsr & overflow) >> 28; }
+    u32 GetSign()     const { return (cpsr & sign_flag)     >> 31; }
+    u32 GetZero()     const { return (cpsr & zero_flag)     >> 30; }
+    u32 GetCarry()    const { return (cpsr & carry_flag)    >> 29; }
+    u32 GetOverflow() const { return (cpsr & overflow_flag) >> 28; }
 
     std::function<int(Cpu& cpu, Thumb opcode)> DecodeThumb(Thumb opcode) const;
     std::function<int(Cpu& cpu, Arm opcode)> DecodeArm(Arm opcode) const;
