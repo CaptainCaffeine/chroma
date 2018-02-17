@@ -130,9 +130,9 @@ bool GetFilterEnable(const std::vector<std::string>& tokens) {
     }
 }
 
-std::streampos GetFileSize(std::ifstream& filestream) {
+std::size_t GetFileSize(std::ifstream& filestream) {
     filestream.seekg(0, std::ios_base::end);
-    std::streampos size = filestream.tellg();
+    auto size = filestream.tellg();
     filestream.seekg(0, std::ios_base::beg);
 
     return size;
@@ -148,14 +148,14 @@ Gb::Console CheckRomFile(const std::string& filename) {
 
     const auto rom_size = GetFileSize(rom_file);
 
-    if (rom_size < 0x8000) {
-        // 32KB is the smallest possible GB game.
-        throw std::runtime_error("Rom size of " + std::to_string(rom_size)
-                                 + " bytes is too small to be a GB or GBA game.");
-    } else if (rom_size > 0x2000000) {
+    if (rom_size > 0x2000000) {
         // 32MB is the largest possible GBA game.
         throw std::runtime_error("Rom size of " + std::to_string(rom_size)
                                  + " bytes is too large to be a GB or GBA game.");
+    } else if (rom_size < 0x134) {
+        // Provided file is not large enough to contain a DMG Nintendo logo.
+        throw std::runtime_error("Rom size of " + std::to_string(rom_size)
+                                 + " bytes is too small to be a GB or GBA game.");
     }
 
     // Read the first 0x134 bytes to check for the Nintendo logos.
@@ -165,6 +165,12 @@ Gb::Console CheckRomFile(const std::string& filename) {
     if (Gba::Memory::CheckNintendoLogo(rom_header)) {
         return Gb::Console::AGB;
     } else if (Gb::CartridgeHeader::CheckNintendoLogo(Gb::Console::CGB, rom_header)) {
+        if (rom_size < 0x8000) {
+            // 32KB is the smallest possible GB game.
+            throw std::runtime_error("Rom size of " + std::to_string(rom_size)
+                                     + " bytes is too small to be a GB game.");
+        }
+
         return Gb::Console::CGB;
     } else {
         throw std::runtime_error("Provided ROM is neither a GB or GBA game. No valid Nintendo logo found.");

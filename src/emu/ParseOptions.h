@@ -39,7 +39,7 @@ LogLevel GetLogLevel(const std::vector<std::string>& tokens);
 unsigned int GetPixelScale(const std::vector<std::string>& tokens);
 bool GetFilterEnable(const std::vector<std::string>& tokens);
 
-std::streampos GetFileSize(std::ifstream& filestream);
+std::size_t GetFileSize(std::ifstream& filestream);
 Gb::Console CheckRomFile(const std::string& filename);
 std::string SaveGamePath(const std::string& rom_path);
 std::vector<u8> LoadSaveGame(const Gb::CartridgeHeader& cart_header, const std::string& save_path);
@@ -48,7 +48,7 @@ std::vector<u32> LoadGbaBios();
 void CheckPathIsRegularFile(const std::string& filename);
 
 template<typename T>
-std::vector<T> LoadRom(const std::string& filename) {
+std::vector<T> LoadRom(const std::string& filename, Gb::Console console) {
     std::ifstream rom_file(filename);
     if (!rom_file) {
         throw std::runtime_error("Error when attempting to open " + filename);
@@ -56,7 +56,12 @@ std::vector<T> LoadRom(const std::string& filename) {
 
     const auto rom_size = GetFileSize(rom_file);
 
-    std::vector<T> rom_contents(rom_size / sizeof(T));
+    // AGB ROMs are often less than 32MB in size. To avoid needing a bounds check before every ROM access, we always
+    // make the ROM vector 32MB to fill its address space. This isn't an issue on CGB because only 32KB of ROM is
+    // mapped in the address space.
+    const auto rom_vector_size = (console == Gb::Console::AGB) ? 0x0200'0000 : rom_size;
+
+    std::vector<T> rom_contents(rom_vector_size / sizeof(T));
     rom_file.read(reinterpret_cast<char*>(rom_contents.data()), rom_size);
 
     return rom_contents;
