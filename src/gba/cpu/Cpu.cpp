@@ -307,14 +307,16 @@ u32 Cpu::Shift(u32 value, ShiftType type, int shift_amount) {
         return value;
     }
 
-    // Need to cast to 64-bits before shifting so that shifting by 32 works correctly.
+    // ARM allows specifying shift lengths of up to 255, of which all 32 and above behave the same. But on x86,
+    // shifting by more than the bit-length of the value is a no-op, so we clamp the shift length to 32.
+    // We need to cast to 64-bits before shifting so that shifting by 32 works correctly.
     switch (type) {
     case ShiftType::LSL:
-        return static_cast<u64>(value) << shift_amount;
+        return static_cast<u64>(value) << std::min(shift_amount, 32);
     case ShiftType::LSR:
-        return static_cast<u64>(value) >> shift_amount;
+        return static_cast<u64>(value) >> std::min(shift_amount, 32);
     case ShiftType::ASR:
-        return static_cast<s64>(static_cast<s32>(value)) >> shift_amount;
+        return static_cast<s64>(static_cast<s32>(value)) >> std::min(shift_amount, 32);
     case ShiftType::ROR:
         return RotateRight(value, shift_amount);
     case ShiftType::RRX:
@@ -332,13 +334,14 @@ Cpu::ResultWithCarry Cpu::Shift_C(u32 value, ShiftType type, int shift_amount) {
         return {value, GetCarry()};
     }
 
+    // Shifting by 32 will still update the carry flag normally, so all shift lengths 33 and above behave the same.
     switch (type) {
     case ShiftType::LSL:
-        return LogicalShiftLeft_C(value, shift_amount);
+        return LogicalShiftLeft_C(value, std::min(shift_amount, 33));
     case ShiftType::LSR:
-        return LogicalShiftRight_C(value, shift_amount);
+        return LogicalShiftRight_C(value, std::min(shift_amount, 33));
     case ShiftType::ASR:
-        return ArithmeticShiftRight_C(value, shift_amount);
+        return ArithmeticShiftRight_C(value, std::min(shift_amount, 33));
     case ShiftType::ROR:
         return RotateRight_C(value, shift_amount);
     case ShiftType::RRX:
@@ -349,23 +352,23 @@ Cpu::ResultWithCarry Cpu::Shift_C(u32 value, ShiftType type, int shift_amount) {
     }
 }
 
-Cpu::ResultWithCarry Cpu::LogicalShiftLeft_C(u32 value, int shift_amount) {
+Cpu::ResultWithCarry Cpu::LogicalShiftLeft_C(u64 value, int shift_amount) {
     u32 carry_out = (value << (shift_amount - 1)) >> 31;
-    u32 result = static_cast<u64>(value) << shift_amount;
+    u32 result = value << shift_amount;
 
     return {result, carry_out};
 }
 
-Cpu::ResultWithCarry Cpu::LogicalShiftRight_C(u32 value, int shift_amount) {
+Cpu::ResultWithCarry Cpu::LogicalShiftRight_C(u64 value, int shift_amount) {
     u32 carry_out = (value >> (shift_amount - 1)) & 0x1;
-    u32 result = static_cast<u64>(value) >> shift_amount;
+    u32 result = value >> shift_amount;
 
     return {result, carry_out};
 }
 
-Cpu::ResultWithCarry Cpu::ArithmeticShiftRight_C(u32 value, int shift_amount) {
-    u32 carry_out = (static_cast<s32>(value) >> (shift_amount - 1)) & 0x1;
-    u32 result = static_cast<s64>(static_cast<s32>(value)) >> shift_amount;
+Cpu::ResultWithCarry Cpu::ArithmeticShiftRight_C(s32 value, int shift_amount) {
+    u32 carry_out = (static_cast<s64>(value) >> (shift_amount - 1)) & 0x1;
+    u32 result = static_cast<s64>(value) >> shift_amount;
 
     return {result, carry_out};
 }

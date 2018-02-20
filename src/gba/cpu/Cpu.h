@@ -165,9 +165,9 @@ private:
 
     u32 Shift(u32 value, ShiftType type, int shift_amount);
     ResultWithCarry Shift_C(u32 value, ShiftType type, int shift_amount);
-    static ResultWithCarry LogicalShiftLeft_C(u32 value, int shift_amount);
-    static ResultWithCarry LogicalShiftRight_C(u32 value, int shift_amount);
-    static ResultWithCarry ArithmeticShiftRight_C(u32 value, int shift_amount);
+    static ResultWithCarry LogicalShiftLeft_C(u64 value, int shift_amount);
+    static ResultWithCarry LogicalShiftRight_C(u64 value, int shift_amount);
+    static ResultWithCarry ArithmeticShiftRight_C(s32 value, int shift_amount);
     static ResultWithCarry RotateRight_C(u32 value, int shift_amount);
     static ResultWithCarry RotateRightExtend_C(u32 value, u32 carry_in);
 
