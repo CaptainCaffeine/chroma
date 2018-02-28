@@ -467,14 +467,15 @@ int Cpu::Arm_WriteStatusReg(Condition cond, bool write_spsr, u32 mask, u32 value
     u32 psr_mask = ((mask & 0x1) | ((mask & 0x8) << 25)) * 0xFF;
 
     if (write_spsr) {
-        spsr[CurrentCpuModeIndex()] = value & psr_mask;
+        spsr[CurrentCpuModeIndex()] = (value & psr_mask) | (spsr[CurrentCpuModeIndex()] & ~psr_mask);
     } else {
         if (write_control_field) {
             CpuModeSwitch(static_cast<CpuMode>(value & cpu_mode));
         }
 
         // The thumb bit is masked out when writing the CPSR.
-        cpsr = value & psr_mask & ~thumb_mode;
+        psr_mask &= ~thumb_mode;
+        cpsr = (value & psr_mask) | (cpsr & ~psr_mask);
     }
 
     return 0;
