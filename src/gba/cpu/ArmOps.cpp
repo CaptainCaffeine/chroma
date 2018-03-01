@@ -1084,12 +1084,14 @@ int Cpu::Arm_PushA2(Condition cond, Reg t) {
         return 0;
     }
 
+    u32 addr = regs[sp] - 4;
+
     // Address calculation occurs during the first cycle, after which the PC is incremented.
     regs[pc] += 4;
     pc_written = true;
 
-    mem.WriteMem(regs[sp], regs[t]);
-    int cycles = mem.AccessTime<u32>(regs[sp]);
+    mem.WriteMem(addr, regs[t]);
+    int cycles = mem.AccessTime<u32>(addr);
 
     // Only write back to SP if it wasn't in the register list (ARM7TDMI behaviour).
     if (t != sp) {
