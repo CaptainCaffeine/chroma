@@ -76,7 +76,14 @@ int Cpu::Arm_ArithRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s
         return 0;
     }
 
-    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
+    assert(d != pc); // Unpredictable
+    assert(s != pc); // Unpredictable
+
+    // During the first cycle, the prefetch is performed and the shift value in Rs is transferred to some internal
+    // register. The actual shift and the operation don't occur until the second cycle, so if either Rm or Rn are
+    // the PC, they will use the incremented value.
+    regs[pc] += 4;
+    pc_written = true;
 
     u32 shifted_reg = Shift(regs[m], type, regs[s] & 0xFF);
     ArithResult result = op(regs[n], shifted_reg, carry);
@@ -121,7 +128,10 @@ int Cpu::Arm_CompareRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg
         return 0;
     }
 
-    assert(n != pc && m != pc && s != pc); // Unpredictable
+    assert(s != pc); // Unpredictable
+
+    regs[pc] += 4;
+    pc_written = true;
 
     u32 shifted_reg = Shift(regs[m], type, regs[s] & 0xFF);
     ArithResult result = op(regs[n], shifted_reg, carry);
@@ -137,7 +147,10 @@ int Cpu::Arm_MultiplyReg(Condition cond, bool set_flags, Reg d, Reg a, Reg m, Re
         return 0;
     }
 
-    assert(d != pc && n != pc && m != pc && d != n); // Unpredictable
+    assert(d != pc); // Unpredictable
+    assert(n != pc); // Unpredictable
+    assert(m != pc); // Unpredictable
+    assert(d != n); // Unpredictable
 
     int cycles = MultiplyCycles(regs[m]);
     u32 result = regs[n] * regs[m];
@@ -163,7 +176,13 @@ int Cpu::Arm_MultiplyLongReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg
         return 0;
     }
 
-    assert(dh != pc && dl != pc && m != pc && n != pc && dh != n && dl != n && dh != dl); // Unpredictable
+    assert(dh != pc); // Unpredictable
+    assert(dl != pc); // Unpredictable
+    assert(m != pc); // Unpredictable
+    assert(n != pc); // Unpredictable
+    assert(dh != n); // Unpredictable
+    assert(dl != n); // Unpredictable
+    assert(dh != dl); // Unpredictable
 
     // Multiply Long takes an extra internal cycle.
     int cycles = MultiplyCycles(regs[m]) + 1;
@@ -225,7 +244,11 @@ int Cpu::Arm_LogicRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s
         return 0;
     }
 
-    assert(d != pc && n != pc && m != pc && s != pc); // Unpredictable
+    assert(d != pc); // Unpredictable
+    assert(s != pc); // Unpredictable
+
+    regs[pc] += 4;
+    pc_written = true;
 
     ResultWithCarry shifted_reg = Shift_C(regs[m], type, regs[s] & 0xFF);
     u32 result = op(regs[n], shifted_reg.result);
@@ -270,7 +293,10 @@ int Cpu::Arm_TestRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m,
         return 0;
     }
 
-    assert(n != pc && m != pc && s != pc); // Unpredictable
+    assert(s != pc); // Unpredictable
+
+    regs[pc] += 4;
+    pc_written = true;
 
     ResultWithCarry shifted_reg = Shift_C(regs[m], type, regs[s] & 0xFF);
     u32 result = op(regs[n], shifted_reg.result);
@@ -305,7 +331,11 @@ int Cpu::Arm_ShiftReg(Condition cond, bool set_flags, Reg d, Reg m, Reg n, Shift
         return 0;
     }
 
-    assert(d != pc && n != pc && m != pc); // Unpredictable
+    assert(d != pc); // Unpredictable
+    assert(m != pc); // Unpredictable
+
+    regs[pc] += 4;
+    pc_written = true;
 
     ResultWithCarry shifted_reg = Shift_C(regs[n], type, regs[m] & 0xFF);
 
@@ -322,6 +352,7 @@ int Cpu::Arm_LoadImm(Condition cond, bool pre_indexed, bool add, bool writeback,
     }
 
     assert(t != pc); // Unpredictable
+    assert(!(writeback && (n == pc))); // Unpredictable
 
     writeback = writeback || !pre_indexed;
 
@@ -357,7 +388,9 @@ int Cpu::Arm_LoadReg(Condition cond, bool pre_indexed, bool add, bool writeback,
     }
 
     writeback = writeback || !pre_indexed;
-    assert(m != pc && t != pc && !(writeback && (n == pc || n == m))); // Unpredictable
+    assert(m != pc); // Unpredictable
+    assert(t != pc); // Unpredictable
+    assert(!(writeback && (n == pc))); // Unpredictable
 
     ImmediateShift shift = DecodeImmShift(type, imm);
 
@@ -394,7 +427,8 @@ int Cpu::Arm_StoreImm(Condition cond, bool pre_indexed, bool add, bool writeback
     }
 
     writeback = writeback || !pre_indexed;
-    assert(!(writeback && (n == t || n == pc))); // Unpredictable
+    assert(!(writeback && (n == t))); // Unpredictable
+    assert(!(writeback && (n == pc))); // Unpredictable
 
     if (!add) {
         imm = -imm;
@@ -404,6 +438,10 @@ int Cpu::Arm_StoreImm(Condition cond, bool pre_indexed, bool add, bool writeback
     if (pre_indexed) {
         addr += imm;
     }
+
+    // Address calculation occurs during the first cycle, after which the PC is incremented.
+    regs[pc] += 4;
+    pc_written = true;
 
     int cycles = op(mem, addr, regs[t]);
 
@@ -421,7 +459,9 @@ int Cpu::Arm_StoreReg(Condition cond, bool pre_indexed, bool add, bool writeback
     }
 
     writeback = writeback || !pre_indexed;
-    assert(m != pc && !(writeback && (n == pc || n == t || n == m))); // Unpredictable
+    assert(m != pc); // Unpredictable
+    assert(!(writeback && (n == pc))); // Unpredictable
+    assert(!(writeback && (n == t))); // Unpredictable
 
     ImmediateShift shift = DecodeImmShift(type, imm);
 
@@ -435,6 +475,10 @@ int Cpu::Arm_StoreReg(Condition cond, bool pre_indexed, bool add, bool writeback
     if (pre_indexed) {
         addr += offset;
     }
+
+    // Address calculation occurs during the first cycle, after which the PC is incremented.
+    regs[pc] += 4;
+    pc_written = true;
 
     int cycles = op(mem, addr, regs[t]);
 
@@ -854,6 +898,7 @@ int Cpu::Arm_LdrImm(Condition cond, bool pre_indexed, bool add, bool writeback, 
     }
 
     writeback = writeback || !pre_indexed;
+    assert(!(writeback && (n == pc))); // Unpredictable
 
     if (!add) {
         imm = -imm;
@@ -893,7 +938,8 @@ int Cpu::Arm_LdrReg(Condition cond, bool pre_indexed, bool add, bool writeback, 
     }
 
     writeback = writeback || !pre_indexed;
-    assert(m != pc && !(writeback && (n == pc || n == m))); // Unpredictable
+    assert(m != pc); // Unpredictable
+    assert(!(writeback && (n == pc))); // Unpredictable
 
     ImmediateShift shift = DecodeImmShift(type, imm);
 
@@ -1038,6 +1084,10 @@ int Cpu::Arm_PushA2(Condition cond, Reg t) {
         return 0;
     }
 
+    // Address calculation occurs during the first cycle, after which the PC is incremented.
+    regs[pc] += 4;
+    pc_written = true;
+
     mem.WriteMem(regs[sp], regs[t]);
     int cycles = mem.AccessTime<u32>(regs[sp]);
 
@@ -1078,6 +1128,10 @@ int Cpu::Arm_Stm(Condition cond, bool pre_indexed, bool increment, bool store_us
         current_cpu_mode = CurrentCpuMode();
         CpuModeSwitch(CpuMode::User);
     }
+
+    // Address calculation occurs during the first cycle, after which the PC is incremented.
+    regs[pc] += 4;
+    pc_written = true;
 
     int cycles = 0;
     for (Reg i = 0; i < 16; ++i) {
