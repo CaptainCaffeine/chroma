@@ -36,39 +36,11 @@ void Timer::Tick(int cycles) {
         return;
     }
 
-    if (CyclesPerTick() == 1) {
-        // Don't bother manipulating `cycle_count` when the timer count increments every cycle.
-        int remaining_ticks = 0x10000 - counter;
-
-        while (cycles > remaining_ticks) {
-            cycles -= remaining_ticks;
-            counter = reload;
-            remaining_ticks = 0x10000 - counter;
-
-            if (InterruptEnabled()) {
-                core.mem->RequestInterrupt(Interrupt::Timer0 << id);
-            }
-
-            if (id < 3 && core.timers[id + 1].TimerRunning() && core.timers[id + 1].CascadeEnabled()) {
-                core.timers[id + 1].CounterTick();
-            }
-        }
-
-        counter += cycles;
-        cycle_count = 0;
-    } else {
-        int remaining_cycles = CyclesPerTick() - cycle_count;
-        while (cycles > remaining_cycles) {
-            // This can only ever loop more than once if cycles per tick is 64, and even then only in rare cases.
-            cycles -= remaining_cycles;
-            cycle_count = 0;
-
+    while (cycles-- > 0) {
+        if (--cycle_count == 0) {
+            cycle_count = CyclesPerTick();
             CounterTick();
-
-            remaining_cycles = CyclesPerTick();
         }
-
-        cycle_count += cycles;
     }
 }
 
@@ -103,6 +75,8 @@ void Timer::WriteControl(const u16 data, const u16 mask) {
     if (was_stopped && TimerRunning()) {
         // The counter is reloaded when a timer is enabled.
         counter = reload;
+        // Timers have a two cycle start up delay.
+        cycle_count = CyclesPerTick() + 2;
     }
 }
 

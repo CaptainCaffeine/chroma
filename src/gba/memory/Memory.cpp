@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <stdexcept>
+
 #include "gba/memory/Memory.h"
 #include "gba/core/Core.h"
 #include "gba/cpu/Cpu.h"
@@ -237,11 +239,11 @@ template void Memory::WriteMem<u32>(const u32 addr, const u32 data);
 
 template <typename T>
 int Memory::AccessTime(const u32 addr, const bool force_sequential) {
-    int u32_access = sizeof(T) / 4;
+    constexpr int u32_access = sizeof(T) / 4;
     bool sequential = force_sequential || (addr - last_addr) <= 4;
     last_addr = addr;
 
-    auto RomTime = [this, u32_access, sequential](int i) -> int {
+    auto RomTime = [this, sequential](int i) -> int {
         if (sequential) {
             return wait_state_s[i] << u32_access;
         } else {
@@ -714,6 +716,10 @@ void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
     case HALTCNT:
         haltcnt.Write(data, mask);
         if ((mask & 0xFF00) == 0xFF00 && (data & 0x8000) == 0) {
+            if (master_enable == 0 && intr_enable == 0) {
+                throw std::runtime_error("The CPU has hung: halt mode entered with interrupts disabled.");
+            }
+
             core.cpu->Halt();
         }
         break;
