@@ -172,8 +172,7 @@ private:
     static ResultWithCarry RotateRightExtend_C(u32 value, u32 carry_in);
 
     static constexpr ArithResult AddWithCarry(u64 value1, u64 value2, u64 carry) {
-        value2 = value2 + carry;
-        u64 result = value1 + value2;
+        u64 result = value1 + value2 + carry;
         bool overflow = (value1 & sign_bit) == (value2 & sign_bit) && (value1 & sign_bit) != (result & sign_bit);
         return {result, overflow};
     }
