@@ -26,6 +26,8 @@ namespace Gba {
 
 class Lcd;
 
+using Tile = std::array<u8, 64>;
+
 struct BgTile {
     BgTile(u16 map_entry)
             : num(map_entry & 0x3FF)
@@ -38,7 +40,7 @@ struct BgTile {
     bool v_flip;
     int palette;
 
-    std::array<u8, 64> data;
+    Tile data;
 };
 
 class Bg {

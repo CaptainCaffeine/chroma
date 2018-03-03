@@ -17,14 +17,117 @@
 #pragma once
 
 #include <vector>
+#include <array>
 
 #include "common/CommonTypes.h"
+#include "common/CommonFuncs.h"
 #include "gba/memory/IOReg.h"
 
 namespace Gba {
 
 class Core;
 class Bg;
+
+using Tile = std::array<u8, 64>;
+
+class Sprite {
+public:
+    Sprite(u32 attr1, u32 attr2)
+            : y_pos(attr1 & 0xFF)
+            , affine(attr1 & 0x100)
+            , disable(attr1 & 0x200)
+            , mode((attr1 >> 10) & 0x3)
+            , mosaic(attr1 & 0x1000)
+            , single_palette(attr1 & 0x2000)
+            , shape(static_cast<Shape>((attr1 >> 14) & 0x3))
+            , x_pos(SignExtend((attr1 >> 16) & 0x1FF, 9))
+            , affine_select((attr1 >> 25) & 0x1F)
+            , h_flip(attr1 & 0x1000'0000)
+            , v_flip(attr1 & 0x2000'0000)
+            , size((attr1 >> 30) & 0x3)
+            , tile_num(attr2 & 0x3FF)
+            , priority((attr2 >> 10) & 0x3)
+            , palette((attr2 >> 12) & 0xF)
+            , pixel_width(Width(shape, size))
+            , pixel_height(Height(shape, size))
+            , tile_width(pixel_width / 8)
+            , tile_height(pixel_height / 8)
+            , tiles(tile_width * tile_height) {}
+
+    enum class Shape {Square     = 0,
+                      Horizontal = 1,
+                      Vertical   = 2,
+                      Prohibited = 3};
+
+    int y_pos;
+    bool affine;
+    bool disable; // Also double-size in affine mode.
+    int mode;
+    bool mosaic;
+    bool single_palette;
+    Shape shape;
+
+    int x_pos;
+    int affine_select;
+    bool h_flip;
+    bool v_flip;
+    int size;
+
+    int tile_num;
+    int priority;
+    int palette;
+
+    int pixel_width;
+    int pixel_height;
+    int tile_width;
+    int tile_height;
+
+    std::vector<Tile> tiles;
+
+    static int Height(Shape shape, int size) {
+        switch (shape) {
+        case Shape::Square:
+            // 8, 16, 32, 64
+            return 8 << size;
+        case Shape::Horizontal:
+            // 8, 8, 16, 32
+            if (size > 0) {
+                size -= 1;
+            }
+            return 8 << size;
+        case Shape::Vertical:
+            // 16, 32, 32, 64
+            if (size > 1) {
+                size -= 1;
+            }
+            return 16 << size;
+        default:
+            return 0;
+        }
+    }
+
+    static int Width(Shape shape, int size) {
+        switch (shape) {
+        case Shape::Square:
+            // 8, 16, 32, 64
+            return 8 << size;
+        case Shape::Horizontal:
+            // 16, 32, 32, 64
+            if (size > 1) {
+                size -= 1;
+            }
+            return 16 << size;
+        case Shape::Vertical:
+            // 8, 8, 16, 32
+            if (size > 0) {
+                size -= 1;
+            }
+            return 8 << size;
+        default:
+            return 0;
+        }
+    }
+};
 
 class Lcd {
 public:
@@ -57,8 +160,11 @@ public:
     static constexpr int h_pixels = 240;
     static constexpr int v_pixels = 160;
     static constexpr u16 alpha_bit = 0x8000;
+    static constexpr int sprite_tile_base = 0x1'0000;
 
     void Update(int cycles);
+
+    std::array<u16, 8> GetTilePixels(const Tile& tile, bool single_palette, int pixel_row, int palette, int base);
 
 private:
     Core& core;
@@ -67,7 +173,14 @@ private:
 
     int scanline_cycles = 0;
 
+    std::vector<Sprite> sprites;
+    std::array<std::array<u16, 240>, 4> sprite_scanlines;
+
     void DrawScanline();
+
+    void ReadOam();
+    void GetTileData();
+    void DrawSprites();
 
     // Control flags
     int BgMode() const { return control & 0x7; }

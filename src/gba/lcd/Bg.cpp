@@ -83,7 +83,7 @@ void Bg::GetTileData() {
 }
 
 void Bg::DrawScanline() {
-    const int tile_row = (scroll_y + lcd.vcount) % 8;
+    const int pixel_row = (scroll_y + lcd.vcount) % 8;
 
     const int horizontal_tiles = (ScreenSize<int>() & 0x1) ? 64 : 32;
     int tile_index = (scroll_x / 8) % horizontal_tiles;
@@ -93,34 +93,9 @@ void Bg::DrawScanline() {
     while (scanline_index < Lcd::h_pixels) {
         auto& tile = tiles[tile_index];
         tile_index = (tile_index + 1) % horizontal_tiles;
-        const int flip_row = tile.v_flip ? (8 - tile_row) : tile_row;
+        const int flip_row = tile.v_flip ? (7 - pixel_row) : pixel_row;
 
-        std::array<u16, 8> pixel_colours;
-        if (SinglePalette()) {
-            // Each tile byte specifies the 8-bit palette index for a pixel.
-            for (int i = 0; i < 8; ++i) {
-                u8 palette_entry = tile.data[flip_row * 8 + i];
-                pixel_colours[i] = lcd.pram[palette_entry];
-
-                if (palette_entry == 0) {
-                    // Palette entry 0 is transparent.
-                    pixel_colours[i] |= Lcd::alpha_bit;
-                }
-            }
-        } else {
-            // Each tile byte specifies the 4-bit palette indices for two pixels.
-            for (int i = 0; i < 8; ++i) {
-                // The lower 4 bits are the palette index for even pixels, and the upper 4 bits are for odd pixels.
-                const int odd_shift = 4 * (i & 0x1);
-                u8 palette_entry = (tile.data[flip_row * 4 + i / 2] >> odd_shift) & 0xF;
-                pixel_colours[i] = lcd.pram[tile.palette * 16 + palette_entry];
-
-                if (palette_entry == 0) {
-                    // Palette entry 0 is transparent.
-                    pixel_colours[i] |= Lcd::alpha_bit;
-                }
-            }
-        }
+        std::array<u16, 8> pixel_colours = lcd.GetTilePixels(tile.data, SinglePalette(), flip_row, tile.palette, 0);
 
         if (tile.h_flip) {
             std::reverse(pixel_colours.begin(), pixel_colours.end());

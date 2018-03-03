@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <array>
 #include <algorithm>
 
 #include "gba/lcd/Lcd.h"
@@ -110,6 +109,12 @@ void Lcd::DrawScanline() {
         return;
     }
 
+    if (ObjEnabled()) {
+        ReadOam();
+        GetTileData();
+        DrawSprites();
+    }
+
     if (BgMode() == 0 || BgMode() == 1) {
         for (int b = 0; b < 4; ++b) {
             if (!BgEnabled(b)) {
@@ -126,24 +131,34 @@ void Lcd::DrawScanline() {
             bgs[b].DrawScanline();
         }
 
-        // Compose the background scanlines together based on their priorities. 0 is the highest priority value, and 3
-        // is the lowest. If multiple backgrounds have the same priority value, then the lower-numbered background has
-        // higher priority.
-        std::array<const Bg*, 4> sorted_bgs{{&bgs[0], &bgs[1], &bgs[2], &bgs[3]}};
-        std::stable_sort(sorted_bgs.begin(), sorted_bgs.end(), [](const auto& bg1, const auto& bg2) {
-                return bg1->Priority() < bg2->Priority();
-        });
+        // Organize the backgrounds by their priorities. 0 is the highest priority value, and 3 is the lowest.
+        // If multiple backgrounds have the same priority value, the lower-numbered background has higher priority.
+        std::array<std::vector<const Bg*>, 4> priorities;
+        for (int b = 3; b >= 0; --b) {
+            if (BgEnabled(b)) {
+                priorities[bgs[b].Priority()].push_back(&bgs[b]);
+            }
+        }
 
         // The first palette entry is the backdrop colour.
         std::fill_n(back_buffer.begin() + vcount * h_pixels, h_pixels, pram[0] & 0x7FFF);
-        for (int b = 3; b >= 0; --b) {
-            if (!BgEnabled(b)) {
-                continue;
+
+        // Draw the scanlines from each enabled background, starting with the lowest priority level.
+        for (int p = 3; p >= 0; --p) {
+            for (const auto& bg : priorities[p]) {
+                for (int i = 0; i < h_pixels; ++i) {
+                    if ((bg->scanline[i] & alpha_bit) == 0) {
+                        back_buffer[vcount * h_pixels + i] = bg->scanline[i];
+                    }
+                }
             }
 
-            for (int i = 0; i < h_pixels; ++i) {
-                if ((sorted_bgs[b]->scanline[i] & alpha_bit) == 0) {
-                    back_buffer[vcount * h_pixels + i] = sorted_bgs[b]->scanline[i];
+            if (ObjEnabled()) {
+                // Draw sprites of the same priority level.
+                for (int i = 0; i < h_pixels; ++i) {
+                    if ((sprite_scanlines[p][i] & alpha_bit) == 0) {
+                        back_buffer[vcount * h_pixels + i] = sprite_scanlines[p][i];
+                    }
                 }
             }
         }
@@ -160,6 +175,164 @@ void Lcd::DrawScanline() {
             back_buffer[vcount * h_pixels + i] = pram[palette_entry];
         }
     }
+}
+
+void Lcd::ReadOam() {
+    sprites.clear();
+
+    // The number of sprites that can be drawn on one scanline depends on the number of cycles each sprite takes
+    // to render. The maximum rendering time is reduced if HBlank Interval Free is set.
+    const int max_render_cycles = HBlankFree() ? 954 : 1210;
+    int render_cycles_needed = 0;
+    for (std::size_t i = 0; i < oam.size(); i += 2) {
+        Sprite sprite{oam[i], oam[i + 1]};
+        if (sprite.y_pos <= vcount && vcount < sprite.y_pos + sprite.pixel_height && !sprite.disable) {
+            // All sprites, including offscreen ones, contribute to rendering time.
+            if (sprite.affine) {
+                render_cycles_needed += sprite.pixel_width * 2 + 10;
+            } else {
+                render_cycles_needed += sprite.pixel_width;
+            }
+
+            // Don't draw any more sprites once we run out of rendering cycles.
+            if (render_cycles_needed > max_render_cycles) {
+                break;
+            }
+
+            // Only onscreen sprites will actually be drawn.
+            if (sprite.x_pos < h_pixels && sprite.x_pos + sprite.pixel_width >= 0) {
+                sprites.push_back(sprite);
+            }
+        }
+    }
+}
+
+void Lcd::GetTileData() {
+    // Get tile data. Each tile is 32 bytes in 16 palette mode, and 64 bytes in single palette mode.
+    for (auto& sprite : sprites) {
+        int tile_bytes = 32;
+        if (sprite.single_palette) {
+            tile_bytes = 64;
+            sprite.tile_num &= ~0x1;
+        }
+
+        if (ObjMapping1D()) {
+            for (std::size_t t = 0; t < sprite.tiles.size(); ++t) {
+                const int tile_addr = (sprite_tile_base + sprite.tile_num * 32 + t * tile_bytes) / 2;
+                for (int i = 0; i < tile_bytes; i += 2) {
+                    sprite.tiles[t][i] = vram[tile_addr + i / 2];
+                    sprite.tiles[t][i + 1] = vram[tile_addr + i / 2] >> 8;
+                }
+            }
+        } else {
+            for (int h = 0; h < sprite.tile_height; ++h) {
+                for (int w = 0; w < sprite.tile_width; ++w) {
+                    const int tile_addr = (sprite_tile_base + sprite.tile_num * 32 + h * 32 * 32 + w * tile_bytes) / 2;
+                    const int tile_index = h * sprite.tile_width + w;
+                    for (int i = 0; i < tile_bytes; i += 2) {
+                        sprite.tiles[tile_index][i] = vram[tile_addr + i / 2];
+                        sprite.tiles[tile_index][i + 1] = vram[tile_addr + i / 2] >> 8;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void Lcd::DrawSprites() {
+    // Clear each sprite scanline.
+    for (auto& scanline : sprite_scanlines) {
+        std::fill(scanline.begin(), scanline.end(), 0x8000);
+    }
+
+    for (int s = sprites.size() - 1; s >= 0; --s) {
+        const auto& sprite = sprites[s];
+
+        int tile_row = (vcount - sprite.y_pos) / 8;
+        int pixel_row = (vcount - sprite.y_pos) % 8;
+        if (sprite.v_flip) {
+            tile_row = (sprite.tile_height - 1) - tile_row;
+            pixel_row = 7 - pixel_row;
+        }
+
+        const int first_tile = tile_row * sprite.tile_width;
+        const int last_tile = (tile_row + 1) * sprite.tile_width - 1;
+
+        int start_offset = 0;
+        int scanline_index = sprite.x_pos;
+        if (sprite.x_pos < 0) {
+            start_offset = -sprite.x_pos % 8;
+            scanline_index = 0;
+        }
+
+        // If the sprite is horizontally flipped, we start drawing from the rightmost tile.
+        int tile_index = first_tile;
+        int tile_direction = 1;
+        if (sprite.h_flip) {
+            tile_index = last_tile;
+            tile_direction = -1;
+        }
+
+        if (sprite.x_pos < 0) {
+            // Start drawing at the first onscreen tile.
+            tile_index += (-sprite.x_pos / 8) * tile_direction;
+        }
+
+        while (scanline_index < h_pixels && tile_index <= last_tile && tile_index >= first_tile) {
+            auto& tile = sprite.tiles[tile_index];
+            tile_index += tile_direction;
+
+            std::array<u16, 8> pixel_colours = GetTilePixels(tile, sprite.single_palette, pixel_row, sprite.palette,
+                                                             256);
+
+            if (sprite.h_flip) {
+                std::reverse(pixel_colours.begin(), pixel_colours.end());
+            }
+
+            // The first and last tiles may be partially scrolled off-screen.
+            const int end_offset = std::min(h_pixels - scanline_index, 8);
+            for (int i = start_offset; i < end_offset; ++i) {
+                if ((pixel_colours[i] & alpha_bit) == 0) {
+                    sprite_scanlines[sprite.priority][scanline_index] = pixel_colours[i];
+                }
+
+                scanline_index += 1;
+            }
+            start_offset = 0;
+        }
+    }
+}
+
+std::array<u16, 8> Lcd::GetTilePixels(const Tile& tile, bool single_palette, int pixel_row, int palette, int base) {
+    std::array<u16, 8> pixel_colours;
+
+    if (single_palette) {
+        // Each tile byte specifies the 8-bit palette index for a pixel.
+        for (int i = 0; i < 8; ++i) {
+            u8 palette_entry = tile[pixel_row * 8 + i];
+            pixel_colours[i] = pram[base + palette_entry];
+
+            if (palette_entry == 0) {
+                // Palette entry 0 is transparent.
+                pixel_colours[i] |= alpha_bit;
+            }
+        }
+    } else {
+        // Each tile byte specifies the 4-bit palette indices for two pixels.
+        for (int i = 0; i < 8; ++i) {
+            // The lower 4 bits are the palette index for even pixels, and the upper 4 bits are for odd pixels.
+            const int odd_shift = 4 * (i & 0x1);
+            u8 palette_entry = (tile[pixel_row * 4 + i / 2] >> odd_shift) & 0xF;
+            pixel_colours[i] = pram[base + palette * 16 + palette_entry];
+
+            if (palette_entry == 0) {
+                // Palette entry 0 is transparent.
+                pixel_colours[i] |= alpha_bit;
+            }
+        }
+    }
+
+    return pixel_colours;
 }
 
 } // End namespace Gba
