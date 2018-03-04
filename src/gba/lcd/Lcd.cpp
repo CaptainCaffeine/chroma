@@ -26,7 +26,7 @@
 namespace Gba {
 
 Lcd::Lcd(const std::vector<u16>& _pram, const std::vector<u16>& _vram, const std::vector<u32>& _oam, Core& _core)
-        : bgs{*this, *this, *this, *this}
+        : bgs{{0, *this}, {1, *this}, {2, *this}, {3, *this}}
         , pram(_pram)
         , vram(_vram)
         , oam(_oam)
@@ -160,13 +160,73 @@ void Lcd::DrawScanline() {
 
     // The first palette entry is the backdrop colour.
     std::fill_n(back_buffer.begin() + vcount * h_pixels, h_pixels, pram[0] & 0x7FFF);
+    std::vector<int> pixel_layer(240, 5);
+
+    // The target vectors are initialized with non-existent layer 6.
+    std::vector<int> highest_second_target(240, IsSecondTarget(5) ? 5 : 6);
+    std::vector<int> highest_first_target(240, 6);
+
+    // If alpha blending is enabled, or if semi-transparent sprites are present, calculate the highest first target
+    // layer and second target layer for each pixel.
+    if (BlendMode() == Effect::AlphaBlend || semi_transparent_used) {
+        // Inspect each enabled background, starting with the lowest priority level.
+        for (int p = 3; p >= 0; --p) {
+            for (const auto& bg : priorities[p]) {
+                for (int i = 0; i < h_pixels; ++i) {
+                    if ((bg->scanline[i] & alpha_bit) == 0) {
+                        if (IsSecondTarget(bg->id)) {
+                            highest_second_target[i] = bg->id;
+                        }
+                        if (IsFirstTarget(bg->id)) {
+                            highest_first_target[i] = bg->id;
+                        }
+                    }
+                }
+            }
+
+            if (ObjEnabled() && sprite_scanline_used[p]) {
+                // There is only one sprite layer, even though each sprite can have varying priorities. When
+                // calculating blending effects, the GBA only considers the highest priority sprite on each pixel.
+                for (int i = 0; i < h_pixels; ++i) {
+                    if ((sprite_scanlines[p][i] & alpha_bit) == 0) {
+                        if (IsSecondTarget(4)) {
+                            highest_second_target[i] = 4;
+                        }
+                        if (IsFirstTarget(4) || semi_transparent[i]) {
+                            highest_first_target[i] = 4;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    auto HighestTargetLayers = [&highest_first_target, &highest_second_target, &pixel_layer](int layer, int i) {
+        return layer == highest_first_target[i] && pixel_layer[i] == highest_second_target[i];
+    };
 
     // Draw the scanlines from each enabled background, starting with the lowest priority level.
+    std::array<int, 3> channels;
     for (int p = 3; p >= 0; --p) {
         for (const auto& bg : priorities[p]) {
             for (int i = 0; i < h_pixels; ++i) {
                 if ((bg->scanline[i] & alpha_bit) == 0) {
-                    back_buffer[vcount * h_pixels + i] = bg->scanline[i];
+                    auto& buffer_pixel = back_buffer[vcount * h_pixels + i];
+
+                    if (BlendMode() == Effect::AlphaBlend && HighestTargetLayers(bg->id, i)) {
+                        for (int j = 0; j < 3; ++j) {
+                            int channel_target1 = (bg->scanline[i] >> (5 * j)) & 0x1F;
+                            int channel_target2 = (buffer_pixel >> (5 * j)) & 0x1F;
+
+                            channels[j] = Blend(channel_target1, channel_target2);
+                        }
+
+                        buffer_pixel = (channels[2] << 10) | (channels[1] << 5) | channels[0];
+                    } else {
+                        buffer_pixel = bg->scanline[i];
+                    }
+
+                    pixel_layer[i] = bg->id;
                 }
             }
         }
@@ -175,8 +235,48 @@ void Lcd::DrawScanline() {
             // Draw sprites of the same priority level.
             for (int i = 0; i < h_pixels; ++i) {
                 if ((sprite_scanlines[p][i] & alpha_bit) == 0) {
-                    back_buffer[vcount * h_pixels + i] = sprite_scanlines[p][i];
+                    auto& buffer_pixel = back_buffer[vcount * h_pixels + i];
+
+                    if ((BlendMode() == Effect::AlphaBlend || semi_transparent[i]) && HighestTargetLayers(4, i)) {
+                        for (int j = 0; j < 3; ++j) {
+                            int channel_target1 = (sprite_scanlines[p][i] >> (5 * j)) & 0x1F;
+                            int channel_target2 = (buffer_pixel >> (5 * j)) & 0x1F;
+
+                            channels[j] = Blend(channel_target1, channel_target2);
+                        }
+
+                        buffer_pixel = (channels[2] << 10) | (channels[1] << 5) | channels[0];
+                    } else {
+                        buffer_pixel = sprite_scanlines[p][i];
+
+                        // If a semi-transparent sprite blends, no other blending effects can occur on this pixel.
+                        // So if a sprite pixel doesn't blend, we remove the semi-transparent flag (if present) so
+                        // fade effects can be applied later.
+                        semi_transparent[i] = false;
+                    }
+
+                    pixel_layer[i] = 4;
                 }
+            }
+        }
+    }
+
+    if (BlendMode() == Effect::Brighten || BlendMode() == Effect::Darken) {
+        for (int i = 0; i < h_pixels; ++i) {
+            if (IsFirstTarget(pixel_layer[i]) && !(pixel_layer[i] == 4 && semi_transparent[i])) {
+                auto& buffer_pixel = back_buffer[vcount * h_pixels + i];
+
+                if (BlendMode() == Effect::Brighten) {
+                    for (int j = 0; j < 3; ++j) {
+                        channels[j] = Brighten((buffer_pixel >> (5 * j)) & 0x1F);
+                    }
+                } else if (BlendMode() == Effect::Darken) {
+                    for (int j = 0; j < 3; ++j) {
+                        channels[j] = Darken((buffer_pixel >> (5 * j)) & 0x1F);
+                    }
+                }
+
+                buffer_pixel = (channels[2] << 10) | (channels[1] << 5) | channels[0];
             }
         }
     }
@@ -255,6 +355,11 @@ void Lcd::DrawSprites() {
         }
     }
 
+    if (semi_transparent_used) {
+        std::fill(semi_transparent.begin(), semi_transparent.end(), false);
+        semi_transparent_used = false;
+    }
+
     for (int s = sprites.size() - 1; s >= 0; --s) {
         const auto& sprite = sprites[s];
 
@@ -306,6 +411,14 @@ void Lcd::DrawSprites() {
             for (int i = start_offset; i < end_offset; ++i) {
                 if ((pixel_colours[i] & alpha_bit) == 0) {
                     sprite_scanlines[sprite.priority][scanline_index] = pixel_colours[i];
+
+                    // Erase sprite pixels at a lower priority than this one, since we only have one object plane.
+                    for (int j = sprite.priority + 1; j < 4; ++j) {
+                        sprite_scanlines[j][scanline_index] |= alpha_bit;
+                    }
+
+                    semi_transparent[scanline_index] = sprite.mode == Sprite::Mode::SemiTransparent;
+                    semi_transparent_used = semi_transparent_used || sprite.mode == Sprite::Mode::SemiTransparent;
                 }
 
                 scanline_index += 1;

@@ -36,7 +36,7 @@ public:
             : y_pos(attr1 & 0xFF)
             , affine(attr1 & 0x100)
             , disable(attr1 & 0x200)
-            , mode((attr1 >> 10) & 0x3)
+            , mode(static_cast<Mode>((attr1 >> 10) & 0x3))
             , mosaic(attr1 & 0x1000)
             , single_palette(attr1 & 0x2000)
             , shape(static_cast<Shape>((attr1 >> 14) & 0x3))
@@ -59,6 +59,11 @@ public:
         }
     }
 
+    enum class Mode {Normal          = 0,
+                     SemiTransparent = 1,
+                     ObjWindow       = 2,
+                     Prohibited      = 3};
+
     enum class Shape {Square     = 0,
                       Horizontal = 1,
                       Vertical   = 2,
@@ -67,7 +72,7 @@ public:
     int y_pos;
     bool affine;
     bool disable; // Also double-size in affine mode.
-    int mode;
+    Mode mode;
     bool mosaic;
     bool single_palette;
     Shape shape;
@@ -181,12 +186,21 @@ private:
     std::vector<Sprite> sprites;
     std::array<std::array<u16, 240>, 4> sprite_scanlines;
     std::array<bool, 4> sprite_scanline_used{{true, true, true, true}};
+    std::array<bool, 240> semi_transparent;
+    bool semi_transparent_used = true;
 
     void DrawScanline();
 
     void ReadOam();
     void GetTileData();
     void DrawSprites();
+
+    bool IsFirstTarget(int target) const { return (FirstTargets() >> target) & 0x1; }
+    bool IsSecondTarget(int target) const { return (SecondTargets() >> target) & 0x1; }
+
+    int Brighten(int t) const { return t + (31.0 - t) * Intensity(); }
+    int Darken(int t) const { return t * (1.0 - Intensity()); }
+    int Blend(int t1, int t2) const { return std::min(t1 * FirstAlpha() + t2 * SecondAlpha(), 31.0); }
 
     // Control flags
     int BgMode() const { return control & 0x7; }
@@ -208,6 +222,20 @@ private:
     static constexpr u16 vcount_irq  = 0x20;
 
     int VTrigger() const { return status >> 8; }
+
+    // Blending flags
+    enum class Effect {None = 0,
+                       AlphaBlend = 1,
+                       Brighten = 2,
+                       Darken = 3};
+    int FirstTargets() const { return blend_control & 0x3F; }
+    Effect BlendMode() const { return static_cast<Effect>((blend_control >> 6) & 0x3); }
+    int SecondTargets() const { return (blend_control >> 8) & 0x3F; }
+
+    double FirstAlpha() const { return std::min(static_cast<double>(blend_alpha & 0x1F) / 16.0, 1.0); }
+    double SecondAlpha() const { return std::min(static_cast<double>((blend_alpha >> 8) & 0x1F) / 16.0, 1.0); }
+
+    double Intensity() const { return std::min(static_cast<double>(blend_fade & 0x1F) / 16.0, 1.0); }
 };
 
 } // End namespace Gba

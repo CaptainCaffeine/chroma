@@ -45,8 +45,9 @@ struct BgTile {
 
 class Bg {
 public:
-    Bg(Lcd& _lcd)
-            : lcd(_lcd) {}
+    Bg(int _id, Lcd& _lcd)
+            : id(_id)
+            , lcd(_lcd) {}
 
     IOReg control    = {0x0000, 0xFFCF, 0xFFCF};
     IOReg scroll_x   = {0x0000, 0x0000, 0x01FF};
@@ -61,6 +62,8 @@ public:
     IOReg offset_x_h = {0x0000, 0x0000, 0x0FFF};
     IOReg offset_y_l = {0x0000, 0x0000, 0xFFFF};
     IOReg offset_y_h = {0x0000, 0x0000, 0x0FFF};
+
+    const int id;
 
     std::array<u16, 240> scanline;
 
