@@ -52,7 +52,12 @@ public:
             , pixel_height(Height(shape, size))
             , tile_width(pixel_width / 8)
             , tile_height(pixel_height / 8)
-            , tiles(tile_width * tile_height) {}
+            , tiles(tile_width * tile_height) {
+
+        if (y_pos + pixel_height > 0xFF) {
+            y_pos -= 0xFF;
+        }
+    }
 
     enum class Shape {Square     = 0,
                       Horizontal = 1,
