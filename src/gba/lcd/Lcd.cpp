@@ -171,7 +171,7 @@ void Lcd::DrawScanline() {
             }
         }
 
-        if (ObjEnabled()) {
+        if (ObjEnabled() && sprite_scanline_used[p]) {
             // Draw sprites of the same priority level.
             for (int i = 0; i < h_pixels; ++i) {
                 if ((sprite_scanlines[p][i] & alpha_bit) == 0) {
@@ -247,13 +247,18 @@ void Lcd::GetTileData() {
 }
 
 void Lcd::DrawSprites() {
-    // Clear each sprite scanline.
-    for (auto& scanline : sprite_scanlines) {
-        std::fill(scanline.begin(), scanline.end(), 0x8000);
+    // Only clear used sprite scanlines.
+    for (int s = 0; s < 4; ++s) {
+        if (sprite_scanline_used[s]) {
+            std::fill(sprite_scanlines[s].begin(), sprite_scanlines[s].end(), 0x8000);
+            sprite_scanline_used[s] = false;
+        }
     }
 
     for (int s = sprites.size() - 1; s >= 0; --s) {
         const auto& sprite = sprites[s];
+
+        sprite_scanline_used[sprite.priority] = true;
 
         int tile_row = (vcount - sprite.y_pos) / 8;
         int pixel_row = (vcount - sprite.y_pos) % 8;

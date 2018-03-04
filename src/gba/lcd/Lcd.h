@@ -180,6 +180,7 @@ private:
 
     std::vector<Sprite> sprites;
     std::array<std::array<u16, 240>, 4> sprite_scanlines;
+    std::array<bool, 4> sprite_scanline_used{{true, true, true, true}};
 
     void DrawScanline();
 
