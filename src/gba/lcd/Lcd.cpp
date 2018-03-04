@@ -115,6 +115,8 @@ void Lcd::DrawScanline() {
         DrawSprites();
     }
 
+    std::array<std::vector<const Bg*>, 4> priorities;
+
     if (BgMode() == 0 || BgMode() == 1) {
         for (int b = 0; b < 4; ++b) {
             if (!BgEnabled(b)) {
@@ -133,46 +135,49 @@ void Lcd::DrawScanline() {
 
         // Organize the backgrounds by their priorities. 0 is the highest priority value, and 3 is the lowest.
         // If multiple backgrounds have the same priority value, the lower-numbered background has higher priority.
-        std::array<std::vector<const Bg*>, 4> priorities;
         for (int b = 3; b >= 0; --b) {
             if (BgEnabled(b)) {
                 priorities[bgs[b].Priority()].push_back(&bgs[b]);
             }
         }
-
-        // The first palette entry is the backdrop colour.
-        std::fill_n(back_buffer.begin() + vcount * h_pixels, h_pixels, pram[0] & 0x7FFF);
-
-        // Draw the scanlines from each enabled background, starting with the lowest priority level.
-        for (int p = 3; p >= 0; --p) {
-            for (const auto& bg : priorities[p]) {
-                for (int i = 0; i < h_pixels; ++i) {
-                    if ((bg->scanline[i] & alpha_bit) == 0) {
-                        back_buffer[vcount * h_pixels + i] = bg->scanline[i];
-                    }
-                }
-            }
-
-            if (ObjEnabled()) {
-                // Draw sprites of the same priority level.
-                for (int i = 0; i < h_pixels; ++i) {
-                    if ((sprite_scanlines[p][i] & alpha_bit) == 0) {
-                        back_buffer[vcount * h_pixels + i] = sprite_scanlines[p][i];
-                    }
-                }
-            }
-        }
     } else if (BgMode() == 3) {
         for (int i = 0; i < h_pixels; ++i) {
-            back_buffer[vcount * h_pixels + i] = vram[vcount * h_pixels + i];
+            bgs[2].scanline[i] = vram[vcount * h_pixels + i] & 0x7FFF;
         }
+
+        priorities[0].push_back(&bgs[2]);
     } else if (BgMode() == 4) {
         const int base_addr = vcount * h_pixels + (DisplayFrame1() ? 0xA000 : 0);
         for (int i = 0; i < h_pixels; ++i) {
             // The lower byte is the palette index for even pixels, and the upper byte is for odd pixels.
             const int odd_shift = 8 * (i & 0x1);
             u8 palette_entry = vram[(base_addr + i) / 2] >> odd_shift;
-            back_buffer[vcount * h_pixels + i] = pram[palette_entry];
+            bgs[2].scanline[i] = pram[palette_entry];
+        }
+
+        priorities[0].push_back(&bgs[2]);
+    }
+
+    // The first palette entry is the backdrop colour.
+    std::fill_n(back_buffer.begin() + vcount * h_pixels, h_pixels, pram[0] & 0x7FFF);
+
+    // Draw the scanlines from each enabled background, starting with the lowest priority level.
+    for (int p = 3; p >= 0; --p) {
+        for (const auto& bg : priorities[p]) {
+            for (int i = 0; i < h_pixels; ++i) {
+                if ((bg->scanline[i] & alpha_bit) == 0) {
+                    back_buffer[vcount * h_pixels + i] = bg->scanline[i];
+                }
+            }
+        }
+
+        if (ObjEnabled()) {
+            // Draw sprites of the same priority level.
+            for (int i = 0; i < h_pixels; ++i) {
+                if ((sprite_scanlines[p][i] & alpha_bit) == 0) {
+                    back_buffer[vcount * h_pixels + i] = sprite_scanlines[p][i];
+                }
+            }
         }
     }
 }
@@ -186,7 +191,7 @@ void Lcd::ReadOam() {
     int render_cycles_needed = 0;
     for (std::size_t i = 0; i < oam.size(); i += 2) {
         Sprite sprite{oam[i], oam[i + 1]};
-        if (sprite.y_pos <= vcount && vcount < sprite.y_pos + sprite.pixel_height && !sprite.disable) {
+        if (!sprite.disable && sprite.y_pos <= vcount && vcount < sprite.y_pos + sprite.pixel_height) {
             // All sprites, including offscreen ones, contribute to rendering time.
             if (sprite.affine) {
                 render_cycles_needed += sprite.pixel_width * 2 + 10;
@@ -200,7 +205,9 @@ void Lcd::ReadOam() {
             }
 
             // Only onscreen sprites will actually be drawn.
-            if (sprite.x_pos < h_pixels && sprite.x_pos + sprite.pixel_width >= 0) {
+            // In bitmap BG modes, attempts to use sprite tiles < 512 are not displayed.
+            if (sprite.x_pos < h_pixels && sprite.x_pos + sprite.pixel_width >= 0
+                    && (BgMode() < 3 || sprite.tile_num >= 512)) {
                 sprites.push_back(sprite);
             }
         }
@@ -218,20 +225,20 @@ void Lcd::GetTileData() {
 
         if (ObjMapping1D()) {
             for (std::size_t t = 0; t < sprite.tiles.size(); ++t) {
-                const int tile_addr = (sprite_tile_base + sprite.tile_num * 32 + t * tile_bytes) / 2;
+                const int tile_addr = sprite_tile_base + sprite.tile_num * 32 + t * tile_bytes;
                 for (int i = 0; i < tile_bytes; i += 2) {
-                    sprite.tiles[t][i] = vram[tile_addr + i / 2];
-                    sprite.tiles[t][i + 1] = vram[tile_addr + i / 2] >> 8;
+                    sprite.tiles[t][i] = vram[(tile_addr + i) / 2];
+                    sprite.tiles[t][i + 1] = vram[(tile_addr + i) / 2] >> 8;
                 }
             }
         } else {
             for (int h = 0; h < sprite.tile_height; ++h) {
                 for (int w = 0; w < sprite.tile_width; ++w) {
-                    const int tile_addr = (sprite_tile_base + sprite.tile_num * 32 + h * 32 * 32 + w * tile_bytes) / 2;
+                    const int tile_addr = sprite_tile_base + sprite.tile_num * 32 + h * 32 * 32 + w * tile_bytes;
                     const int tile_index = h * sprite.tile_width + w;
                     for (int i = 0; i < tile_bytes; i += 2) {
-                        sprite.tiles[tile_index][i] = vram[tile_addr + i / 2];
-                        sprite.tiles[tile_index][i + 1] = vram[tile_addr + i / 2] >> 8;
+                        sprite.tiles[tile_index][i] = vram[(tile_addr + i) / 2];
+                        sprite.tiles[tile_index][i + 1] = vram[(tile_addr + i) / 2] >> 8;
                     }
                 }
             }

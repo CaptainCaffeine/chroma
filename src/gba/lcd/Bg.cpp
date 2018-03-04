@@ -74,11 +74,18 @@ void Bg::GetTileData() {
     // Get tile data. Each tile is 32 bytes in 16 palette mode, and 64 bytes in single palette mode.
     const int tile_bytes = SinglePalette() ? 64 : 32;
     for (auto& tile : tiles) {
-        int tile_addr = (TileBase() + tile.num * tile_bytes) / 2;
-        for (int i = 0; i < tile_bytes; i += 2) {
-            tile.data[i] = lcd.vram[tile_addr + i / 2];
-            tile.data[i + 1] = lcd.vram[tile_addr + i / 2] >> 8;
+        const int tile_addr = TileBase() + tile.num * tile_bytes;
+        if (tile_addr < Lcd::sprite_tile_base) {
+            for (int i = 0; i < tile_bytes; i += 2) {
+                tile.data[i] = lcd.vram[(tile_addr + i) / 2];
+                tile.data[i + 1] = lcd.vram[(tile_addr + i) / 2] >> 8;
+            }
+        } else {
+            // Tiles in OBJ VRAM cannot be used for backgrounds.
+            std::fill_n(tile.data.begin(), tile_bytes, 0x8000);
+            continue;
         }
+
     }
 }
 
