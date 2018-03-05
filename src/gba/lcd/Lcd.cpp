@@ -291,7 +291,7 @@ void Lcd::ReadOam() {
     int render_cycles_needed = 0;
     for (std::size_t i = 0; i < oam.size(); i += 2) {
         Sprite sprite{oam[i], oam[i + 1]};
-        if (!sprite.disable && sprite.y_pos <= vcount && vcount < sprite.y_pos + sprite.pixel_height) {
+        if (!sprite.Disabled() && sprite.y_pos <= vcount && vcount < sprite.y_pos + sprite.pixel_height) {
             // All sprites, including offscreen ones, contribute to rendering time.
             if (sprite.affine) {
                 render_cycles_needed += sprite.pixel_width * 2 + 10;
@@ -360,71 +360,163 @@ void Lcd::DrawSprites() {
         semi_transparent_used = false;
     }
 
+
     for (int s = sprites.size() - 1; s >= 0; --s) {
         const auto& sprite = sprites[s];
 
         sprite_scanline_used[sprite.priority] = true;
 
-        int tile_row = (vcount - sprite.y_pos) / 8;
-        int pixel_row = (vcount - sprite.y_pos) % 8;
-        if (sprite.v_flip) {
-            tile_row = (sprite.tile_height - 1) - tile_row;
-            pixel_row = 7 - pixel_row;
+        if (sprite.affine) {
+            DrawAffineSprite(sprite);
+        } else {
+            DrawRegularSprite(sprite);
         }
+    }
+}
 
-        const int first_tile = tile_row * sprite.tile_width;
-        const int last_tile = (tile_row + 1) * sprite.tile_width - 1;
+void Lcd::DrawRegularSprite(const Sprite& sprite) {
+    int tile_row = (vcount - sprite.y_pos) / 8;
+    int pixel_row = (vcount - sprite.y_pos) % 8;
+    if (sprite.v_flip) {
+        tile_row = (sprite.tile_height - 1) - tile_row;
+        pixel_row = 7 - pixel_row;
+    }
 
-        int start_offset = 0;
-        int scanline_index = sprite.x_pos;
-        if (sprite.x_pos < 0) {
-            start_offset = -sprite.x_pos % 8;
-            scanline_index = 0;
-        }
+    const int first_tile = tile_row * sprite.tile_width;
+    const int last_tile = (tile_row + 1) * sprite.tile_width - 1;
 
-        // If the sprite is horizontally flipped, we start drawing from the rightmost tile.
-        int tile_index = first_tile;
-        int tile_direction = 1;
+    int start_offset = 0;
+    int scanline_index = sprite.x_pos;
+    if (sprite.x_pos < 0) {
+        start_offset = -sprite.x_pos % 8;
+        scanline_index = 0;
+    }
+
+    // If the sprite is horizontally flipped, we start drawing from the rightmost tile.
+    int tile_index = first_tile;
+    int tile_direction = 1;
+    if (sprite.h_flip) {
+        tile_index = last_tile;
+        tile_direction = -1;
+    }
+
+    if (sprite.x_pos < 0) {
+        // Start drawing at the first onscreen tile.
+        tile_index += (-sprite.x_pos / 8) * tile_direction;
+    }
+
+    while (scanline_index < h_pixels && tile_index <= last_tile && tile_index >= first_tile) {
+        auto& tile = sprite.tiles[tile_index];
+        tile_index += tile_direction;
+
+        std::array<u16, 8> pixel_colours = GetTilePixels(tile, sprite.single_palette, pixel_row, sprite.palette, 256);
+
         if (sprite.h_flip) {
-            tile_index = last_tile;
-            tile_direction = -1;
+            std::reverse(pixel_colours.begin(), pixel_colours.end());
         }
 
-        if (sprite.x_pos < 0) {
-            // Start drawing at the first onscreen tile.
-            tile_index += (-sprite.x_pos / 8) * tile_direction;
-        }
+        // The first and last tiles may be partially scrolled off-screen.
+        const int end_offset = std::min(h_pixels - scanline_index, 8);
+        for (int i = start_offset; i < end_offset; ++i) {
+            if ((pixel_colours[i] & alpha_bit) == 0) {
+                sprite_scanlines[sprite.priority][scanline_index] = pixel_colours[i];
 
-        while (scanline_index < h_pixels && tile_index <= last_tile && tile_index >= first_tile) {
-            auto& tile = sprite.tiles[tile_index];
-            tile_index += tile_direction;
-
-            std::array<u16, 8> pixel_colours = GetTilePixels(tile, sprite.single_palette, pixel_row, sprite.palette,
-                                                             256);
-
-            if (sprite.h_flip) {
-                std::reverse(pixel_colours.begin(), pixel_colours.end());
-            }
-
-            // The first and last tiles may be partially scrolled off-screen.
-            const int end_offset = std::min(h_pixels - scanline_index, 8);
-            for (int i = start_offset; i < end_offset; ++i) {
-                if ((pixel_colours[i] & alpha_bit) == 0) {
-                    sprite_scanlines[sprite.priority][scanline_index] = pixel_colours[i];
-
-                    // Erase sprite pixels at a lower priority than this one, since we only have one object plane.
-                    for (int j = sprite.priority + 1; j < 4; ++j) {
-                        sprite_scanlines[j][scanline_index] |= alpha_bit;
-                    }
-
-                    semi_transparent[scanline_index] = sprite.mode == Sprite::Mode::SemiTransparent;
-                    semi_transparent_used = semi_transparent_used || sprite.mode == Sprite::Mode::SemiTransparent;
+                // Erase sprite pixels at a lower priority than this one, since we only have one object plane.
+                for (int j = sprite.priority + 1; j < 4; ++j) {
+                    sprite_scanlines[j][scanline_index] |= alpha_bit;
                 }
 
-                scanline_index += 1;
+                semi_transparent[scanline_index] = sprite.mode == Sprite::Mode::SemiTransparent;
+                semi_transparent_used = semi_transparent_used || sprite.mode == Sprite::Mode::SemiTransparent;
             }
-            start_offset = 0;
+
+            scanline_index += 1;
         }
+        start_offset = 0;
+    }
+}
+
+void Lcd::DrawAffineSprite(const Sprite& sprite) {
+    sprite_scanline_used[sprite.priority] = true;
+
+    const int tex_centre_x = sprite.pixel_width / 2;
+    const int tex_centre_y = sprite.pixel_height / 2;
+
+    const int sprite_centre_x = tex_centre_x + sprite.x_pos;
+    const int sprite_centre_y = tex_centre_y + sprite.y_pos;
+
+    int scanline_index = std::max(sprite.x_pos, 0);
+    const int last_sprite_pixel = std::min(sprite.x_pos + sprite.pixel_width, 240);
+
+    // Affine parameters.
+    const int pa = static_cast<s32>(oam[sprite.affine_select * 8 + 1]) >> 16;
+    const int pb = static_cast<s32>(oam[sprite.affine_select * 8 + 3]) >> 16;
+    const int pc = static_cast<s32>(oam[sprite.affine_select * 8 + 5]) >> 16;
+    const int pd = static_cast<s32>(oam[sprite.affine_select * 8 + 7]) >> 16;
+
+    const int sprite_y = vcount - sprite_centre_y;
+    const int pb_sprite_y = pb * sprite_y;
+    const int pd_sprite_y = pd * sprite_y;
+
+    while (scanline_index < last_sprite_pixel) {
+        int sprite_x = scanline_index - sprite_centre_x;
+
+        int tex_x = ((pa * sprite_x + pb_sprite_y) >> 8) + tex_centre_x;
+        int tex_y = ((pc * sprite_x + pd_sprite_y) >> 8) + tex_centre_y;
+
+        if (sprite.double_size) {
+            tex_x -= sprite.pixel_width / 4;
+            tex_y -= sprite.pixel_height / 4;
+        }
+
+        if (tex_x >= sprite.pixel_width || tex_x < 0 || tex_y >= sprite.pixel_height || tex_y < 0) {
+            scanline_index += 1;
+            continue;
+        } else if (sprite.double_size && (tex_x >= sprite.pixel_width / 2 || tex_y >= sprite.pixel_height / 2)) {
+            scanline_index += 1;
+            continue;
+        }
+
+        int tile_row = tex_y / 8;
+        int pixel_row = tex_y % 8;
+        int tile_index = tile_row * sprite.tile_width + tex_x / 8;
+
+        if (sprite.single_palette) {
+            // Each tile byte specifies the 8-bit palette index for a pixel.
+            const int pixel_index = pixel_row * 8 + tex_x % 8;
+            u8 palette_entry = sprite.tiles[tile_index][pixel_index];
+            if (palette_entry != 0) {
+                // Palette entry 0 is transparent.
+                sprite_scanlines[sprite.priority][scanline_index] = pram[256 + palette_entry];
+
+                // Erase sprite pixels at a lower priority than this one, since we only have one object plane.
+                for (int j = sprite.priority + 1; j < 4; ++j) {
+                    sprite_scanlines[j][scanline_index] |= alpha_bit;
+                }
+
+                semi_transparent[scanline_index] = sprite.mode == Sprite::Mode::SemiTransparent;
+                semi_transparent_used = semi_transparent_used || sprite.mode == Sprite::Mode::SemiTransparent;
+            }
+        } else {
+            // The lower 4 bits are the palette index for even pixels, and the upper 4 bits are for odd pixels.
+            const int odd_shift = 4 * ((tex_x % 8) & 0x1);
+            const int pixel_index = pixel_row * 4 + (tex_x % 8) / 2;
+            u8 palette_entry = (sprite.tiles[tile_index][pixel_index] >> odd_shift) & 0xF;
+            if (palette_entry != 0) {
+                // Palette entry 0 is transparent.
+                sprite_scanlines[sprite.priority][scanline_index] = pram[256 + sprite.palette * 16 + palette_entry];
+
+                // Erase sprite pixels at a lower priority than this one, since we only have one object plane.
+                for (int j = sprite.priority + 1; j < 4; ++j) {
+                    sprite_scanlines[j][scanline_index] |= alpha_bit;
+                }
+
+                semi_transparent[scanline_index] = sprite.mode == Sprite::Mode::SemiTransparent;
+                semi_transparent_used = semi_transparent_used || sprite.mode == Sprite::Mode::SemiTransparent;
+            }
+        }
+
+        scanline_index += 1;
     }
 }
 

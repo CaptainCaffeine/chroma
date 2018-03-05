@@ -36,6 +36,7 @@ public:
             : y_pos(attr1 & 0xFF)
             , affine(attr1 & 0x100)
             , disable(attr1 & 0x200)
+            , double_size(attr1 & 0x200)
             , mode(static_cast<Mode>((attr1 >> 10) & 0x3))
             , mosaic(attr1 & 0x1000)
             , single_palette(attr1 & 0x2000)
@@ -54,6 +55,11 @@ public:
             , tile_height(pixel_height / 8)
             , tiles(tile_width * tile_height) {
 
+        if (affine && double_size) {
+            pixel_width *= 2;
+            pixel_height *= 2;
+        }
+
         if (y_pos + pixel_height > 0xFF) {
             y_pos -= 0xFF;
         }
@@ -71,7 +77,8 @@ public:
 
     int y_pos;
     bool affine;
-    bool disable; // Also double-size in affine mode.
+    bool disable;
+    bool double_size;
     Mode mode;
     bool mosaic;
     bool single_palette;
@@ -93,6 +100,8 @@ public:
     int tile_height;
 
     std::vector<Tile> tiles;
+
+    bool Disabled() const { return !affine && disable; }
 
     static int Height(Shape shape, int size) {
         switch (shape) {
@@ -194,6 +203,8 @@ private:
     void ReadOam();
     void GetTileData();
     void DrawSprites();
+    void DrawRegularSprite(const Sprite& sprite);
+    void DrawAffineSprite(const Sprite& sprite);
 
     bool IsFirstTarget(int target) const { return (FirstTargets() >> target) & 0x1; }
     bool IsSecondTarget(int target) const { return (SecondTargets() >> target) & 0x1; }
