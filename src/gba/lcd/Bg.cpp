@@ -32,7 +32,7 @@ void Bg::GetRowMapInfo() {
     }
 
     // Get a row of map entries from the specified screenblock.
-    auto ReadRowMap = [this, row_num](int screenblock) {
+    auto ReadRowMap = [this, row_num = row_num % 32](int screenblock) {
         int map_addr = (MapBase() + row_num * 64 + 0x800 * screenblock) / 2;
 
         for (int i = map_addr; i < map_addr + 32; ++i) {
