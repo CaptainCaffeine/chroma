@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
+#include <stdexcept>
 
 #include "gba/lcd/Lcd.h"
 #include "gba/lcd/Bg.h"
@@ -79,6 +80,11 @@ void Lcd::Update(int cycles) {
                 dma.Trigger(Dma::VBlank);
             }
 
+            for (int b = 2; b < 4; ++b) {
+                bgs[b].LatchReferencePointX();
+                bgs[b].LatchReferencePointY();
+            }
+
             core.SwapBuffers(back_buffer);
         } else if (vcount == 227) {
             // Vblank flag is unset one scanline before vblank ends.
@@ -103,7 +109,7 @@ void Lcd::Update(int cycles) {
 }
 
 void Lcd::DrawScanline() {
-    if (ForcedBlank() || BgMode() == 2 || BgMode() == 5) {
+    if (ForcedBlank()) {
         // Other BG modes unimplemented for now.
         std::fill_n(back_buffer.begin() + vcount * h_pixels, h_pixels, 0x7FFF);
         return;
@@ -117,20 +123,13 @@ void Lcd::DrawScanline() {
 
     std::array<std::vector<const Bg*>, 4> priorities;
 
-    if (BgMode() == 0 || BgMode() == 1) {
+    if (BgMode() == 0) {
         for (int b = 0; b < 4; ++b) {
-            if (!BgEnabled(b)) {
-                continue;
+            if (BgEnabled(b)) {
+                bgs[b].GetRowMapInfo();
+                bgs[b].GetTileData();
+                bgs[b].DrawRegularScanline();
             }
-
-            if (BgMode() == 1 && b > 1) {
-                // Affine backgrounds are not implemented yet, so only draw the first two backgrounds in mode 1.
-                break;
-            }
-
-            bgs[b].GetRowMapInfo();
-            bgs[b].GetTileData();
-            bgs[b].DrawScanline();
         }
 
         // Organize the backgrounds by their priorities. 0 is the highest priority value, and 3 is the lowest.
@@ -140,22 +139,45 @@ void Lcd::DrawScanline() {
                 priorities[bgs[b].Priority()].push_back(&bgs[b]);
             }
         }
-    } else if (BgMode() == 3) {
-        for (int i = 0; i < h_pixels; ++i) {
-            bgs[2].scanline[i] = vram[vcount * h_pixels + i] & 0x7FFF;
+    } else if (BgMode() == 1) {
+        for (int b = 0; b < 2; ++b) {
+            if (BgEnabled(b)) {
+                bgs[b].GetRowMapInfo();
+                bgs[b].GetTileData();
+                bgs[b].DrawRegularScanline();
+            }
         }
 
-        priorities[0].push_back(&bgs[2]);
-    } else if (BgMode() == 4) {
-        const int base_addr = vcount * h_pixels + (DisplayFrame1() ? 0xA000 : 0);
-        for (int i = 0; i < h_pixels; ++i) {
-            // The lower byte is the palette index for even pixels, and the upper byte is for odd pixels.
-            const int odd_shift = 8 * (i & 0x1);
-            u8 palette_entry = vram[(base_addr + i) / 2] >> odd_shift;
-            bgs[2].scanline[i] = pram[palette_entry];
+        if (BgEnabled(2)) {
+            bgs[2].DrawAffineScanline();
         }
 
-        priorities[0].push_back(&bgs[2]);
+        for (int b = 2; b >= 0; --b) {
+            if (BgEnabled(b)) {
+                priorities[bgs[b].Priority()].push_back(&bgs[b]);
+            }
+        }
+    } else if (BgMode() == 2) {
+        for (int b = 2; b < 4; ++b) {
+            if (BgEnabled(b)) {
+                bgs[b].DrawAffineScanline();
+            }
+        }
+
+        for (int b = 3; b >= 2; --b) {
+            if (BgEnabled(b)) {
+                priorities[bgs[b].Priority()].push_back(&bgs[b]);
+            }
+        }
+    } else if (BgMode() == 3 || BgMode() == 4 || BgMode() == 5){
+        // Bitmap modes.
+        if (BgEnabled(2)) {
+            bgs[2].DrawBitmapScanline(BgMode(), DisplayFrame1() ? 0xA000 : 0);
+            priorities[0].push_back(&bgs[2]);
+        }
+    } else {
+        // It probably just doesn't draw any background in this case, but if this ever happens I'd like to know.
+        throw std::runtime_error("Invalid BG mode.");
     }
 
     // The first palette entry is the backdrop colour.

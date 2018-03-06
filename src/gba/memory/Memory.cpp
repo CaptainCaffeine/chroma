@@ -490,15 +490,19 @@ void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
         break;
     case BG2X_L:
         core.lcd->bgs[2].offset_x_l.Write(data, mask);
+        core.lcd->bgs[2].LatchReferencePointX();
         break;
     case BG2X_H:
         core.lcd->bgs[2].offset_x_h.Write(data, mask);
+        core.lcd->bgs[2].LatchReferencePointX();
         break;
     case BG2Y_L:
         core.lcd->bgs[2].offset_y_l.Write(data, mask);
+        core.lcd->bgs[2].LatchReferencePointY();
         break;
     case BG2Y_H:
         core.lcd->bgs[2].offset_y_h.Write(data, mask);
+        core.lcd->bgs[2].LatchReferencePointY();
         break;
     case BG3PA:
         core.lcd->bgs[3].affine_a.Write(data, mask);
@@ -514,15 +518,19 @@ void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
         break;
     case BG3X_L:
         core.lcd->bgs[3].offset_x_l.Write(data, mask);
+        core.lcd->bgs[3].LatchReferencePointX();
         break;
     case BG3X_H:
         core.lcd->bgs[3].offset_x_h.Write(data, mask);
+        core.lcd->bgs[3].LatchReferencePointX();
         break;
     case BG3Y_L:
         core.lcd->bgs[3].offset_y_l.Write(data, mask);
+        core.lcd->bgs[3].LatchReferencePointY();
         break;
     case BG3Y_H:
         core.lcd->bgs[3].offset_y_h.Write(data, mask);
+        core.lcd->bgs[3].LatchReferencePointY();
         break;
     case WIN0H:
         core.lcd->win0_width.Write(data, mask);

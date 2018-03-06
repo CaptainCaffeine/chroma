@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "common/CommonTypes.h"
+#include "common/CommonFuncs.h"
 #include "gba/memory/IOReg.h"
 
 namespace Gba {
@@ -69,35 +70,38 @@ public:
 
     void GetRowMapInfo();
     void GetTileData();
-    void DrawScanline();
+    void DrawRegularScanline();
+    void DrawAffineScanline();
+    void DrawBitmapScanline(int bg_mode, int base_addr);
 
-    // Control flags
-    static constexpr int kbyte = 1024;
+    void LatchReferencePointX() { ref_point_x = SignExtend((static_cast<u32>(offset_x_h) << 16) | offset_x_l, 28); }
+    void LatchReferencePointY() { ref_point_y = SignExtend((static_cast<u32>(offset_y_h) << 16) | offset_y_l, 28); }
 
     int Priority() const { return control & 0x3; }
-    int TileBase() const { return ((control >> 2) & 0x3) * 16 * kbyte; }
-    bool Mosaic() const { return control & 0x40; }
-    bool SinglePalette() const { return control & 0x80; }
-    int MapBase() const { return ((control >> 8) & 0x1F) * 2 * kbyte; }
-    bool Wraparound() const { return control & 0x2000; }
-
-    enum class Regular {Size32x32 = 0,
-                        Size64x32 = 1,
-                        Size32x64 = 2,
-                        Size64x64 = 3};
-
-    enum class Affine {Size16x16   = 0,
-                       Size32x32   = 1,
-                       Size64x64   = 2,
-                       Size128x128 = 3};
-
-    template<typename T>
-    T ScreenSize() const { return static_cast<T>(control >> 14); }
 
 private:
     Lcd& lcd;
 
     std::vector<BgTile> tiles;
+
+    s32 ref_point_x;
+    s32 ref_point_y;
+
+    // Control flags
+    static constexpr int kbyte = 1024;
+
+    int TileBase() const { return ((control >> 2) & 0x3) * 16 * kbyte; }
+    bool Mosaic() const { return control & 0x40; }
+    bool SinglePalette() const { return control & 0x80; }
+    int MapBase() const { return ((control >> 8) & 0x1F) * 2 * kbyte; }
+    bool WrapAround() const { return control & 0x2000; }
+
+    enum Sizes {Size32x32 = 0,
+                Size64x32 = 1,
+                Size32x64 = 2,
+                Size64x64 = 3};
+
+    int ScreenSize() const { return control >> 14; }
 };
 
 } // End namespace Gba
