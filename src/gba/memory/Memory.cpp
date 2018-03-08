@@ -533,16 +533,16 @@ void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
         core.lcd->bgs[3].LatchReferencePointY();
         break;
     case WIN0H:
-        core.lcd->win0_width.Write(data, mask);
+        core.lcd->windows[0].width.Write(data, mask);
         break;
     case WIN1H:
-        core.lcd->win1_width.Write(data, mask);
+        core.lcd->windows[1].width.Write(data, mask);
         break;
     case WIN0V:
-        core.lcd->win0_height.Write(data, mask);
+        core.lcd->windows[0].height.Write(data, mask);
         break;
     case WIN1V:
-        core.lcd->win1_height.Write(data, mask);
+        core.lcd->windows[1].height.Write(data, mask);
         break;
     case WININ:
         core.lcd->winin.Write(data, mask);

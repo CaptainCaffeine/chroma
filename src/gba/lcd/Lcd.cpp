@@ -28,6 +28,7 @@ namespace Gba {
 
 Lcd::Lcd(const std::vector<u16>& _pram, const std::vector<u16>& _vram, const std::vector<u32>& _oam, Core& _core)
         : bgs{{0, *this}, {1, *this}, {2, *this}, {3, *this}}
+        , windows(2)
         , pram(_pram)
         , vram(_vram)
         , oam(_oam)
@@ -110,7 +111,7 @@ void Lcd::Update(int cycles) {
 
 void Lcd::DrawScanline() {
     if (ForcedBlank()) {
-        // Other BG modes unimplemented for now.
+        // Scanlines are drawn white when forced blank is enabled.
         std::fill_n(back_buffer.begin() + vcount * h_pixels, h_pixels, 0x7FFF);
         return;
     }
@@ -169,7 +170,7 @@ void Lcd::DrawScanline() {
                 priorities[bgs[b].Priority()].push_back(&bgs[b]);
             }
         }
-    } else if (BgMode() == 3 || BgMode() == 4 || BgMode() == 5){
+    } else if (BgMode() == 3 || BgMode() == 4 || BgMode() == 5) {
         // Bitmap modes.
         if (BgEnabled(2)) {
             bgs[2].DrawBitmapScanline(BgMode(), DisplayFrame1() ? 0xA000 : 0);
@@ -232,10 +233,11 @@ void Lcd::DrawScanline() {
     for (int p = 3; p >= 0; --p) {
         for (const auto& bg : priorities[p]) {
             for (int i = 0; i < h_pixels; ++i) {
-                if ((bg->scanline[i] & alpha_bit) == 0) {
+                if ((bg->scanline[i] & alpha_bit) == 0 && IsWithinWindow(bg->id, i, vcount)) {
                     auto& buffer_pixel = back_buffer[vcount * h_pixels + i];
 
-                    if (BlendMode() == Effect::AlphaBlend && HighestTargetLayers(bg->id, i)) {
+                    if (BlendMode() == Effect::AlphaBlend && HighestTargetLayers(bg->id, i)
+                                                          && IsWithinWindow(5, i, vcount)) {
                         for (int j = 0; j < 3; ++j) {
                             int channel_target1 = (bg->scanline[i] >> (5 * j)) & 0x1F;
                             int channel_target2 = (buffer_pixel >> (5 * j)) & 0x1F;
@@ -256,10 +258,11 @@ void Lcd::DrawScanline() {
         if (ObjEnabled() && sprite_scanline_used[p]) {
             // Draw sprites of the same priority level.
             for (int i = 0; i < h_pixels; ++i) {
-                if ((sprite_scanlines[p][i] & alpha_bit) == 0) {
+                if ((sprite_scanlines[p][i] & alpha_bit) == 0 && IsWithinWindow(4, i, vcount)) {
                     auto& buffer_pixel = back_buffer[vcount * h_pixels + i];
 
-                    if ((BlendMode() == Effect::AlphaBlend || semi_transparent[i]) && HighestTargetLayers(4, i)) {
+                    if ((BlendMode() == Effect::AlphaBlend || semi_transparent[i]) && HighestTargetLayers(4, i)
+                                                                                   && IsWithinWindow(5, i, vcount)) {
                         for (int j = 0; j < 3; ++j) {
                             int channel_target1 = (sprite_scanlines[p][i] >> (5 * j)) & 0x1F;
                             int channel_target2 = (buffer_pixel >> (5 * j)) & 0x1F;
@@ -285,7 +288,8 @@ void Lcd::DrawScanline() {
 
     if (BlendMode() == Effect::Brighten || BlendMode() == Effect::Darken) {
         for (int i = 0; i < h_pixels; ++i) {
-            if (IsFirstTarget(pixel_layer[i]) && !(pixel_layer[i] == 4 && semi_transparent[i])) {
+            if (IsFirstTarget(pixel_layer[i]) && !(pixel_layer[i] == 4 && semi_transparent[i])
+                                              && IsWithinWindow(5, i, vcount)) {
                 auto& buffer_pixel = back_buffer[vcount * h_pixels + i];
 
                 if (BlendMode() == Effect::Brighten) {
@@ -301,6 +305,37 @@ void Lcd::DrawScanline() {
                 buffer_pixel = (channels[2] << 10) | (channels[1] << 5) | channels[0];
             }
         }
+    }
+}
+
+bool Lcd::IsWithinWindow(int layer_id, int x, int y) const {
+    if (!WinEnabled(0) && !WinEnabled(1) && !ObjWinEnabled()) {
+        return true;
+    }
+
+    if (WinEnabled(0) && windows[0].Contains(x, y)) {
+        return InWindowContent(0, layer_id);
+    } else if (WinEnabled(1) && windows[1].Contains(x, y)) {
+        return InWindowContent(1, layer_id);
+    } else if (ObjWinEnabled() && obj_window[x]) {
+        return InWindowContent(3, layer_id);
+    } else {
+        return InWindowContent(2, layer_id);
+    }
+}
+
+bool Lcd::InWindowContent(int win_id, int layer_id) const {
+    switch (win_id) {
+    case 0:
+        return winin & (1 << layer_id);
+    case 1:
+        return (winin >> 8) & (1 << layer_id);
+    case 2:
+        return winout & (1 << layer_id);
+    case 3:
+        return (winout >> 8) & (1 << layer_id);
+    default:
+        return false;
     }
 }
 
@@ -382,6 +417,10 @@ void Lcd::DrawSprites() {
         semi_transparent_used = false;
     }
 
+    if (obj_window_used) {
+        std::fill(obj_window.begin(), obj_window.end(), false);
+        obj_window_used = false;
+    }
 
     for (int s = sprites.size() - 1; s >= 0; --s) {
         const auto& sprite = sprites[s];
@@ -441,15 +480,20 @@ void Lcd::DrawRegularSprite(const Sprite& sprite) {
         const int end_offset = std::min(h_pixels - scanline_index, 8);
         for (int i = start_offset; i < end_offset; ++i) {
             if ((pixel_colours[i] & alpha_bit) == 0) {
-                sprite_scanlines[sprite.priority][scanline_index] = pixel_colours[i];
+                if (ObjWinEnabled() && sprite.mode == Sprite::Mode::ObjWindow) {
+                    obj_window[scanline_index] = true;
+                    obj_window_used = true;
+                } else {
+                    sprite_scanlines[sprite.priority][scanline_index] = pixel_colours[i];
 
-                // Erase sprite pixels at a lower priority than this one, since we only have one object plane.
-                for (int j = sprite.priority + 1; j < 4; ++j) {
-                    sprite_scanlines[j][scanline_index] |= alpha_bit;
+                    // Erase sprite pixels at a lower priority than this one, since we only have one object plane.
+                    for (int j = sprite.priority + 1; j < 4; ++j) {
+                        sprite_scanlines[j][scanline_index] |= alpha_bit;
+                    }
+
+                    semi_transparent[scanline_index] = sprite.mode == Sprite::Mode::SemiTransparent;
+                    semi_transparent_used = semi_transparent_used || sprite.mode == Sprite::Mode::SemiTransparent;
                 }
-
-                semi_transparent[scanline_index] = sprite.mode == Sprite::Mode::SemiTransparent;
-                semi_transparent_used = semi_transparent_used || sprite.mode == Sprite::Mode::SemiTransparent;
             }
 
             scanline_index += 1;
@@ -509,15 +553,20 @@ void Lcd::DrawAffineSprite(const Sprite& sprite) {
             u8 palette_entry = sprite.tiles[tile_index][pixel_index];
             if (palette_entry != 0) {
                 // Palette entry 0 is transparent.
-                sprite_scanlines[sprite.priority][scanline_index] = pram[256 + palette_entry];
+                if (ObjWinEnabled() && sprite.mode == Sprite::Mode::ObjWindow) {
+                    obj_window[scanline_index] = true;
+                    obj_window_used = true;
+                } else {
+                    sprite_scanlines[sprite.priority][scanline_index] = pram[256 + palette_entry];
 
-                // Erase sprite pixels at a lower priority than this one, since we only have one object plane.
-                for (int j = sprite.priority + 1; j < 4; ++j) {
-                    sprite_scanlines[j][scanline_index] |= alpha_bit;
+                    // Erase sprite pixels at a lower priority than this one, since we only have one object plane.
+                    for (int j = sprite.priority + 1; j < 4; ++j) {
+                        sprite_scanlines[j][scanline_index] |= alpha_bit;
+                    }
+
+                    semi_transparent[scanline_index] = sprite.mode == Sprite::Mode::SemiTransparent;
+                    semi_transparent_used = semi_transparent_used || sprite.mode == Sprite::Mode::SemiTransparent;
                 }
-
-                semi_transparent[scanline_index] = sprite.mode == Sprite::Mode::SemiTransparent;
-                semi_transparent_used = semi_transparent_used || sprite.mode == Sprite::Mode::SemiTransparent;
             }
         } else {
             // The lower 4 bits are the palette index for even pixels, and the upper 4 bits are for odd pixels.
@@ -526,15 +575,20 @@ void Lcd::DrawAffineSprite(const Sprite& sprite) {
             u8 palette_entry = (sprite.tiles[tile_index][pixel_index] >> odd_shift) & 0xF;
             if (palette_entry != 0) {
                 // Palette entry 0 is transparent.
-                sprite_scanlines[sprite.priority][scanline_index] = pram[256 + sprite.palette * 16 + palette_entry];
+                if (ObjWinEnabled() && sprite.mode == Sprite::Mode::ObjWindow) {
+                    obj_window[scanline_index] = true;
+                    obj_window_used = true;
+                } else {
+                    sprite_scanlines[sprite.priority][scanline_index] = pram[256 + sprite.palette * 16 + palette_entry];
 
-                // Erase sprite pixels at a lower priority than this one, since we only have one object plane.
-                for (int j = sprite.priority + 1; j < 4; ++j) {
-                    sprite_scanlines[j][scanline_index] |= alpha_bit;
+                    // Erase sprite pixels at a lower priority than this one, since we only have one object plane.
+                    for (int j = sprite.priority + 1; j < 4; ++j) {
+                        sprite_scanlines[j][scanline_index] |= alpha_bit;
+                    }
+
+                    semi_transparent[scanline_index] = sprite.mode == Sprite::Mode::SemiTransparent;
+                    semi_transparent_used = semi_transparent_used || sprite.mode == Sprite::Mode::SemiTransparent;
                 }
-
-                semi_transparent[scanline_index] = sprite.mode == Sprite::Mode::SemiTransparent;
-                semi_transparent_used = semi_transparent_used || sprite.mode == Sprite::Mode::SemiTransparent;
             }
         }
 

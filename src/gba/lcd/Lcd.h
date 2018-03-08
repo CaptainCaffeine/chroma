@@ -148,6 +148,30 @@ public:
     }
 };
 
+class Window {
+public:
+    IOReg width  = {0x0000, 0x0000, 0xFFFF};
+    IOReg height = {0x0000, 0x0000, 0xFFFF};
+
+    int Left() const { return width >> 8; }
+    int Right() const { return width & 0xFF; }
+    int Top() const { return height >> 8; }
+    int Bottom() const { return height & 0xFF; }
+
+    bool Contains(int x, int y) const {
+        if (!(y >= Top() && y < Bottom())) {
+            return false;
+        }
+
+        if (Right() >= Left()) {
+            return x >= Left() && x < Right();
+        } else {
+            // The window wraps around the side of the screen.
+            return x >= Left() || x < Right();
+        }
+    }
+};
+
 class Lcd {
 public:
     Lcd(const std::vector<u16>& _pram, const std::vector<u16>& _vram, const std::vector<u32>& _oam, Core& _core);
@@ -158,10 +182,6 @@ public:
     IOReg status        = {0x0000, 0xFF3F, 0xFF38};
     IOReg vcount        = {0x0000, 0x00FF, 0x0000};
 
-    IOReg win0_width    = {0x0000, 0x0000, 0xFFFF};
-    IOReg win1_width    = {0x0000, 0x0000, 0xFFFF};
-    IOReg win0_height   = {0x0000, 0x0000, 0xFFFF};
-    IOReg win1_height   = {0x0000, 0x0000, 0xFFFF};
     IOReg winin         = {0x0000, 0x3F3F, 0x3F3F};
     IOReg winout        = {0x0000, 0x3F3F, 0x3F3F};
 
@@ -171,6 +191,7 @@ public:
     IOReg blend_fade    = {0x0000, 0x0000, 0x001F};
 
     std::vector<Bg> bgs;
+    std::vector<Window> windows;
 
     const std::vector<u16>& pram;
     const std::vector<u16>& vram;
@@ -197,6 +218,8 @@ private:
     std::array<bool, 4> sprite_scanline_used{{true, true, true, true}};
     std::array<bool, 240> semi_transparent;
     bool semi_transparent_used = true;
+    std::array<bool, 240> obj_window;
+    bool obj_window_used = true;
 
     void DrawScanline();
 
@@ -205,6 +228,9 @@ private:
     void DrawSprites();
     void DrawRegularSprite(const Sprite& sprite);
     void DrawAffineSprite(const Sprite& sprite);
+
+    bool IsWithinWindow(int layer_id, int x, int y) const;
+    bool InWindowContent(int win_id, int layer_id) const;
 
     bool IsFirstTarget(int target) const { return (FirstTargets() >> target) & 0x1; }
     bool IsSecondTarget(int target) const { return (SecondTargets() >> target) & 0x1; }
