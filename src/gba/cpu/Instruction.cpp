@@ -26,103 +26,103 @@ template<>
 template<typename Dispatcher>
 std::vector<Instruction<Thumb>> Instruction<Thumb>::GetInstructionTable() {
     std::vector<Instruction<Thumb>> thumb_instructions {
-        {"ADCS Rdn, Rm",          "0100000101mmmddd", &Dispatcher::Thumb_AdcReg},
+        {"0100000101mmmddd", &Dispatcher::Thumb_AdcReg},     // ADCS Rdn, Rm
 
-        {"ADDS Rd, Rn, #imm",     "0001110iiinnnddd", &Dispatcher::Thumb_AddImmT1},
-        {"ADDS Rdn, #imm",        "00110dddiiiiiiii", &Dispatcher::Thumb_AddImmT2},
-        {"ADDS Rd, Rn, Rm",       "0001100mmmnnnddd", &Dispatcher::Thumb_AddRegT1},
-        {"ADD Rdn, Rm",           "01000100dmmmmddd", &Dispatcher::Thumb_AddRegT2},
-        {"ADD Rd, SP, #imm",      "10101dddiiiiiiii", &Dispatcher::Thumb_AddSpImmT1},
-        {"ADD SP, SP, #imm",      "101100000iiiiiii", &Dispatcher::Thumb_AddSpImmT2},
-        {"ADD Rd, PC, #imm",      "10100dddiiiiiiii", &Dispatcher::Thumb_AddPcImm},
+        {"0001110iiinnnddd", &Dispatcher::Thumb_AddImmT1},   // ADDS Rd, Rn, #imm
+        {"00110dddiiiiiiii", &Dispatcher::Thumb_AddImmT2},   // ADDS Rdn, #imm
+        {"0001100mmmnnnddd", &Dispatcher::Thumb_AddRegT1},   // ADDS Rd, Rn, Rm
+        {"01000100dmmmmddd", &Dispatcher::Thumb_AddRegT2},   // ADD Rdn, Rm
+        {"10101dddiiiiiiii", &Dispatcher::Thumb_AddSpImmT1}, // ADD Rd, SP, #imm
+        {"101100000iiiiiii", &Dispatcher::Thumb_AddSpImmT2}, // ADD SP, SP, #imm
+        {"10100dddiiiiiiii", &Dispatcher::Thumb_AddPcImm},   // ADD Rd, PC, #imm
 
-        {"ANDS Rdn, Rm",          "0100000000mmmddd", &Dispatcher::Thumb_AndReg},
+        {"0100000000mmmddd", &Dispatcher::Thumb_AndReg},     // ANDS Rdn, Rm
 
-        {"ASRS Rd, Rm, #imm",     "00010iiiiimmmddd", &Dispatcher::Thumb_AsrImm},
-        {"ASRS Rdn, Rm",          "0100000100mmmddd", &Dispatcher::Thumb_AsrReg},
+        {"00010iiiiimmmddd", &Dispatcher::Thumb_AsrImm},     // ASRS Rd, Rm, #imm
+        {"0100000100mmmddd", &Dispatcher::Thumb_AsrReg},     // ASRS Rdn, Rm
 
-        {"B<c> label",            "1101cccciiiiiiii", &Dispatcher::Thumb_BT1},
-        {"B label",               "11100iiiiiiiiiii", &Dispatcher::Thumb_BT2},
+        {"1101cccciiiiiiii", &Dispatcher::Thumb_BT1},        // B<c> label
+        {"11100iiiiiiiiiii", &Dispatcher::Thumb_BT2},        // B label
 
-        {"BICS Rdn, Rm",          "0100001110mmmddd", &Dispatcher::Thumb_BicReg},
+        {"0100001110mmmddd", &Dispatcher::Thumb_BicReg},     // BICS Rdn, Rm
 
-        {"BL<c> label",           "11110iiiiiiiiiii", &Dispatcher::Thumb_BlH1},
-        {"BL<c> label",           "11111iiiiiiiiiii", &Dispatcher::Thumb_BlH2},
+        {"11110iiiiiiiiiii", &Dispatcher::Thumb_BlH1},       // BL<c> label
+        {"11111iiiiiiiiiii", &Dispatcher::Thumb_BlH2},       // BL<c> label
 
-        {"BX Rm",                 "010001110mmmm000", &Dispatcher::Thumb_Bx},
+        {"010001110mmmm000", &Dispatcher::Thumb_Bx},         // BX Rm
 
-        {"CMN Rn, Rm",            "0100001011mmmnnn", &Dispatcher::Thumb_CmnReg},
+        {"0100001011mmmnnn", &Dispatcher::Thumb_CmnReg},     // CMN Rn, Rm
 
-        {"CMP Rn, #imm",          "00101nnniiiiiiii", &Dispatcher::Thumb_CmpImm},
-        {"CMP Rn, Rm",            "0100001010mmmnnn", &Dispatcher::Thumb_CmpRegT1},
-        {"CMP Rn, Rm",            "01000101nmmmmnnn", &Dispatcher::Thumb_CmpRegT2},
+        {"00101nnniiiiiiii", &Dispatcher::Thumb_CmpImm},     // CMP Rn, #imm
+        {"0100001010mmmnnn", &Dispatcher::Thumb_CmpRegT1},   // CMP Rn, Rm
+        {"01000101nmmmmnnn", &Dispatcher::Thumb_CmpRegT2},   // CMP Rn, Rm
 
-        {"EORS Rdn, Rm",          "0100000001mmmddd", &Dispatcher::Thumb_EorReg},
+        {"0100000001mmmddd", &Dispatcher::Thumb_EorReg},     // EORS Rdn, Rm
 
-        {"LDM Rn{!}, rlist",      "11001nnnrrrrrrrr", &Dispatcher::Thumb_Ldm}, // ! if Rn not in rlist. Also LDMIA, LDMFD.
+        {"11001nnnrrrrrrrr", &Dispatcher::Thumb_Ldm},        // LDM Rn{!}, rlist
 
-        {"LDR Rt, [Rn, {#imm}]",  "01101iiiiinnnttt", &Dispatcher::Thumb_LdrImm},
-        {"LDR Rt, [SP, {#imm}]",  "10011tttiiiiiiii", &Dispatcher::Thumb_LdrSpImm},
-        {"LDR Rt, [PC, #imm]",    "01001tttiiiiiiii", &Dispatcher::Thumb_LdrPcImm}, // Normally "LDR Rt, label".
-        {"LDR Rt, [Rn, Rm]",      "0101100mmmnnnttt", &Dispatcher::Thumb_LdrReg},
+        {"01101iiiiinnnttt", &Dispatcher::Thumb_LdrImm},     // LDR Rt, [Rn, {#imm}]
+        {"10011tttiiiiiiii", &Dispatcher::Thumb_LdrSpImm},   // LDR Rt, [SP, {#imm}]
+        {"01001tttiiiiiiii", &Dispatcher::Thumb_LdrPcImm},   // LDR Rt, [PC, #imm]; Normally "LDR Rt, label".
+        {"0101100mmmnnnttt", &Dispatcher::Thumb_LdrReg},     // LDR Rt, [Rn, Rm]
 
-        {"LDRB Rt, [Rn, {#imm}]", "01111iiiiinnnttt", &Dispatcher::Thumb_LdrbImm},
-        {"LDRB Rt, [Rn, Rm]",     "0101110mmmnnnttt", &Dispatcher::Thumb_LdrbReg},
+        {"01111iiiiinnnttt", &Dispatcher::Thumb_LdrbImm},    // LDRB Rt, [Rn, {#imm}]
+        {"0101110mmmnnnttt", &Dispatcher::Thumb_LdrbReg},    // LDRB Rt, [Rn, Rm]
 
-        {"LDRH Rt, [Rn, {#imm}]", "10001iiiiinnnttt", &Dispatcher::Thumb_LdrhImm},
-        {"LDRH Rt, [Rn, Rm]",     "0101101mmmnnnttt", &Dispatcher::Thumb_LdrhReg},
+        {"10001iiiiinnnttt", &Dispatcher::Thumb_LdrhImm},    // LDRH Rt, [Rn, {#imm}]
+        {"0101101mmmnnnttt", &Dispatcher::Thumb_LdrhReg},    // LDRH Rt, [Rn, Rm]
 
-        {"LDRSB Rt, [Rn, Rm]",    "0101011mmmnnnttt", &Dispatcher::Thumb_LdrsbReg},
-        {"LDRSH Rt, [Rn, Rm]",    "0101111mmmnnnttt", &Dispatcher::Thumb_LdrshReg},
+        {"0101011mmmnnnttt", &Dispatcher::Thumb_LdrsbReg},   // LDRSB Rt, [Rn, Rm]
+        {"0101111mmmnnnttt", &Dispatcher::Thumb_LdrshReg},   // LDRSH Rt, [Rn, Rm]
 
-        {"LSLS Rd, Rm, #imm",     "00000iiiiimmmddd", &Dispatcher::Thumb_LslImm},
-        {"LSLS Rdn, Rm",          "0100000010mmmddd", &Dispatcher::Thumb_LslReg},
+        {"00000iiiiimmmddd", &Dispatcher::Thumb_LslImm},     // LSLS Rd, Rm, #imm
+        {"0100000010mmmddd", &Dispatcher::Thumb_LslReg},     // LSLS Rdn, Rm
 
-        {"LSRS Rd, Rm, #imm",     "00001iiiiimmmddd", &Dispatcher::Thumb_LsrImm},
-        {"LSRS Rdn, Rm",          "0100000011mmmddd", &Dispatcher::Thumb_LsrReg},
+        {"00001iiiiimmmddd", &Dispatcher::Thumb_LsrImm},     // LSRS Rd, Rm, #imm
+        {"0100000011mmmddd", &Dispatcher::Thumb_LsrReg},     // LSRS Rdn, Rm
 
-        {"MOVS Rd, #imm",         "00100dddiiiiiiii", &Dispatcher::Thumb_MovImm},
-        {"MOV Rd, Rm",            "01000110dmmmmddd", &Dispatcher::Thumb_MovRegT1},
-        {"MOVS Rd, Rm",           "0000000000mmmddd", &Dispatcher::Thumb_MovRegT2},
+        {"00100dddiiiiiiii", &Dispatcher::Thumb_MovImm},     // MOVS Rd, #imm
+        {"01000110dmmmmddd", &Dispatcher::Thumb_MovRegT1},   // MOV Rd, Rm
+        {"0000000000mmmddd", &Dispatcher::Thumb_MovRegT2},   // MOVS Rd, Rm
 
-        {"MULS Rdn, Rm",          "0100001101nnnddd", &Dispatcher::Thumb_MulReg},
+        {"0100001101nnnddd", &Dispatcher::Thumb_MulReg},     // MULS Rdn, Rm
 
-        {"MVNS Rdn, Rm",          "0100001111mmmddd", &Dispatcher::Thumb_MvnReg},
+        {"0100001111mmmddd", &Dispatcher::Thumb_MvnReg},     // MVNS Rdn, Rm
 
-        {"ORRS Rdn, Rm",          "0100001100mmmddd", &Dispatcher::Thumb_OrrReg},
+        {"0100001100mmmddd", &Dispatcher::Thumb_OrrReg},     // ORRS Rdn, Rm
 
-        {"POP rlist",             "1011110prrrrrrrr", &Dispatcher::Thumb_Pop},
+        {"1011110prrrrrrrr", &Dispatcher::Thumb_Pop},        // POP rlist
 
-        {"PUSH rlist",            "1011010mrrrrrrrr", &Dispatcher::Thumb_Push},
+        {"1011010mrrrrrrrr", &Dispatcher::Thumb_Push},       // PUSH rlist
 
-        {"RORS Rdn, Rm",          "0100000111mmmddd", &Dispatcher::Thumb_RorReg},
+        {"0100000111mmmddd", &Dispatcher::Thumb_RorReg},     // RORS Rdn, Rm
 
-        {"RSBS Rdn, Rm, #0",      "0100001001nnnddd", &Dispatcher::Thumb_RsbImm},
+        {"0100001001nnnddd", &Dispatcher::Thumb_RsbImm},     // RSBS Rdn, Rm, #0
 
-        {"SBCS Rdn, Rm",          "0100000110mmmddd", &Dispatcher::Thumb_SbcReg},
+        {"0100000110mmmddd", &Dispatcher::Thumb_SbcReg},     // SBCS Rdn, Rm
 
-        {"STM Rn!, rlist",        "11000nnnrrrrrrrr", &Dispatcher::Thumb_Stm}, // Also STMIA, STMEA
+        {"11000nnnrrrrrrrr", &Dispatcher::Thumb_Stm},        // STM Rn!, rlist
 
-        {"STR Rt, [Rn, {#imm}]",  "01100iiiiinnnttt", &Dispatcher::Thumb_StrImm},
-        {"STR Rt, [SP, {#imm}]",  "10010tttiiiiiiii", &Dispatcher::Thumb_StrSpImm},
-        {"STR Rt, [Rn, Rm]",      "0101000mmmnnnttt", &Dispatcher::Thumb_StrReg},
+        {"01100iiiiinnnttt", &Dispatcher::Thumb_StrImm},     // STR Rt, [Rn, {#imm}]
+        {"10010tttiiiiiiii", &Dispatcher::Thumb_StrSpImm},   // STR Rt, [SP, {#imm}]
+        {"0101000mmmnnnttt", &Dispatcher::Thumb_StrReg},     // STR Rt, [Rn, Rm]
 
-        {"STRB Rt, [Rn, {#imm}]", "01110iiiiinnnttt", &Dispatcher::Thumb_StrbImm},
-        {"STRB Rt, [Rn, Rm]",     "0101010mmmnnnttt", &Dispatcher::Thumb_StrbReg},
+        {"01110iiiiinnnttt", &Dispatcher::Thumb_StrbImm},    // STRB Rt, [Rn, {#imm}]
+        {"0101010mmmnnnttt", &Dispatcher::Thumb_StrbReg},    // STRB Rt, [Rn, Rm]
 
-        {"STRH Rt, [Rn, {#imm}]", "10000iiiiinnnttt", &Dispatcher::Thumb_StrhImm},
-        {"STRH Rt, [Rn, Rm]",     "0101001mmmnnnttt", &Dispatcher::Thumb_StrhReg},
+        {"10000iiiiinnnttt", &Dispatcher::Thumb_StrhImm},    // STRH Rt, [Rn, {#imm}]
+        {"0101001mmmnnnttt", &Dispatcher::Thumb_StrhReg},    // STRH Rt, [Rn, Rm]
 
-        {"SUBS Rd, Rn, #imm",     "0001111iiinnnddd", &Dispatcher::Thumb_SubImmT1},
-        {"SUBS Rdn, #imm",        "00111dddiiiiiiii", &Dispatcher::Thumb_SubImmT2},
-        {"SUBS Rd, Rn, Rm",       "0001101mmmnnnddd", &Dispatcher::Thumb_SubReg},
-        {"SUB SP, SP, #imm",      "101100001iiiiiii", &Dispatcher::Thumb_SubSpImm},
+        {"0001111iiinnnddd", &Dispatcher::Thumb_SubImmT1},   // SUBS Rd, Rn, #imm
+        {"00111dddiiiiiiii", &Dispatcher::Thumb_SubImmT2},   // SUBS Rdn, #imm
+        {"0001101mmmnnnddd", &Dispatcher::Thumb_SubReg},     // SUBS Rd, Rn, Rm
+        {"101100001iiiiiii", &Dispatcher::Thumb_SubSpImm},   // SUB SP, SP, #imm
 
-        {"SWI #imm",              "11011111iiiiiiii", &Dispatcher::Thumb_Swi},
+        {"11011111iiiiiiii", &Dispatcher::Thumb_Swi},        // SWI #imm
 
-        {"TST Rn, Rm",            "0100001000mmmnnn", &Dispatcher::Thumb_TstReg},
+        {"0100001000mmmnnn", &Dispatcher::Thumb_TstReg},     // TST Rn, Rm
 
-        {"Undefined",             "iiiiiiiiiiiiiiii", &Dispatcher::Thumb_Undefined},
+        {"iiiiiiiiiiiiiiii", &Dispatcher::Thumb_Undefined},  // Undefined
     };
 
     std::sort(thumb_instructions.begin(), thumb_instructions.end(), [](const auto& instr1, const auto& instr2) {
@@ -139,153 +139,151 @@ template<>
 template<typename Dispatcher>
 std::vector<Instruction<Arm>> Instruction<Arm>::GetInstructionTable() {
     std::vector<Instruction<Arm>> arm_instructions {
-        {"ADC Rd, Rn, #imm",                 "cccc0010101Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_AdcImm},
-        {"ADC Rd, Rn, Rm, {shift}",          "cccc0000101Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_AdcReg},
-        {"ADC Rd, Rn, Rm, type, Rs",         "cccc0000101Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_AdcRegShifted},
+        {"cccc0010101Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_AdcImm},        // ADC Rd, Rn, #imm
+        {"cccc0000101Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_AdcReg},        // ADC Rd, Rn, Rm, {shift}
+        {"cccc0000101Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_AdcRegShifted}, // ADC Rd, Rn, Rm, type, Rs
 
-        {"ADD Rd, Rn, #imm",                 "cccc0010100Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_AddImm},
-        {"ADD Rd, Rn, Rm, {shift}",          "cccc0000100Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_AddReg},
-        {"ADD Rd, Rn, Rm, type, Rs",         "cccc0000100Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_AddRegShifted},
+        {"cccc0010100Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_AddImm},        // ADD Rd, Rn, #imm
+        {"cccc0000100Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_AddReg},        // ADD Rd, Rn, Rm, {shift}
+        {"cccc0000100Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_AddRegShifted}, // ADD Rd, Rn, Rm, type, Rs
 
-        {"AND Rd, Rn, #imm",                 "cccc0010000Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_AndImm},
-        {"AND Rd, Rn, Rm, {shift}",          "cccc0000000Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_AndReg},
-        {"AND Rd, Rn, Rm, type, Rs",         "cccc0000000Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_AndRegShifted},
+        {"cccc0010000Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_AndImm},        // AND Rd, Rn, #imm
+        {"cccc0000000Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_AndReg},        // AND Rd, Rn, Rm, {shift}
+        {"cccc0000000Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_AndRegShifted}, // AND Rd, Rn, Rm, type, Rs
 
-        {"ASR Rd, Rm, #imm",                 "cccc0001101S0000ddddiiiii100mmmm", &Dispatcher::Arm_AsrImm},
-        {"ASR Rd, Rn, Rm",                   "cccc0001101S0000ddddmmmm0101nnnn", &Dispatcher::Arm_AsrReg},
+        {"cccc0001101S0000ddddiiiii100mmmm", &Dispatcher::Arm_AsrImm},        // ASR Rd, Rm, #imm
+        {"cccc0001101S0000ddddmmmm0101nnnn", &Dispatcher::Arm_AsrReg},        // ASR Rd, Rn, Rm
 
-        {"B label",                          "cccc1010iiiiiiiiiiiiiiiiiiiiiiii", &Dispatcher::Arm_B},
+        {"cccc1010iiiiiiiiiiiiiiiiiiiiiiii", &Dispatcher::Arm_B},             // B label
 
-        {"BIC Rd, Rn, #imm",                 "cccc0011110Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_BicImm},
-        {"BIC Rd, Rn, Rm, {shift}",          "cccc0001110Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_BicReg},
-        {"BIC Rd, Rn, Rm, type, Rs",         "cccc0001110Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_BicRegShifted},
+        {"cccc0011110Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_BicImm},        // BIC Rd, Rn, #imm
+        {"cccc0001110Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_BicReg},        // BIC Rd, Rn, Rm, {shift}
+        {"cccc0001110Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_BicRegShifted}, // BIC Rd, Rn, Rm, type, Rs
 
-        {"BL label",                         "cccc1011iiiiiiiiiiiiiiiiiiiiiiii", &Dispatcher::Arm_Bl},
+        {"cccc1011iiiiiiiiiiiiiiiiiiiiiiii", &Dispatcher::Arm_Bl},            // BL label
 
-        {"BX Rm",                            "cccc000100101111111111110001mmmm", &Dispatcher::Arm_Bx},
+        {"cccc000100101111111111110001mmmm", &Dispatcher::Arm_Bx},            // BX Rm
 
-        {"CDP coproc, opc1, CRd, CRn, CRm, opc2", "cccc1110oooonnnnddddkkkkppp0mmmm", &Dispatcher::Arm_Cdp},
+        {"cccc1110oooonnnnddddkkkkppp0mmmm", &Dispatcher::Arm_Cdp},           // CDP coproc, opc1, CRd, CRn, CRm, opc2
 
-        {"CMN Rn, #imm",                     "cccc00110111nnnn0000iiiiiiiiiiii", &Dispatcher::Arm_CmnImm},
-        {"CMN Rn, Rm, {shift}",              "cccc00010111nnnn0000iiiiiqq0mmmm", &Dispatcher::Arm_CmnReg},
-        {"CMN Rn, Rm, type, Rs",             "cccc00010111nnnn0000ssss0qq1mmmm", &Dispatcher::Arm_CmnRegShifted},
+        {"cccc00110111nnnn0000iiiiiiiiiiii", &Dispatcher::Arm_CmnImm},        // CMN Rn, #imm
+        {"cccc00010111nnnn0000iiiiiqq0mmmm", &Dispatcher::Arm_CmnReg},        // CMN Rn, Rm, {shift}
+        {"cccc00010111nnnn0000ssss0qq1mmmm", &Dispatcher::Arm_CmnRegShifted}, // CMN Rn, Rm, type, Rs
 
-        {"CMP Rn, #imm",                     "cccc00110101nnnn0000iiiiiiiiiiii", &Dispatcher::Arm_CmpImm},
-        {"CMP Rn, Rm, {shift}",              "cccc00010101nnnn0000iiiiiqq0mmmm", &Dispatcher::Arm_CmpReg},
-        {"CMP Rn, Rm, type, Rs",             "cccc00010101nnnn0000ssss0qq1mmmm", &Dispatcher::Arm_CmpRegShifted},
+        {"cccc00110101nnnn0000iiiiiiiiiiii", &Dispatcher::Arm_CmpImm},        // CMP Rn, #imm
+        {"cccc00010101nnnn0000iiiiiqq0mmmm", &Dispatcher::Arm_CmpReg},        // CMP Rn, Rm, {shift}
+        {"cccc00010101nnnn0000ssss0qq1mmmm", &Dispatcher::Arm_CmpRegShifted}, // CMP Rn, Rm, type, Rs
 
-        {"EOR Rd, Rn, #imm",                 "cccc0010001Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_EorImm},
-        {"EOR Rd, Rn, Rm, {shift}",          "cccc0000001Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_EorReg},
-        {"EOR Rd, Rn, Rm, type, Rs",         "cccc0000001Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_EorRegShifted},
+        {"cccc0010001Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_EorImm},        // EOR Rd, Rn, #imm
+        {"cccc0000001Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_EorReg},        // EOR Rd, Rn, Rm, {shift}
+        {"cccc0000001Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_EorRegShifted}, // EOR Rd, Rn, Rm, type, Rs
 
-        {"LDC coproc, CRd, [Rn, #+/-imm]{!}","cccc110pudw1nnnnddddkkkkiiiiiiii", &Dispatcher::Arm_Ldc},
+        {"cccc110pudw1nnnnddddkkkkiiiiiiii", &Dispatcher::Arm_Ldc},           // LDC coproc, CRd, [Rn, #+/-imm]{!}
 
-        {"LDM{U}{P} Rn{!}, rlist{^}",        "cccc100puew1nnnnrrrrrrrrrrrrrrrr", &Dispatcher::Arm_Ldm},
+        {"cccc100puew1nnnnrrrrrrrrrrrrrrrr", &Dispatcher::Arm_Ldm},           // LDM{U}{P} Rn{!}, rlist{^}
 
-        // Disassembly different for post-indexed (p == 0). Disassemble as LDR*T when p == 0 && w == 1.
-        {"LDR Rt, [Rn, {#+/-imm}]{!}",       "cccc010pu0w1nnnnttttiiiiiiiiiiii", &Dispatcher::Arm_LdrImm},
-        {"LDR Rt, [Rn, +/-Rm, {shift}]{!}",  "cccc011pu0w1nnnnttttiiiiiqq0mmmm", &Dispatcher::Arm_LdrReg},
+        {"cccc010pu0w1nnnnttttiiiiiiiiiiii", &Dispatcher::Arm_LdrImm},        // LDR Rt, [Rn, {#+/-imm}]{!}
+        {"cccc011pu0w1nnnnttttiiiiiqq0mmmm", &Dispatcher::Arm_LdrReg},        // LDR Rt, [Rn, +/-Rm, {shift}]{!}
 
-        {"LDRB Rt, [Rn, {#+/-imm}]{!}",      "cccc010pu1w1nnnnttttiiiiiiiiiiii", &Dispatcher::Arm_LdrbImm},
-        {"LDRB Rt, [Rn, +/-Rm, {shift}]{!}", "cccc011pu1w1nnnnttttiiiiiqq0mmmm", &Dispatcher::Arm_LdrbReg},
+        {"cccc010pu1w1nnnnttttiiiiiiiiiiii", &Dispatcher::Arm_LdrbImm},       // LDRB Rt, [Rn, {#+/-imm}]{!}
+        {"cccc011pu1w1nnnnttttiiiiiqq0mmmm", &Dispatcher::Arm_LdrbReg},       // LDRB Rt, [Rn, +/-Rm, {shift}]{!}
 
-        {"LDRH Rt, [Rn, {#+/-imm}]{!}",      "cccc000pu1w1nnnnttttiiii1011iiii", &Dispatcher::Arm_LdrhImm},
-        {"LDRH Rt, [Rn, +/-Rm]{!}",          "cccc000pu0w1nnnntttt00001011mmmm", &Dispatcher::Arm_LdrhReg},
+        {"cccc000pu1w1nnnnttttiiii1011iiii", &Dispatcher::Arm_LdrhImm},       // LDRH Rt, [Rn, {#+/-imm}]{!}
+        {"cccc000pu0w1nnnntttt00001011mmmm", &Dispatcher::Arm_LdrhReg},       // LDRH Rt, [Rn, +/-Rm]{!}
 
-        {"LDRSB Rt, [Rn, {#+/-imm}]{!}",     "cccc000pu1w1nnnnttttiiii1101iiii", &Dispatcher::Arm_LdrsbImm},
-        {"LDRSB Rt, [Rn, +/-Rm]{!}",         "cccc000pu0w1nnnntttt00001101mmmm", &Dispatcher::Arm_LdrsbReg},
+        {"cccc000pu1w1nnnnttttiiii1101iiii", &Dispatcher::Arm_LdrsbImm},      // LDRSB Rt, [Rn, {#+/-imm}]{!}
+        {"cccc000pu0w1nnnntttt00001101mmmm", &Dispatcher::Arm_LdrsbReg},      // LDRSB Rt, [Rn, +/-Rm]{!}
 
-        {"LDRSH Rt, [Rn, {#+/-imm}]{!}",     "cccc000pu1w1nnnnttttiiii1111iiii", &Dispatcher::Arm_LdrshImm},
-        {"LDRSH Rt, [Rn, +/-Rm]{!}",         "cccc000pu0w1nnnntttt00001111mmmm", &Dispatcher::Arm_LdrshReg},
+        {"cccc000pu1w1nnnnttttiiii1111iiii", &Dispatcher::Arm_LdrshImm},      // LDRSH Rt, [Rn, {#+/-imm}]{!}
+        {"cccc000pu0w1nnnntttt00001111mmmm", &Dispatcher::Arm_LdrshReg},      // LDRSH Rt, [Rn, +/-Rm]{!}
 
-        {"LSL Rd, Rm, #imm",                 "cccc0001101S0000ddddiiiii000mmmm", &Dispatcher::Arm_LslImm},
-        {"LSL Rd, Rn, Rm",                   "cccc0001101S0000ddddmmmm0001nnnn", &Dispatcher::Arm_LslReg},
+        {"cccc0001101S0000ddddiiiii000mmmm", &Dispatcher::Arm_LslImm},        // LSL Rd, Rm, #imm
+        {"cccc0001101S0000ddddmmmm0001nnnn", &Dispatcher::Arm_LslReg},        // LSL Rd, Rn, Rm
 
-        {"LSR Rd, Rm, #imm",                 "cccc0001101S0000ddddiiiii010mmmm", &Dispatcher::Arm_LsrImm},
-        {"LSR Rd, Rn, Rm",                   "cccc0001101S0000ddddmmmm0011nnnn", &Dispatcher::Arm_LsrReg},
+        {"cccc0001101S0000ddddiiiii010mmmm", &Dispatcher::Arm_LsrImm},        // LSR Rd, Rm, #imm
+        {"cccc0001101S0000ddddmmmm0011nnnn", &Dispatcher::Arm_LsrReg},        // LSR Rd, Rn, Rm
 
-        {"MCR coproc, opc1, Rt, CRn, CRm, opc2",  "cccc1110ooo0nnnnttttkkkkppp1mmmm", &Dispatcher::Arm_Mcr},
+        {"cccc1110ooo0nnnnttttkkkkppp1mmmm", &Dispatcher::Arm_Mcr},           // MCR coproc, opc1, Rt, CRn, CRm, opc2
 
-        {"MLA Rd, Rn, Rm, Ra",               "cccc0000001Sddddaaaammmm1001nnnn", &Dispatcher::Arm_MlaReg},
+        {"cccc0000001Sddddaaaammmm1001nnnn", &Dispatcher::Arm_MlaReg},        // MLA Rd, Rn, Rm, Ra
 
-        {"MOV Rd, #imm",                     "cccc0011101S0000ddddiiiiiiiiiiii", &Dispatcher::Arm_MovImm},
-        {"MOV Rd, Rm",                       "cccc0001101S0000dddd00000000mmmm", &Dispatcher::Arm_MovReg},
+        {"cccc0011101S0000ddddiiiiiiiiiiii", &Dispatcher::Arm_MovImm},        // MOV Rd, #imm
+        {"cccc0001101S0000dddd00000000mmmm", &Dispatcher::Arm_MovReg},        // MOV Rd, Rm
 
-        {"MRC coproc, opc1, Rt, CRn, CRm, opc2",  "cccc1110ooo1nnnnttttkkkkppp1mmmm", &Dispatcher::Arm_Mcr},
+        {"cccc1110ooo1nnnnttttkkkkppp1mmmm", &Dispatcher::Arm_Mcr},           // MRC coproc, opc1, Rt, CRn, CRm, opc2
 
-        {"MRS Rd, special_reg",              "cccc00010r001111dddd000000000000", &Dispatcher::Arm_Mrs},
+        {"cccc00010r001111dddd000000000000", &Dispatcher::Arm_Mrs},           // MRS Rd, special_reg
 
-        {"MSR special_reg, #imm",            "cccc00110r10mmmm1111iiiiiiiiiiii", &Dispatcher::Arm_MsrImm},
-        {"MSR special_reg, Rn",              "cccc00010r10mmmm111100000000nnnn", &Dispatcher::Arm_MsrReg},
+        {"cccc00110r10mmmm1111iiiiiiiiiiii", &Dispatcher::Arm_MsrImm},        // MSR special_reg, #imm
+        {"cccc00010r10mmmm111100000000nnnn", &Dispatcher::Arm_MsrReg},        // MSR special_reg, Rn
 
-        {"MUL Rd, Rn, Rm",                   "cccc0000000Sdddd0000mmmm1001nnnn", &Dispatcher::Arm_MulReg},
+        {"cccc0000000Sdddd0000mmmm1001nnnn", &Dispatcher::Arm_MulReg},        // MUL Rd, Rn, Rm
 
-        {"MVN Rd, #imm",                     "cccc0011111S0000ddddiiiiiiiiiiii", &Dispatcher::Arm_MvnImm},
-        {"MVN Rd, Rm, {shift}",              "cccc0001111S0000ddddiiiiiqq0mmmm", &Dispatcher::Arm_MvnReg},
-        {"MVN Rd, Rm, type, Rs",             "cccc0001111S0000ddddssss0qq1mmmm", &Dispatcher::Arm_MvnRegShifted},
+        {"cccc0011111S0000ddddiiiiiiiiiiii", &Dispatcher::Arm_MvnImm},        // MVN Rd, #imm
+        {"cccc0001111S0000ddddiiiiiqq0mmmm", &Dispatcher::Arm_MvnReg},        // MVN Rd, Rm, {shift}
+        {"cccc0001111S0000ddddssss0qq1mmmm", &Dispatcher::Arm_MvnRegShifted}, // MVN Rd, Rm, type, Rs
 
-        {"ORR Rd, Rn, #imm",                 "cccc0011100Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_OrrImm},
-        {"ORR Rd, Rn, Rm, {shift}",          "cccc0001100Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_OrrReg},
-        {"ORR Rd, Rn, Rm, type, Rs",         "cccc0001100Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_OrrRegShifted},
+        {"cccc0011100Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_OrrImm},        // ORR Rd, Rn, #imm
+        {"cccc0001100Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_OrrReg},        // ORR Rd, Rn, Rm, {shift}
+        {"cccc0001100Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_OrrRegShifted}, // ORR Rd, Rn, Rm, type, Rs
 
-        {"POP rlist",                        "cccc100010111101rrrrrrrrrrrrrrrr", &Dispatcher::Arm_PopA1},
-        {"POP Rt",                           "cccc010010011101tttt000000000100", &Dispatcher::Arm_PopA2},
+        {"cccc100010111101rrrrrrrrrrrrrrrr", &Dispatcher::Arm_PopA1},         // POP rlist
+        {"cccc010010011101tttt000000000100", &Dispatcher::Arm_PopA2},         // POP Rt
 
-        {"PUSH rlist",                       "cccc100100101101rrrrrrrrrrrrrrrr", &Dispatcher::Arm_PushA1},
-        {"PUSH Rt",                          "cccc010100101101tttt000000000100", &Dispatcher::Arm_PushA2},
+        {"cccc100100101101rrrrrrrrrrrrrrrr", &Dispatcher::Arm_PushA1},        // PUSH rlist
+        {"cccc010100101101tttt000000000100", &Dispatcher::Arm_PushA2},        // PUSH Rt
 
-        {"ROR Rd, Rm, #imm",                 "cccc0001101S0000ddddiiiii110mmmm", &Dispatcher::Arm_RorImm}, // RRX if imm == 0
-        {"ROR Rd, Rn, Rm",                   "cccc0001101S0000ddddmmmm0111nnnn", &Dispatcher::Arm_RorReg},
+        {"cccc0001101S0000ddddiiiii110mmmm", &Dispatcher::Arm_RorImm},        // ROR Rd, Rm, #imm; RRX if imm == 0
+        {"cccc0001101S0000ddddmmmm0111nnnn", &Dispatcher::Arm_RorReg},        // ROR Rd, Rn, Rm
 
-        {"RSB Rd, Rn, #imm",                 "cccc0010011Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_RsbImm},
-        {"RSB Rd, Rn, Rm, {shift}",          "cccc0000011Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_RsbReg},
-        {"RSB Rd, Rn, Rm, type, Rs",         "cccc0000011Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_RsbRegShifted},
+        {"cccc0010011Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_RsbImm},        // RSB Rd, Rn, #imm
+        {"cccc0000011Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_RsbReg},        // RSB Rd, Rn, Rm, {shift}
+        {"cccc0000011Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_RsbRegShifted}, // RSB Rd, Rn, Rm, type, Rs
 
-        {"RSC Rd, Rn, #imm",                 "cccc0010111Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_RscImm},
-        {"RSC Rd, Rn, Rm, {shift}",          "cccc0000111Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_RscReg},
-        {"RSC Rd, Rn, Rm, type, Rs",         "cccc0000111Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_RscRegShifted},
+        {"cccc0010111Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_RscImm},        // RSC Rd, Rn, #imm
+        {"cccc0000111Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_RscReg},        // RSC Rd, Rn, Rm, {shift}
+        {"cccc0000111Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_RscRegShifted}, // RSC Rd, Rn, Rm, type, Rs
 
-        {"SBC Rd, Rn, #imm",                 "cccc0010110Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_SbcImm},
-        {"SBC Rd, Rn, Rm, {shift}",          "cccc0000110Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_SbcReg},
-        {"SBC Rd, Rn, Rm, type, Rs",         "cccc0000110Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_SbcRegShifted},
+        {"cccc0010110Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_SbcImm},        // SBC Rd, Rn, #imm
+        {"cccc0000110Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_SbcReg},        // SBC Rd, Rn, Rm, {shift}
+        {"cccc0000110Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_SbcRegShifted}, // SBC Rd, Rn, Rm, type, Rs
 
-        {"SMLAL RdLo, RdHi, Rn, Rm",         "cccc0000111Shhhhllllmmmm1001nnnn", &Dispatcher::Arm_SmlalReg},
-        {"SMULL RdLo, RdHi, Rn, Rm",         "cccc0000110Shhhhllllmmmm1001nnnn", &Dispatcher::Arm_SmullReg},
+        {"cccc0000111Shhhhllllmmmm1001nnnn", &Dispatcher::Arm_SmlalReg},      // SMLAL RdLo, RdHi, Rn, Rm
+        {"cccc0000110Shhhhllllmmmm1001nnnn", &Dispatcher::Arm_SmullReg},      // SMULL RdLo, RdHi, Rn, Rm
 
-        {"STC coproc, CRd, [Rn, #+/-imm]{!}","cccc110pudw0nnnnddddkkkkiiiiiiii", &Dispatcher::Arm_Ldc},
+        {"cccc110pudw0nnnnddddkkkkiiiiiiii", &Dispatcher::Arm_Ldc},           // STC coproc, CRd, [Rn, #+/-imm]{!}
 
-        {"STM{U}{P} Rn{!}, rlist{^}",        "cccc100puew0nnnnrrrrrrrrrrrrrrrr", &Dispatcher::Arm_Stm},
+        {"cccc100puew0nnnnrrrrrrrrrrrrrrrr", &Dispatcher::Arm_Stm},           // STM{U}{P} Rn{!}, rlist{^}
 
-        // Disassembly different for post-indexed (p == 0).
-        {"STR Rt, [Rn, {#+/-imm}]{!}",       "cccc010pu0w0nnnnttttiiiiiiiiiiii", &Dispatcher::Arm_StrImm},
-        {"STR Rt, [Rn, +/-Rm, {shift}]{!}",  "cccc011pu0w0nnnnttttiiiiiqq0mmmm", &Dispatcher::Arm_StrReg},
+        {"cccc010pu0w0nnnnttttiiiiiiiiiiii", &Dispatcher::Arm_StrImm},        // STR Rt, [Rn, {#+/-imm}]{!}
+        {"cccc011pu0w0nnnnttttiiiiiqq0mmmm", &Dispatcher::Arm_StrReg},        // STR Rt, [Rn, +/-Rm, {shift}]{!}
 
-        {"STRB Rt, [Rn, {#+/-imm}]{!}",      "cccc010pu1w0nnnnttttiiiiiiiiiiii", &Dispatcher::Arm_StrbImm},
-        {"STRB Rt, [Rn, +/-Rm, {shift}]{!}", "cccc011pu1w0nnnnttttiiiiiqq0mmmm", &Dispatcher::Arm_StrbReg},
+        {"cccc010pu1w0nnnnttttiiiiiiiiiiii", &Dispatcher::Arm_StrbImm},       // STRB Rt, [Rn, {#+/-imm}]{!}
+        {"cccc011pu1w0nnnnttttiiiiiqq0mmmm", &Dispatcher::Arm_StrbReg},       // STRB Rt, [Rn, +/-Rm, {shift}]{!}
 
-        {"STRH Rt, [Rn, {#+/-imm}]{!}",      "cccc000pu1w0nnnnttttiiii1011iiii", &Dispatcher::Arm_StrhImm},
-        {"STRH Rt, [Rn, +/-Rm]{!}",          "cccc000pu0w0nnnntttt00001011mmmm", &Dispatcher::Arm_StrhReg},
+        {"cccc000pu1w0nnnnttttiiii1011iiii", &Dispatcher::Arm_StrhImm},       // STRH Rt, [Rn, {#+/-imm}]{!}
+        {"cccc000pu0w0nnnntttt00001011mmmm", &Dispatcher::Arm_StrhReg},       // STRH Rt, [Rn, +/-Rm]{!}
 
-        {"SUB Rd, Rn, #imm",                 "cccc0010010Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_SubImm},
-        {"SUB Rd, Rn, Rm, {shift}",          "cccc0000010Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_SubReg},
-        {"SUB Rd, Rn, Rm, type, Rs",         "cccc0000010Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_SubRegShifted},
+        {"cccc0010010Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_SubImm},        // SUB Rd, Rn, #imm
+        {"cccc0000010Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_SubReg},        // SUB Rd, Rn, Rm, {shift}
+        {"cccc0000010Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_SubRegShifted}, // SUB Rd, Rn, Rm, type, Rs
 
-        {"SWI #imm",                         "cccc1111iiiiiiiiiiiiiiiiiiiiiiii", &Dispatcher::Arm_Swi},
+        {"cccc1111iiiiiiiiiiiiiiiiiiiiiiii", &Dispatcher::Arm_Swi},           // SWI #imm
 
-        {"SWP{B} Rt, Rm, [Rn]",              "cccc00010b00nnnntttt00001001mmmm", &Dispatcher::Arm_SwpReg},
+        {"cccc00010b00nnnntttt00001001mmmm", &Dispatcher::Arm_SwpReg},        // SWP{B} Rt, Rm, [Rn]
 
-        {"TEQ Rn, #imm",                     "cccc00110011nnnn0000iiiiiiiiiiii", &Dispatcher::Arm_TeqImm},
-        {"TEQ Rn, Rm, {shift}",              "cccc00010011nnnn0000iiiiiqq0mmmm", &Dispatcher::Arm_TeqReg},
-        {"TEQ Rn, Rm, type, Rs",             "cccc00010011nnnn0000ssss0qq1mmmm", &Dispatcher::Arm_TeqRegShifted},
+        {"cccc00110011nnnn0000iiiiiiiiiiii", &Dispatcher::Arm_TeqImm},        // TEQ Rn, #imm
+        {"cccc00010011nnnn0000iiiiiqq0mmmm", &Dispatcher::Arm_TeqReg},        // TEQ Rn, Rm, {shift}
+        {"cccc00010011nnnn0000ssss0qq1mmmm", &Dispatcher::Arm_TeqRegShifted}, // TEQ Rn, Rm, type, Rs
 
-        {"TST Rn, #imm",                     "cccc00110001nnnn0000iiiiiiiiiiii", &Dispatcher::Arm_TstImm},
-        {"TST Rn, Rm, {shift}",              "cccc00010001nnnn0000iiiiiqq0mmmm", &Dispatcher::Arm_TstReg},
-        {"TST Rn, Rm, type, Rs",             "cccc00010001nnnn0000ssss0qq1mmmm", &Dispatcher::Arm_TstRegShifted},
+        {"cccc00110001nnnn0000iiiiiiiiiiii", &Dispatcher::Arm_TstImm},        // TST Rn, #imm
+        {"cccc00010001nnnn0000iiiiiqq0mmmm", &Dispatcher::Arm_TstReg},        // TST Rn, Rm, {shift}
+        {"cccc00010001nnnn0000ssss0qq1mmmm", &Dispatcher::Arm_TstRegShifted}, // TST Rn, Rm, type, Rs
 
-        {"UMLAL RdLo, RdHi, Rn, Rm",         "cccc0000101Shhhhllllmmmm1001nnnn", &Dispatcher::Arm_UmlalReg},
-        {"UMULL RdLo, RdHi, Rn, Rm",         "cccc0000100Shhhhllllmmmm1001nnnn", &Dispatcher::Arm_UmullReg},
+        {"cccc0000101Shhhhllllmmmm1001nnnn", &Dispatcher::Arm_UmlalReg},      // UMLAL RdLo, RdHi, Rn, Rm
+        {"cccc0000100Shhhhllllmmmm1001nnnn", &Dispatcher::Arm_UmullReg},      // UMULL RdLo, RdHi, Rn, Rm
 
-        {"Undefined",                        "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii", &Dispatcher::Arm_Undefined},
+        {"iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii", &Dispatcher::Arm_Undefined},     // Undefined
     };
 
     std::sort(arm_instructions.begin(), arm_instructions.end(), [](const auto& instr1, const auto& instr2) {
