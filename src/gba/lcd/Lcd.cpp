@@ -438,6 +438,16 @@ void Lcd::DrawSprites() {
 void Lcd::DrawRegularSprite(const Sprite& sprite) {
     int tile_row = (vcount - sprite.y_pos) / 8;
     int pixel_row = (vcount - sprite.y_pos) % 8;
+
+    if (sprite.mosaic && vcount % MosaicObjV() != 0) {
+        tile_row = (vcount - vcount % MosaicObjV() - sprite.y_pos) / 8;
+        pixel_row = (vcount - vcount % MosaicObjV() - sprite.y_pos) % 8;
+
+        if (tile_row < 0 || pixel_row < 0) {
+            return;
+        }
+    }
+
     if (sprite.v_flip) {
         tile_row = (sprite.tile_height - 1) - tile_row;
         pixel_row = 7 - pixel_row;
@@ -479,6 +489,10 @@ void Lcd::DrawRegularSprite(const Sprite& sprite) {
         // The first and last tiles may be partially scrolled off-screen.
         const int end_offset = std::min(h_pixels - scanline_index, 8);
         for (int i = start_offset; i < end_offset; ++i) {
+            if (sprite.mosaic && scanline_index % MosaicObjH() != 0) {
+                pixel_colours[i] = sprite_scanlines[sprite.priority][scanline_index - (scanline_index % MosaicObjH())];
+            }
+
             if ((pixel_colours[i] & alpha_bit) == 0) {
                 if (ObjWinEnabled() && sprite.mode == Sprite::Mode::ObjWindow) {
                     obj_window[scanline_index] = true;

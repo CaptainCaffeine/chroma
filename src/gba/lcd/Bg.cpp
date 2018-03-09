@@ -90,6 +90,11 @@ void Bg::GetTileData() {
 }
 
 void Bg::DrawRegularScanline() {
+    if (Mosaic() && lcd.vcount % lcd.MosaicBgV() != 0) {
+        // Reuse the previous scanline.
+        return;
+    }
+
     const int pixel_row = (scroll_y + lcd.vcount) % 8;
 
     const int horizontal_tiles = (ScreenSize() & 0x1) ? 64 : 32;
@@ -111,7 +116,13 @@ void Bg::DrawRegularScanline() {
         // The first and last tiles may be partially scrolled off-screen.
         const int end_offset = std::min(Lcd::h_pixels - scanline_index, 8);
         for (int i = start_offset; i < end_offset; ++i) {
-            scanline[scanline_index++] = pixel_colours[i];
+            if (Mosaic() && scanline_index % lcd.MosaicBgH() != 0) {
+                scanline[scanline_index] = scanline[scanline_index - (scanline_index % lcd.MosaicBgH())];
+            } else {
+                scanline[scanline_index] = pixel_colours[i];
+            }
+
+            scanline_index += 1;
         }
         start_offset = 0;
     }

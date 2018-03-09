@@ -206,6 +206,10 @@ public:
 
     std::array<u16, 8> GetTilePixels(const Tile& tile, bool single_palette, int pixel_row, int palette, int base);
 
+    // Mosaic flags
+    int MosaicBgH() const { return (mosaic & 0xF) + 1; }
+    int MosaicBgV() const { return ((mosaic >> 4) & 0xF) + 1; }
+
 private:
     Core& core;
 
@@ -259,6 +263,10 @@ private:
     static constexpr u16 vcount_irq  = 0x20;
 
     int VTrigger() const { return status >> 8; }
+
+    // Mosaic flags
+    int MosaicObjH() const { return ((mosaic >> 8) & 0xF) + 1; }
+    int MosaicObjV() const { return ((mosaic >> 12) & 0xF) + 1; }
 
     // Blending flags
     enum class Effect {None = 0,
