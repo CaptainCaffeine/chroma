@@ -68,6 +68,8 @@ public:
 
     std::array<u16, 240> scanline;
 
+    int enable_delay = 0;
+
     void GetRowMapInfo();
     void GetTileData();
     void DrawRegularScanline();
@@ -77,6 +79,7 @@ public:
     void LatchReferencePointX() { ref_point_x = SignExtend((static_cast<u32>(offset_x_h) << 16) | offset_x_l, 28); }
     void LatchReferencePointY() { ref_point_y = SignExtend((static_cast<u32>(offset_y_h) << 16) | offset_y_l, 28); }
 
+    bool Enabled() const;
     int Priority() const { return control & 0x3; }
 
 private:

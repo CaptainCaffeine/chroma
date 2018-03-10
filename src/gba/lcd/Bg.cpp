@@ -21,6 +21,10 @@
 
 namespace Gba {
 
+bool Bg::Enabled() const {
+    return (lcd.control & (0x100 << id)) && enable_delay == 0;
+}
+
 void Bg::GetRowMapInfo() {
     tiles.clear();
 

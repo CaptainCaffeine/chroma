@@ -204,6 +204,8 @@ public:
 
     void Update(int cycles);
 
+    void WriteControl(const u16 data, const u16 mask);
+
     std::array<u16, 8> GetTilePixels(const Tile& tile, bool single_palette, int pixel_row, int palette, int base);
 
     // Mosaic flags
@@ -249,7 +251,6 @@ private:
     bool HBlankFree() const { return control & 0x20; }
     bool ObjMapping1D() const { return control & 0x40; }
     bool ForcedBlank() const { return control & 0x80; }
-    bool BgEnabled(int bg_id) const { return control & (0x100 << bg_id); }
     bool ObjEnabled() const { return control & 0x1000; }
     bool WinEnabled(int win_id) const { return control & (0x2000 << win_id); }
     bool ObjWinEnabled() const { return control & 0x8000; }

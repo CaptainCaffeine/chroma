@@ -109,6 +109,21 @@ void Lcd::Update(int cycles) {
     scanline_cycles = updated_cycles;
 }
 
+void Lcd::WriteControl(const u16 data, const u16 mask) {
+    std::array<bool, 4> was_disabled{{!bgs[0].Enabled(), !bgs[1].Enabled(), !bgs[2].Enabled(), !bgs[3].Enabled()}};
+    control.Write(data, mask);
+
+    for (int i = 0; i < 4; ++i) {
+        if (was_disabled[i] && bgs[i].Enabled()) {
+            if (vcount < 160 && !ForcedBlank()) {
+                bgs[i].enable_delay = 3;
+            } else {
+                bgs[i].enable_delay = 0;
+            }
+        }
+    }
+}
+
 void Lcd::DrawScanline() {
     if (ForcedBlank()) {
         // Scanlines are drawn white when forced blank is enabled.
@@ -126,7 +141,7 @@ void Lcd::DrawScanline() {
 
     if (BgMode() == 0) {
         for (int b = 0; b < 4; ++b) {
-            if (BgEnabled(b)) {
+            if (bgs[b].Enabled()) {
                 bgs[b].GetRowMapInfo();
                 bgs[b].GetTileData();
                 bgs[b].DrawRegularScanline();
@@ -136,43 +151,43 @@ void Lcd::DrawScanline() {
         // Organize the backgrounds by their priorities. 0 is the highest priority value, and 3 is the lowest.
         // If multiple backgrounds have the same priority value, the lower-numbered background has higher priority.
         for (int b = 3; b >= 0; --b) {
-            if (BgEnabled(b)) {
+            if (bgs[b].Enabled()) {
                 priorities[bgs[b].Priority()].push_back(&bgs[b]);
             }
         }
     } else if (BgMode() == 1) {
         for (int b = 0; b < 2; ++b) {
-            if (BgEnabled(b)) {
+            if (bgs[b].Enabled()) {
                 bgs[b].GetRowMapInfo();
                 bgs[b].GetTileData();
                 bgs[b].DrawRegularScanline();
             }
         }
 
-        if (BgEnabled(2)) {
+        if (bgs[2].Enabled()) {
             bgs[2].DrawAffineScanline();
         }
 
         for (int b = 2; b >= 0; --b) {
-            if (BgEnabled(b)) {
+            if (bgs[b].Enabled()) {
                 priorities[bgs[b].Priority()].push_back(&bgs[b]);
             }
         }
     } else if (BgMode() == 2) {
         for (int b = 2; b < 4; ++b) {
-            if (BgEnabled(b)) {
+            if (bgs[b].Enabled()) {
                 bgs[b].DrawAffineScanline();
             }
         }
 
         for (int b = 3; b >= 2; --b) {
-            if (BgEnabled(b)) {
+            if (bgs[b].Enabled()) {
                 priorities[bgs[b].Priority()].push_back(&bgs[b]);
             }
         }
     } else if (BgMode() == 3 || BgMode() == 4 || BgMode() == 5) {
         // Bitmap modes.
-        if (BgEnabled(2)) {
+        if (bgs[2].Enabled()) {
             bgs[2].DrawBitmapScanline(BgMode(), DisplayFrame1() ? 0xA000 : 0);
             priorities[0].push_back(&bgs[2]);
         }
@@ -304,6 +319,12 @@ void Lcd::DrawScanline() {
 
                 buffer_pixel = (channels[2] << 10) | (channels[1] << 5) | channels[0];
             }
+        }
+    }
+
+    for (auto& bg : bgs) {
+        if (bg.enable_delay > 0) {
+            bg.enable_delay -= 1;
         }
     }
 }

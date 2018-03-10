@@ -432,7 +432,7 @@ template <>
 void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
     switch (addr & ~0x1) {
     case DISPCNT:
-        core.lcd->control.Write(data, mask);
+        core.lcd->WriteControl(data, mask);
         break;
     case GREENSWAP:
         core.lcd->green_swap.Write(data, mask);
