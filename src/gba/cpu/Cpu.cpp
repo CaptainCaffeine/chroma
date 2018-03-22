@@ -77,7 +77,7 @@ int Cpu::Execute(int cycles) {
             pipeline[0] = pipeline[1];
             pipeline[1] = pipeline[2];
             pipeline[2] = mem.ReadMem<Thumb>(regs[pc]);
-            cycles_taken += mem.AccessTime<Thumb>(regs[pc]);
+            cycles_taken += mem.AccessTime<Thumb>(regs[pc], AccessType::Opcode);
 
             // Sync hardware after the prefetch.
             core.UpdateHardware(cycles_taken);
@@ -96,7 +96,7 @@ int Cpu::Execute(int cycles) {
             pipeline[0] = pipeline[1];
             pipeline[1] = pipeline[2];
             pipeline[2] = mem.ReadMem<Arm>(regs[pc]);
-            cycles_taken += mem.AccessTime<Arm>(regs[pc]);
+            cycles_taken += mem.AccessTime<Arm>(regs[pc], AccessType::Opcode);
 
             // Sync hardware after the prefetch.
             core.UpdateHardware(cycles_taken);
@@ -181,22 +181,24 @@ void Cpu::CpuModeSwitch(CpuMode new_cpu_mode) {
 }
 
 int Cpu::FlushPipeline() {
+    mem.FlushPrefetchBuffer();
+
     int cycles = 0;
     if (ThumbMode()) {
         pipeline[1] = mem.ReadMem<Thumb>(regs[pc]);
-        cycles += mem.AccessTime<Thumb>(regs[pc]);
+        cycles += mem.AccessTime<Thumb>(regs[pc], AccessType::Opcode);
         regs[pc] += 2;
 
         pipeline[2] = mem.ReadMem<Thumb>(regs[pc]);
-        cycles += mem.AccessTime<Thumb>(regs[pc]);
+        cycles += mem.AccessTime<Thumb>(regs[pc], AccessType::Opcode);
         regs[pc] += 2;
     } else {
         pipeline[1] = mem.ReadMem<Arm>(regs[pc]);
-        cycles += mem.AccessTime<Arm>(regs[pc]);
+        cycles += mem.AccessTime<Arm>(regs[pc], AccessType::Opcode);
         regs[pc] += 4;
 
         pipeline[2] = mem.ReadMem<Arm>(regs[pc]);
-        cycles += mem.AccessTime<Arm>(regs[pc]);
+        cycles += mem.AccessTime<Arm>(regs[pc], AccessType::Opcode);
         regs[pc] += 4;
     }
 
@@ -260,6 +262,26 @@ int Cpu::ReturnFromException(u32 address) {
         return Thumb_BranchWritePC(address);
     } else {
         return Arm_BranchWritePC(address);
+    }
+}
+
+void Cpu::InternalCycle(int cycles) {
+    if (mem.PrefetchEnabled()) {
+        if (regs[pc] >= 0x0800'0000) {
+            mem.RunPrefetch(cycles);
+        }
+
+        // Make the next access sequential. This only has an effect for LDR/LDM/SWP opcodes, in which case the next
+        // opcode fetch is a sequential access, despite the data load. It could be that the I-cycle gives it the
+        // extra time to decode the next expected opcode address.
+        mem.MakeNextAccessSequential(regs[pc]);
+    } else {
+        if (regs[pc] >= 0x0800'0000) {
+            // Prefetch disable bug: make the next access non-sequential.
+            mem.MakeNextAccessNonsequential();
+        } else {
+            mem.MakeNextAccessSequential(regs[pc]);
+        }
     }
 }
 

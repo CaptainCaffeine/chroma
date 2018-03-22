@@ -21,6 +21,7 @@
 
 #include "common/CommonTypes.h"
 #include "gba/memory/IOReg.h"
+#include "gba/core/Enums.h"
 
 namespace Gba {
 
@@ -35,9 +36,14 @@ public:
     template <typename T>
     void WriteMem(const u32 addr, const T data);
     template <typename T>
-    int AccessTime(const u32 addr, const bool force_sequential = false);
+    int AccessTime(const u32 addr, AccessType access_type = AccessType::Normal);
 
     void MakeNextAccessSequential(u32 addr) { last_addr = addr; }
+    void MakeNextAccessNonsequential() { last_addr = 0; }
+
+    bool PrefetchEnabled() const { return waitcnt & 0x4000; }
+    void RunPrefetch(int cycles);
+    void FlushPrefetchBuffer() { prefetch_cycles = 0; prefetched_opcodes = 0; last_addr = 0; }
 
     bool InterruptMasterEnable() const { return master_enable.v; }
     bool PendingInterrupts() const { return intr_flags & intr_enable; }
@@ -61,6 +67,8 @@ private:
     Core& core;
 
     u32 last_addr = 0x0;
+    int prefetch_cycles = 0;
+    int prefetched_opcodes = 0;
 
     std::array<int, 3> wait_state_n;
     std::array<int, 3> wait_state_s;
@@ -69,17 +77,20 @@ private:
     static constexpr unsigned int kbyte = 1024;
     static constexpr unsigned int mbyte = kbyte * kbyte;
 
-    enum class Region {Bios = 0x0,
-                       XRam = 0x2,
-                       IRam = 0x3,
-                       IO   = 0x4,
-                       PRam = 0x5,
-                       VRam = 0x6,
-                       Oam  = 0x7,
-                       Rom0 = 0x8,
-                       Rom1 = 0xA,
-                       Rom2 = 0xC,
-                       SRam = 0xE};
+    enum class Region {Bios   = 0x0,
+                       XRam   = 0x2,
+                       IRam   = 0x3,
+                       IO     = 0x4,
+                       PRam   = 0x5,
+                       VRam   = 0x6,
+                       Oam    = 0x7,
+                       Rom0_l = 0x8,
+                       Rom0_h = 0x9,
+                       Rom1_l = 0xA,
+                       Rom1_h = 0xB,
+                       Rom2_l = 0xC,
+                       Rom2_h = 0xD,
+                       SRam   = 0xE};
 
     enum RegionSize {bios_size = 16 * kbyte,
                      xram_size = 256 * kbyte,
@@ -101,6 +112,7 @@ private:
                             rom_addr_mask   = rom_size - 1};
 
     static constexpr u32 io_max = 0x0400'0000 + io_size;
+    static constexpr u32 rom_base_addr = 0x0800'0000;
 
     static constexpr u32 region_offset = 24;
     static constexpr Region GetRegion(const u32 addr) {

@@ -55,6 +55,9 @@ public:
     void Halt() { halted = true; }
     u32 GetPc() const { return regs[pc]; };
 
+    bool ThumbMode() const { return cpsr & thumb_mode; }
+    bool ArmMode() const { return !(cpsr & thumb_mode); }
+
     // Public for Disassembler.
     static ImmediateShift DecodeImmShift(ShiftType type, u32 imm5);
     static constexpr u32 ArmExpandImmediate(u32 value) noexcept {
@@ -124,9 +127,6 @@ private:
     using StoreOp = int(*)(Memory&,u32,u32);
 
     // Functions
-    bool ThumbMode() const { return cpsr & thumb_mode; }
-    bool ArmMode() const { return !(cpsr & thumb_mode); }
-
     bool InterruptsEnabled() const;
 
     CpuMode CurrentCpuMode() const { return static_cast<CpuMode>(cpsr & cpu_mode); }
@@ -142,6 +142,8 @@ private:
 
     int TakeException(CpuMode exception_type);
     int ReturnFromException(u32 address);
+
+    void InternalCycle(int cycles);
 
     void SetSign(bool val)     { (val) ? (cpsr |= sign_flag)     : (cpsr &= ~sign_flag); }
     void SetZero(bool val)     { (val) ? (cpsr |= zero_flag)     : (cpsr &= ~zero_flag); }

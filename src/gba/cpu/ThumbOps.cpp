@@ -86,6 +86,8 @@ int Cpu::Thumb_ShiftReg(Reg m, Reg d, ShiftType type) {
     SetSignZeroCarryFlags(shifted_reg.result, shifted_reg.carry);
 
     // One internal cycle for shifting by register.
+    InternalCycle(1);
+
     return 1;
 }
 
@@ -94,12 +96,10 @@ int Cpu::Thumb_Load(u32 imm, Reg n, Reg t, LoadOp op) {
 
     int cycles;
     std::tie(regs[t], cycles) = op(mem, addr);
+
     // Plus one internal cycle to transfer the loaded value to Rt.
     cycles += 1;
-
-    // The next opcode fetch after an LDR is a sequential access, despite the data load.
-    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
-    mem.MakeNextAccessSequential(regs[pc] + 2);
+    InternalCycle(1);
 
     return cycles;
 }
@@ -192,12 +192,14 @@ int Cpu::Thumb_CmpRegT2(Reg n1, Reg m, Reg n2) {
 int Cpu::Thumb_MulReg(Reg n, Reg d) {
     assert(d != n); // Unpredictable
 
-    int cycles = MultiplyCycles(regs[n]);
+    int cycles = MultiplyCycles(regs[d]);
     u32 result = regs[d] * regs[n];
 
     regs[d] = result;
     // The carry flag gets destroyed on ARMv4.
     SetSignZeroCarryFlags(result, 0);
+
+    InternalCycle(cycles);
 
     return cycles;
 }
@@ -389,9 +391,7 @@ int Cpu::Thumb_Ldm(Reg n, u32 reg_list) {
         regs[n] = addr;
     }
 
-    // The next opcode fetch after an LDM is a sequential access, despite the data load.
-    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
-    mem.MakeNextAccessSequential(regs[pc] + 2);
+    InternalCycle(1);
 
     return cycles;
 }
@@ -419,9 +419,7 @@ int Cpu::Thumb_LdrPcImm(Reg t, u32 imm) {
     // Plus one internal cycle to transfer the loaded value to Rt.
     int cycles = 1 + mem.AccessTime<u32>(addr);
 
-    // The next opcode fetch after an LDR is a sequential access, despite the data load.
-    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
-    mem.MakeNextAccessSequential(regs[pc] + 2);
+    InternalCycle(1);
 
     return cycles;
 }

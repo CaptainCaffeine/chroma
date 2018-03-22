@@ -92,6 +92,8 @@ int Cpu::Arm_ArithRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s
     ConditionalSetAllFlags(set_flags, result);
 
     // One internal cycle for shifting by register.
+    InternalCycle(1);
+
     return 1;
 }
 
@@ -139,6 +141,8 @@ int Cpu::Arm_CompareRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg
     SetAllFlags(result);
 
     // One internal cycle for shifting by register.
+    InternalCycle(1);
+
     return 1;
 }
 
@@ -167,6 +171,8 @@ int Cpu::Arm_MultiplyReg(Condition cond, bool set_flags, Reg d, Reg a, Reg m, Re
     regs[d] = result;
     // The carry flag gets destroyed on ARMv4.
     ConditionalSetSignZeroCarryFlags(set_flags, result, 0);
+
+    InternalCycle(cycles);
 
     return cycles;
 }
@@ -197,6 +203,8 @@ int Cpu::Arm_MultiplyLongReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg
     regs[dl] = result;
     // The carry and overflow flags get destroyed on ARMv4.
     ConditionalSetMultiplyLongFlags(set_flags, result);
+
+    InternalCycle(cycles);
 
     return cycles;
 }
@@ -257,6 +265,8 @@ int Cpu::Arm_LogicRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s
     ConditionalSetSignZeroCarryFlags(set_flags, result, shifted_reg.carry);
 
     // One internal cycle for shifting by register.
+    InternalCycle(1);
+
     return 1;
 }
 
@@ -304,6 +314,8 @@ int Cpu::Arm_TestRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m,
     SetSignZeroCarryFlags(result, shifted_reg.carry);
 
     // One internal cycle for shifting by register.
+    InternalCycle(1);
+
     return 1;
 }
 
@@ -343,6 +355,8 @@ int Cpu::Arm_ShiftReg(Condition cond, bool set_flags, Reg d, Reg m, Reg n, Shift
     ConditionalSetSignZeroCarryFlags(set_flags, shifted_reg.result, shifted_reg.carry);
 
     // One internal cycle for shifting by register.
+    InternalCycle(1);
+
     return 1;
 }
 
@@ -371,12 +385,10 @@ int Cpu::Arm_LoadImm(Condition cond, bool pre_indexed, bool add, bool writeback,
 
     int cycles;
     std::tie(regs[t], cycles) = op(mem, addr);
+
     // Plus one internal cycle to transfer the loaded value to Rt.
     cycles += 1;
-
-    // The next opcode fetch after an LDR is a sequential access, despite the data load.
-    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
-    mem.MakeNextAccessSequential(regs[pc] + 4);
+    InternalCycle(1);
 
     return cycles;
 }
@@ -411,12 +423,10 @@ int Cpu::Arm_LoadReg(Condition cond, bool pre_indexed, bool add, bool writeback,
 
     int cycles;
     std::tie(regs[t], cycles) = op(mem, addr);
+
     // Plus one internal cycle to transfer the loaded value to Rt.
     cycles += 1;
-
-    // The next opcode fetch after an LDR is a sequential access, despite the data load.
-    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
-    mem.MakeNextAccessSequential(regs[pc] + 4);
+    InternalCycle(1);
 
     return cycles;
 }
@@ -885,9 +895,7 @@ int Cpu::Arm_Ldm(Condition cond, bool pre_indexed, bool increment, bool exceptio
         return cycles + AluWritePC(exception_return, mem.ReadMem<u32>(addr));
     }
 
-    // The next opcode fetch after an LDM is a sequential access, despite the data load.
-    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
-    mem.MakeNextAccessSequential(regs[pc] + 4);
+    InternalCycle(1);
 
     return cycles;
 }
@@ -924,9 +932,7 @@ int Cpu::Arm_LdrImm(Condition cond, bool pre_indexed, bool add, bool writeback, 
         regs[t] = data;
     }
 
-    // The next opcode fetch after an LDR is a sequential access, despite the data load.
-    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
-    mem.MakeNextAccessSequential(regs[pc] + 4);
+    InternalCycle(1);
 
     return cycles;
 }
@@ -969,9 +975,7 @@ int Cpu::Arm_LdrReg(Condition cond, bool pre_indexed, bool add, bool writeback, 
         regs[t] = data;
     }
 
-    // The next opcode fetch after an LDR is a sequential access, despite the data load.
-    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
-    mem.MakeNextAccessSequential(regs[pc] + 4);
+    InternalCycle(1);
 
     return cycles;
 }
@@ -1067,9 +1071,7 @@ int Cpu::Arm_PopA2(Condition cond, Reg t) {
         regs[sp] += 4;
     }
 
-    // The next opcode fetch after an LDR is a sequential access, despite the data load.
-    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
-    mem.MakeNextAccessSequential(regs[pc] + 4);
+    InternalCycle(1);
 
     return cycles;
 }
@@ -1244,9 +1246,7 @@ int Cpu::Arm_SwpReg(Condition cond, bool byte, Reg n, Reg t, Reg t2) {
 
     regs[t] = data;
 
-    // The next opcode fetch after a SWP is a sequential access, despite the read/write.
-    // It could be that the I-cycle gives it the extra time to decode the next expected opcode address.
-    mem.MakeNextAccessSequential(regs[pc] + 4);
+    InternalCycle(1);
 
     return cycles;
 }

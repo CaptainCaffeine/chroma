@@ -113,9 +113,12 @@ T Memory::ReadMem(const u32 addr) const {
         return ReadVRam<T>(addr);
     case Region::Oam:
         return ReadOam<T>(addr);
-    case Region::Rom0:
-    case Region::Rom1:
-    case Region::Rom2:
+    case Region::Rom0_l:
+    case Region::Rom0_h:
+    case Region::Rom1_l:
+    case Region::Rom1_h:
+    case Region::Rom2_l:
+    case Region::Rom2_h:
         return ReadRom<T>(addr);
     case Region::SRam:
         return 0;
@@ -221,9 +224,12 @@ void Memory::WriteMem(const u32 addr, const T data) {
     case Region::Oam:
         WriteOam(addr, data);
         break;
-    case Region::Rom0:
-    case Region::Rom1:
-    case Region::Rom2:
+    case Region::Rom0_l:
+    case Region::Rom0_h:
+    case Region::Rom1_l:
+    case Region::Rom1_h:
+    case Region::Rom2_l:
+    case Region::Rom2_h:
         // Read only.
         break;
     case Region::SRam:
@@ -238,52 +244,90 @@ template void Memory::WriteMem<u16>(const u32 addr, const u16 data);
 template void Memory::WriteMem<u32>(const u32 addr, const u32 data);
 
 template <typename T>
-int Memory::AccessTime(const u32 addr, const bool force_sequential) {
+int Memory::AccessTime(const u32 addr, AccessType access_type) {
     constexpr int u32_access = sizeof(T) / 4;
-    bool sequential = force_sequential || (addr - last_addr) <= 4;
+    bool sequential = access_type == AccessType::Sequential || (addr - last_addr) <= 4;
     last_addr = addr;
 
-    auto RomTime = [this, sequential](int i) -> int {
-        if (sequential) {
-            return wait_state_s[i] << u32_access;
-        } else {
-            return wait_state_n[i] + wait_state_s[i] * u32_access;
+    auto RomTime = [this, sequential, access_type](int i) -> int {
+        if (PrefetchEnabled() && access_type == AccessType::Opcode && prefetched_opcodes > 0) {
+            prefetched_opcodes -= 1;
+            return 1;
         }
+
+        int access_cycles;
+        if (sequential) {
+            access_cycles = wait_state_s[i] << u32_access;
+        } else {
+            access_cycles = wait_state_n[i] + wait_state_s[i] * u32_access;
+        }
+
+        if (PrefetchEnabled() && access_type == AccessType::Opcode) {
+            int free_cycles = std::min(access_cycles - (1 << u32_access), prefetch_cycles);
+            access_cycles -= free_cycles;
+            prefetch_cycles -= free_cycles;
+        }
+
+        return access_cycles;
     };
 
+    int access_cycles;
     switch (GetRegion(addr)) {
     case Region::Bios:
-        return 1;
+        access_cycles = 1;
+        break;
     case Region::XRam:
-        return 3 << u32_access;
+        access_cycles = 3 << u32_access;
+        break;
     case Region::IRam:
-        return 1;
+        access_cycles = 1;
+        break;
     case Region::IO:
         // Despite being 16 bits wide, 32-bit accesses to IO registers do not incur an extra wait state.
         // Apparently the 16-bit registers are packaged together in pairs.
-        return 1;
+        access_cycles = 1;
+        break;
     case Region::PRam:
-        return 1 << u32_access;
+        access_cycles = 1 << u32_access;
+        break;
     case Region::VRam:
-        return 1 << u32_access;
+        access_cycles = 1 << u32_access;
+        break;
     case Region::Oam:
-        return 1;
-    case Region::Rom0:
-        return RomTime(0);
-    case Region::Rom1:
-        return RomTime(1);
-    case Region::Rom2:
-        return RomTime(2);
+        access_cycles = 1;
+        break;
+    case Region::Rom0_l:
+    case Region::Rom0_h:
+        access_cycles = RomTime(0);
+        break;
+    case Region::Rom1_l:
+    case Region::Rom1_h:
+        access_cycles = RomTime(1);
+        break;
+    case Region::Rom2_l:
+    case Region::Rom2_h:
+        access_cycles = RomTime(2);
+        break;
     case Region::SRam:
-        return wait_state_sram;
+        access_cycles = wait_state_sram;
+        break;
     default:
-        return 1;
+        access_cycles = 1;
+        break;
     }
+
+    if (PrefetchEnabled() && access_type == AccessType::Normal
+                          && addr < rom_base_addr
+                          && core.cpu->GetPc() >= rom_base_addr) {
+        RunPrefetch(access_cycles);
+    }
+
+    return access_cycles;
 }
 
-template int Memory::AccessTime<u8>(const u32 addr, const bool force_sequential);
-template int Memory::AccessTime<u16>(const u32 addr, const bool force_sequential);
-template int Memory::AccessTime<u32>(const u32 addr, const bool force_sequential);
+template int Memory::AccessTime<u8>(const u32 addr, AccessType access_type);
+template int Memory::AccessTime<u16>(const u32 addr, AccessType access_type);
+template int Memory::AccessTime<u32>(const u32 addr, AccessType access_type);
 
 void Memory::UpdateWaitStates() {
     auto WaitStates = [this](int shift) {
@@ -302,6 +346,42 @@ void Memory::UpdateWaitStates() {
     wait_state_s[1] = 1 + ((waitcnt & 0x080) ? 1 : 4);
     wait_state_n[2] = 1 + WaitStates(8);
     wait_state_s[2] = 1 + ((waitcnt & 0x400) ? 1 : 8);
+}
+
+void Memory::RunPrefetch(int cycles) {
+    prefetch_cycles += cycles;
+
+    int wait_states;
+    switch (GetRegion(core.cpu->GetPc())) {
+    case Region::Rom0_l:
+    case Region::Rom0_h:
+        wait_states = wait_state_s[0];
+        break;
+    case Region::Rom1_l:
+    case Region::Rom1_h:
+        wait_states = wait_state_s[1];
+        break;
+    case Region::Rom2_l:
+    case Region::Rom2_h:
+        wait_states = wait_state_s[2];
+        break;
+    default:
+        throw std::runtime_error("Ran prefetch while the PC is not in ROM.");
+        break;
+    }
+
+    if (core.cpu->ThumbMode()) {
+        if (prefetch_cycles >= wait_states) {
+            prefetched_opcodes = std::min(prefetched_opcodes + 1, 8);
+            prefetch_cycles -= wait_states;
+        }
+    } else {
+        wait_states *= 2;
+        if (prefetch_cycles >= wait_states) {
+            prefetched_opcodes = std::min(prefetched_opcodes + 1, 4);
+            prefetch_cycles -= wait_states;
+        }
+    }
 }
 
 template <>

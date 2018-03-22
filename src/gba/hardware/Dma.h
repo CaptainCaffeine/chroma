@@ -18,6 +18,7 @@
 
 #include "common/CommonTypes.h"
 #include "gba/memory/IOReg.h"
+#include "gba/core/Enums.h"
 
 namespace Gba {
 
@@ -58,7 +59,7 @@ private:
 
     void ReloadWordCount();
     template<typename T>
-    int Transfer(bool sequential);
+    int Transfer(AccessType sequential);
 
     // Control flags
     static constexpr u16 repeat     = 0x0200;

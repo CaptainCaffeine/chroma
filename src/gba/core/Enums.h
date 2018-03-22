@@ -57,4 +57,8 @@ enum Interrupt {VBlank  = 0x0001,
                 Gamepak = 0x2000};
 }
 
+enum class AccessType {Normal,
+                       Opcode,
+                       Sequential};
+
 } // End namespace Gba

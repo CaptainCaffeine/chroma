@@ -18,7 +18,6 @@
 
 #include "gba/hardware/Dma.h"
 #include "gba/core/Core.h"
-#include "gba/core/Enums.h"
 #include "gba/memory/Memory.h"
 #include "gba/cpu/Cpu.h"
 
@@ -85,17 +84,17 @@ int Dma::Run() {
 
         // First read & write accesses are non-sequential, all subsequent accesses are sequential.
         if (TransferWidth() == 2) {
-            cycles_taken += Transfer<u16>(false);
+            cycles_taken += Transfer<u16>(AccessType::Normal);
         } else {
-            cycles_taken += Transfer<u32>(false);
+            cycles_taken += Transfer<u32>(AccessType::Normal);
         }
 
         starting = false;
     } else {
         if (TransferWidth() == 2) {
-            cycles_taken += Transfer<u16>(true);
+            cycles_taken += Transfer<u16>(AccessType::Sequential);
         } else {
-            cycles_taken += Transfer<u32>(true);
+            cycles_taken += Transfer<u32>(AccessType::Sequential);
         }
     }
 
@@ -131,7 +130,7 @@ int Dma::Run() {
 }
 
 template<typename T>
-int Dma::Transfer(bool sequential) {
+int Dma::Transfer(AccessType sequential) {
     T data = core.mem->ReadMem<T>(source);
     core.mem->WriteMem<T>(dest, data);
 
