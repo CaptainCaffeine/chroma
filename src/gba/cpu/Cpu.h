@@ -50,10 +50,13 @@ public:
     std::unique_ptr<Disassembler> disasm;
 
     bool dma_active = false;
+    u32 last_bios_fetch = 0x0;
 
     int Execute(int cycles);
     void Halt() { halted = true; }
+
     u32 GetPc() const { return regs[pc]; };
+    u32 GetPrefetchedOpcode(int i) const { return pipeline[i]; }
 
     bool ThumbMode() const { return cpsr & thumb_mode; }
     bool ArmMode() const { return !(cpsr & thumb_mode); }

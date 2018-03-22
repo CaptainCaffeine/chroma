@@ -159,6 +159,7 @@ private:
     void WriteOam(const u32 addr, const T data) { WriteRegion(oam, oam_addr_mask, addr, data); }
 
     void UpdateWaitStates();
+    u32 ReadOpenBus() const;
 
     // IO registers
     static constexpr u32 DISPCNT    = 0x0400'0000;

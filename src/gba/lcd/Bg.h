@@ -48,9 +48,15 @@ class Bg {
 public:
     Bg(int _id, Lcd& _lcd)
             : id(_id)
-            , lcd(_lcd) {}
+            , lcd(_lcd) {
+        // The wraparound bit is not writeable on BG0 and BG1.
+        if (id < 2) {
+            control.read_mask = 0xDFFF;
+            control.write_mask = 0xDFFF;
+        }
+    }
 
-    IOReg control    = {0x0000, 0xFFCF, 0xFFCF};
+    IOReg control    = {0x0000, 0xFFFF, 0xFFFF};
     IOReg scroll_x   = {0x0000, 0x0000, 0x01FF};
     IOReg scroll_y   = {0x0000, 0x0000, 0x01FF};
 

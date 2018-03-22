@@ -241,6 +241,7 @@ int Cpu::TakeException(CpuMode exception_type) {
         break;
     case CpuMode::Irq:
         regs[pc] = 0x18;
+        last_bios_fetch = 0xE25EF004;
         break;
     default:
         // There are no abort or FIQ exceptions on the GBA.
@@ -249,11 +250,15 @@ int Cpu::TakeException(CpuMode exception_type) {
     }
 
     return cycles + FlushPipeline();
-
-    // IRQs have higher priority than SVCs and undefined instructions.
 }
 
 int Cpu::ReturnFromException(u32 address) {
+    if (CurrentCpuMode() == CpuMode::Irq) {
+        last_bios_fetch = 0xE55EC002;
+    } else if (CurrentCpuMode() == CpuMode::Svc) {
+        last_bios_fetch = 0xE3A02004;
+    }
+
     u32 spsr_exception = spsr[CurrentCpuModeIndex()];
     CpuModeSwitch(static_cast<CpuMode>(spsr_exception & cpu_mode));
     cpsr = spsr_exception;

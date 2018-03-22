@@ -80,10 +80,14 @@ u8 Memory::ReadRegion(const std::vector<u32>& region, const AddressMask region_m
 template <typename T>
 T Memory::ReadBios(const u32 addr) const {
     // The BIOS region is not mirrored, and can only be read if the PC is currently within the BIOS.
-    if (addr < bios_size && core.cpu->GetPc() < bios_size) {
-        return ReadRegion<T>(bios, bios_addr_mask, addr);
+    if (addr < bios_size) {
+        if (core.cpu->GetPc() < bios_size) {
+            return ReadRegion<T>(bios, bios_addr_mask, addr);
+        } else {
+            return core.cpu->last_bios_fetch;
+        }
     } else {
-        return 0;
+        return ReadOpenBus();
     }
 }
 
@@ -123,7 +127,7 @@ T Memory::ReadMem(const u32 addr) const {
     case Region::SRam:
         return 0;
     default:
-        return 0;
+        return ReadOpenBus();
     }
 }
 
@@ -437,12 +441,20 @@ u16 Memory::ReadIO(const u32 addr) const {
         return core.lcd->blend_alpha.Read();
     case SOUNDBIAS:
         return soundbias.Read();
+    case DMA0CNT_L:
+        return 0x0000;
     case DMA0CNT_H:
         return core.dma[0].control.Read();
+    case DMA1CNT_L:
+        return 0x0000;
     case DMA1CNT_H:
         return core.dma[1].control.Read();
+    case DMA2CNT_L:
+        return 0x0000;
     case DMA2CNT_H:
         return core.dma[2].control.Read();
+    case DMA3CNT_L:
+        return 0x0000;
     case DMA3CNT_H:
         return core.dma[3].control.Read();
     case TM0CNT_L:
@@ -504,7 +516,7 @@ u16 Memory::ReadIO(const u32 addr) const {
     case HALTCNT:
         return haltcnt.Read();
     default:
-        return 0x0000;
+        return ReadOpenBus();
     }
 }
 
@@ -813,6 +825,49 @@ void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
         break;
     default:
         break;
+    }
+}
+
+u32 Memory::ReadOpenBus() const {
+    if (core.cpu->ArmMode()) {
+        return core.cpu->GetPrefetchedOpcode(2);
+    }
+
+    switch (GetRegion(core.cpu->GetPc())) {
+    case Region::Bios:
+        if ((core.cpu->GetPc() & 0x3) == 0) {
+            return bios[core.cpu->GetPc() / 4];
+        } else {
+            return core.cpu->GetPrefetchedOpcode(1) | (core.cpu->GetPrefetchedOpcode(2) << 16);
+        }
+    case Region::Oam:
+        if ((core.cpu->GetPc() & 0x3) == 0) {
+            return oam[core.cpu->GetPc() / 4];
+        } else {
+            return core.cpu->GetPrefetchedOpcode(1) | (core.cpu->GetPrefetchedOpcode(2) << 16);
+        }
+    case Region::XRam:
+    case Region::PRam:
+    case Region::VRam:
+    case Region::Rom0_l:
+    case Region::Rom0_h:
+    case Region::Rom1_l:
+    case Region::Rom1_h:
+    case Region::Rom2_l:
+    case Region::Rom2_h:
+        return core.cpu->GetPrefetchedOpcode(2) | (core.cpu->GetPrefetchedOpcode(2) << 16);
+    case Region::IRam:
+        if ((core.cpu->GetPc() & 0x3) == 0) {
+            return core.cpu->GetPrefetchedOpcode(2) | (core.cpu->GetPrefetchedOpcode(1) << 16);
+        } else {
+            return core.cpu->GetPrefetchedOpcode(1) | (core.cpu->GetPrefetchedOpcode(2) << 16);
+        }
+    case Region::IO:
+    case Region::SRam:
+    default:
+        // Executing code from these regions is not strictly forbidden, but will likely go poorly. I don't know
+        // what open-bus reads will return.
+        return 0;
     }
 }
 
