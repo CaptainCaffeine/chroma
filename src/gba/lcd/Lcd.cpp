@@ -212,11 +212,10 @@ void Lcd::DrawScanline() {
             for (const auto& bg : priorities[p]) {
                 for (int i = 0; i < h_pixels; ++i) {
                     if ((bg->scanline[i] & alpha_bit) == 0) {
-                        if (IsSecondTarget(bg->id)) {
-                            highest_second_target[i] = bg->id;
-                        }
                         if (IsFirstTarget(bg->id)) {
                             highest_first_target[i] = bg->id;
+                        } else if (IsSecondTarget(bg->id)) {
+                            highest_second_target[i] = bg->id;
                         }
                     }
                 }
@@ -227,11 +226,10 @@ void Lcd::DrawScanline() {
                 // calculating blending effects, the GBA only considers the highest priority sprite on each pixel.
                 for (int i = 0; i < h_pixels; ++i) {
                     if ((sprite_scanlines[p][i] & alpha_bit) == 0) {
-                        if (IsSecondTarget(4)) {
-                            highest_second_target[i] = 4;
-                        }
                         if (IsFirstTarget(4) || semi_transparent[i]) {
                             highest_first_target[i] = 4;
+                        } else if (IsSecondTarget(4)) {
+                            highest_second_target[i] = 4;
                         }
                     }
                 }
