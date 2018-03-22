@@ -33,12 +33,17 @@ Timer::Timer(int _id, Core& _core)
 
 void Timer::Tick(int cycles) {
     if (!TimerRunning() || CascadeEnabled()) {
+        timer_clock += cycles;
         return;
     }
 
     while (cycles-- > 0) {
-        if (--cycle_count == 0) {
-            cycle_count = CyclesPerTick();
+        timer_clock += 1;
+        if (delay-- > 0) {
+            continue;
+        }
+
+        if ((timer_clock & (CyclesPerTick() - 1)) == 0) {
             CounterTick();
         }
     }
@@ -76,7 +81,7 @@ void Timer::WriteControl(const u16 data, const u16 mask) {
         // The counter is reloaded when a timer is enabled.
         counter = reload;
         // Timers have a two cycle start up delay.
-        cycle_count = CyclesPerTick() + 2;
+        delay = 2;
     }
 }
 

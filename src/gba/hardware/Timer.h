@@ -39,7 +39,8 @@ private:
     const int id;
     Core& core;
 
-    int cycle_count = 1;
+    u32 timer_clock = 0;
+    int delay = 0;
 
     bool TimerRunning() const { return control & 0x0080; }
     bool InterruptEnabled() const { return control & 0x0040; }
