@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
-#include <iostream>
+#include <fmt/format.h>
 #include <sys/stat.h>
 
 #include "gb/memory/CartridgeHeader.h"
@@ -47,17 +47,17 @@ std::string GetOptionParam(const std::vector<std::string>& tokens, const std::st
 }
 
 void DisplayHelp() {
-    std::cout << "Usage: chroma [options] <path/to/rom>\n\n";
-    std::cout << "Options:\n";
-    std::cout << "  -h                       display help\n";
-    std::cout << "  -m [dmg, cgb, agb]       specify device to emulate\n";
-    std::cout << "  -l [regular, timer, lcd] specify log level (default: none)\n";
-    std::cout << "  -s [1-15]                specify resolution scale (default: 2)\n";
-    std::cout << "  -f                       activate fullscreen mode\n";
-    std::cout << "  --filter [iir, nearest]  choose audio filtering method (default: iir)\n";
-    std::cout << "                               IIR (slow, better quality)\n";
-    std::cout << "                               nearest-neighbour (fast, lesser quality)\n";
-    std::cout << "  --multicart              emulate this game using an MBC1M" << std::endl;
+    fmt::print("Usage: chroma [options] <path/to/rom>\n\n");
+    fmt::print("Options:\n");
+    fmt::print("  -h                       display help\n");
+    fmt::print("  -m [dmg, cgb, agb]       specify device to emulate\n");
+    fmt::print("  -l [regular, timer, lcd] specify log level (default: none)\n");
+    fmt::print("  -s [1-15]                specify resolution scale (default: 2)\n");
+    fmt::print("  -f                       activate fullscreen mode\n");
+    fmt::print("  --filter [iir, nearest]  choose audio filtering method (default: iir)\n");
+    fmt::print("                               IIR (slow, better quality)\n");
+    fmt::print("                               nearest-neighbour (fast, lesser quality)\n");
+    fmt::print("  --multicart              emulate this game using an MBC1M\n");
 }
 
 Gb::Console GetGameBoyType(const std::vector<std::string>& tokens) {

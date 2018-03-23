@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <iostream>
+#include <fmt/format.h>
 
 #include "gb/memory/RTC.h"
 
@@ -22,7 +22,7 @@ namespace Gb {
 
 RTC::RTC(std::vector<u8>& save_game) {
     if ((save_game.size() % 0x400) != 0x30) {
-        std::cerr << "No RTC save data found. RTC initialized to default time.\n";
+        fmt::print("No RTC save data found. RTC initialized to default time.\n");
     } else {
         LoadRTCData(save_game);
         save_game.erase(save_game.cend() - 0x30, save_game.cend());

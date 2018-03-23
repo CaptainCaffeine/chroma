@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <fstream>
-#include <iostream>
+#include <fmt/format.h>
 
 #include "gb/memory/Memory.h"
 #include "gb/memory/RTC.h"
@@ -27,7 +27,7 @@ void Memory::SaveExternalRAM(const std::string& save_path) const {
         std::ofstream save_ostream(save_path);
 
         if (!save_ostream) {
-            std::cerr << "Error: could not open " << save_path << " to write save file to disk.\n";
+            fmt::print("Error: could not open {} to write save file to disk.\n", save_path);
         } else {
             if (rtc_present) {
                 rtc->AppendRTCData(ext_ram);

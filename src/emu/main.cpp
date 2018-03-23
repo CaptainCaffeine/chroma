@@ -16,7 +16,7 @@
 
 #include <string>
 #include <vector>
-#include <iostream>
+#include <fmt/format.h>
 #include <stdexcept>
 
 #include "common/CommonTypes.h"
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
         fullscreen = Emu::ContainsOption(tokens, "-f");
         multicart = Emu::ContainsOption(tokens, "--multicart");
     } catch (const std::invalid_argument& e) {
-        std::cerr << e.what() << "\n\n";
+        fmt::print("{}\n\n", e.what());
         Emu::DisplayHelp();
         return 1;
     }
@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
             gameboy_core.EmulatorLoop();
         }
     } catch (const std::runtime_error& e) {
-        std::cerr << e.what() << "\n";
+        fmt::print("{}\n", e.what());
         return 1;
     }
 

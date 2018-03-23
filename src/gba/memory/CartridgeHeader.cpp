@@ -14,8 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <array>
-#include <iostream>
+#include <fmt/format.h>
 
 #include "common/CommonFuncs.h"
 #include "gba/memory/Memory.h"
@@ -34,7 +33,7 @@ bool Memory::CheckNintendoLogo(const std::vector<u8>& rom_header) noexcept {
 void Memory::CheckHeader(const std::vector<u16>& rom_header) {
     // Fixed value check. All GBA games must have 0x96 stored at 0xB2.
     if (rom_header[0xB2 / 2] != 0x96) {
-        std::cerr << "WARNING: Fixed value does not match. This ROM would not run on a GBA!" << std::endl;
+        fmt::print("WARNING: Fixed value does not match. This ROM would not run on a GBA!\n");
     }
 
     // Header checksum.
@@ -46,7 +45,7 @@ void Memory::CheckHeader(const std::vector<u16>& rom_header) {
     checksum ^= 0xFF;
 
     if (checksum != (rom_header[0xBD / 2] >> 8)) {
-        std::cerr << "WARNING: Header checksum does not match. This ROM would not run on a GBA!" << std::endl;
+        fmt::print("WARNING: Header checksum does not match. This ROM would not run on a GBA!\n");
     }
 }
 

@@ -16,7 +16,7 @@
 
 #include <array>
 #include <stdexcept>
-#include <iostream>
+#include <fmt/format.h>
 
 #include "common/CommonFuncs.h"
 #include "gb/memory/CartridgeHeader.h"
@@ -47,13 +47,13 @@ CartridgeHeader::CartridgeHeader(Console& console, const std::vector<u8>& rom, b
     // The ROM size is at 0x0148 in cartridge header. Each ROM bank is 16KB.
     num_rom_banks = (0x8000 << rom[0x0148]) / 0x4000;
     if (rom.size() != num_rom_banks * 0x4000) {
-        std::cerr << "WARNING: Size of provided ROM does not match size given in cartridge header." << std::endl;
+        fmt::print("WARNING: Size of provided ROM does not match size given in cartridge header.\n");
     }
 
     GetRAMSize(rom);
     GetMBCType(rom);
     if (console == Console::DMG && !CheckNintendoLogo(console, rom)) {
-        std::cerr << "WARNING: Nintendo logo does not match. This ROM would not run on a DMG!" << std::endl;
+        fmt::print("WARNING: Nintendo logo does not match. This ROM would not run on a DMG!\n");
     }
     HeaderChecksum(rom);
 
@@ -236,15 +236,15 @@ void CartridgeHeader::HeaderChecksum(const std::vector<u8>& rom) const {
     // The header checksum at 0x014D must match the value calculated above. This is checked in the boot ROM, and if
     // it does not match the Game Boy locks up.
     if (checksum != rom[0x014D]) {
-        std::cerr << "WARNING: Header checksum does not match. This ROM would not run on a Game Boy!" << std::endl;
+        fmt::print("WARNING: Header checksum does not match. This ROM would not run on a Game Boy!\n");
     }
 }
 
 bool CartridgeHeader::CheckNintendoLogo(const Console console, const std::vector<u8>& rom) noexcept {
     // Calculate the FNV-1a hash of the first or second half of the region in the ROM header where the Nintendo logo
     // is supposed to be (0x0104-0x0133) and compare it to a precalculated hash of the expected logo.
-    static constexpr u32 logo_first_half_hash = 0x14bddd1b;
-    static constexpr u32 logo_second_half_hash = 0x9fd20031;
+    static constexpr u32 logo_first_half_hash = 0x14BDDD1B;
+    static constexpr u32 logo_second_half_hash = 0x9FD20031;
     static constexpr u16 logo_offset = 0x0104;
 
     if (console == Console::CGB) {
