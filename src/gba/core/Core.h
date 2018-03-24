@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <vector>
+#include <string>
 
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
@@ -36,7 +37,8 @@ class Serial;
 
 class Core {
 public:
-    Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom, LogLevel level);
+    Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom,
+         const std::string& save_path, LogLevel level);
     ~Core();
 
     std::unique_ptr<Memory> mem;

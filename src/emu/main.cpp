@@ -16,8 +16,8 @@
 
 #include <string>
 #include <vector>
-#include <fmt/format.h>
 #include <stdexcept>
+#include <fmt/format.h>
 
 #include "common/CommonTypes.h"
 #include "gb/core/Enums.h"
@@ -64,8 +64,10 @@ int main(int argc, char** argv) {
             const std::vector<u16> rom{Emu::LoadRom<u16>(rom_path, Gb::Console::AGB)};
             Gba::Memory::CheckHeader(rom);
 
+            const std::string save_path{Emu::SaveGamePath(rom_path)};
+
             Emu::SDLContext sdl_context{240, 160, pixel_scale, fullscreen};
-            Gba::Core gba_core{sdl_context, bios, rom, log_level};
+            Gba::Core gba_core{sdl_context, bios, rom, save_path, log_level};
 
             gba_core.EmulatorLoop();
         } else {

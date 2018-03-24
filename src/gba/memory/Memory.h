@@ -18,8 +18,10 @@
 
 #include <vector>
 #include <array>
+#include <string>
 
 #include "common/CommonTypes.h"
+#include "common/CommonFuncs.h"
 #include "gba/memory/IOReg.h"
 #include "gba/core/Enums.h"
 
@@ -29,10 +31,11 @@ class Core;
 
 class Memory {
 public:
-    Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom, Core& _core);
+    Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom, const std::string& _save_path, Core& _core);
+    ~Memory();
 
     template <typename T>
-    T ReadMem(const u32 addr) const;
+    T ReadMem(const u32 addr);
     template <typename T>
     void WriteMem(const u32 addr, const T data);
     template <typename T>
@@ -64,6 +67,9 @@ private:
     std::vector<u32> oam;
     const std::vector<u16>& rom;
 
+    std::vector<u8> sram;
+    const std::string& save_path;
+
     Core& core;
 
     u32 last_addr = 0x0;
@@ -73,6 +79,9 @@ private:
     std::array<int, 3> wait_state_n;
     std::array<int, 3> wait_state_s;
     int wait_state_sram;
+
+    enum class SaveType;
+    SaveType save_type;
 
     static constexpr unsigned int kbyte = 1024;
     static constexpr unsigned int mbyte = kbyte * kbyte;
@@ -90,7 +99,8 @@ private:
                        Rom1_h = 0xB,
                        Rom2_l = 0xC,
                        Rom2_h = 0xD,
-                       SRam   = 0xE};
+                       SRam_l = 0xE,
+                       SRam_h = 0xF};
 
     enum RegionSize {bios_size = 16 * kbyte,
                      xram_size = 256 * kbyte,
@@ -99,7 +109,8 @@ private:
                      pram_size = kbyte,
                      vram_size = 96 * kbyte,
                      oam_size  = kbyte,
-                     rom_size  = 32 * mbyte};
+                     rom_size  = 32 * mbyte,
+                     sram_size = 32 * kbyte};
 
     enum AddressMask : u32 {bios_addr_mask  = bios_size - 1,
                             xram_addr_mask  = xram_size - 1,
@@ -109,13 +120,19 @@ private:
                             vram_addr_mask1 = 0x0000'FFFF,
                             vram_addr_mask2 = 0x0001'7FFF,
                             oam_addr_mask   = oam_size - 1,
-                            rom_addr_mask   = rom_size - 1};
+                            rom_addr_mask   = rom_size - 1,
+                            sram_addr_mask  = sram_size - 1};
+
+    enum class SaveType {Unknown,
+                         SRam,
+                         Eeprom,
+                         Flash};
 
     static constexpr u32 io_max = 0x0400'0000 + io_size;
     static constexpr u32 rom_base_addr = 0x0800'0000;
 
-    static constexpr u32 region_offset = 24;
     static constexpr Region GetRegion(const u32 addr) {
+        constexpr u32 region_offset = 24;
         return static_cast<Region>((addr >> region_offset) & 0x0F);
     }
 
@@ -142,6 +159,8 @@ private:
     T ReadOam(const u32 addr) const { return ReadRegion<T>(oam, oam_addr_mask, addr); }
     template <typename T>
     T ReadRom(const u32 addr) const { return ReadRegion<T>(rom, rom_addr_mask, addr); }
+    template <typename T>
+    T ReadSRam(const u32 addr) const { return sram[addr & sram_addr_mask] * 0x0101'0101; }
 
     template <typename T>
     void WriteXRam(const u32 addr, const T data) { WriteRegion(xram, xram_addr_mask, addr, data); }
@@ -157,9 +176,17 @@ private:
     }
     template <typename T>
     void WriteOam(const u32 addr, const T data) { WriteRegion(oam, oam_addr_mask, addr, data); }
+    template <typename T>
+    void WriteSRam(const u32 addr, const T data) {
+        sram[addr & sram_addr_mask] = RotateRight(data, (addr & (sizeof(T) - 1)) * 8);
+    }
 
     void UpdateWaitStates();
     u32 ReadOpenBus() const;
+
+    void ReadSaveFile();
+    void WriteSaveFile() const;
+    void InitSRam();
 
     // IO registers
     static constexpr u32 DISPCNT    = 0x0400'0000;

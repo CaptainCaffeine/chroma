@@ -25,7 +25,7 @@
 
 namespace Gba {
 
-Disassembler::Disassembler(const Memory& _mem, const Cpu& _cpu, LogLevel level)
+Disassembler::Disassembler(Memory& _mem, const Cpu& _cpu, LogLevel level)
         : mem(_mem)
         , cpu(_cpu)
         , thumb_instructions(Instruction<Thumb>::GetInstructionTable<Disassembler>())

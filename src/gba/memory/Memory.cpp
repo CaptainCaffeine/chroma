@@ -28,7 +28,7 @@
 
 namespace Gba {
 
-Memory::Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom, Core& _core)
+Memory::Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom, const std::string& _save_path, Core& _core)
         : bios(_bios)
         , xram(xram_size / sizeof(u16))
         , iram(iram_size / sizeof(u32))
@@ -36,7 +36,15 @@ Memory::Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom, Core
         , vram(vram_size / sizeof(u16))
         , oam(oam_size / sizeof(u32))
         , rom(_rom)
-        , core(_core) {}
+        , save_path(_save_path)
+        , core(_core) {
+
+    ReadSaveFile();
+}
+
+Memory::~Memory() {
+    WriteSaveFile();
+}
 
 // Bus width 16.
 template <>
@@ -101,7 +109,7 @@ template <> u16 Memory::ReadIO(const u32 addr) const;
 template <> u8 Memory::ReadIO(const u32 addr) const;
 
 template <typename T>
-T Memory::ReadMem(const u32 addr) const {
+T Memory::ReadMem(const u32 addr) {
     switch (GetRegion(addr)) {
     case Region::Bios:
         return ReadBios<T>(addr);
@@ -124,16 +132,26 @@ T Memory::ReadMem(const u32 addr) const {
     case Region::Rom2_l:
     case Region::Rom2_h:
         return ReadRom<T>(addr);
-    case Region::SRam:
-        return 0;
+    case Region::SRam_l:
+    case Region::SRam_h:
+        if (save_type == SaveType::Unknown) {
+            InitSRam();
+        }
+
+        if (save_type == SaveType::SRam) {
+            return ReadSRam<T>(addr);
+        } else {
+            // When not present, SRAM reads return either 0x00 or 0xFF. Not sure when 0xFF is returned, though.
+            return 0;
+        }
     default:
         return ReadOpenBus();
     }
 }
 
-template u8 Memory::ReadMem<u8>(const u32 addr) const;
-template u16 Memory::ReadMem<u16>(const u32 addr) const;
-template u32 Memory::ReadMem<u32>(const u32 addr) const;
+template u8 Memory::ReadMem<u8>(const u32 addr);
+template u16 Memory::ReadMem<u16>(const u32 addr);
+template u32 Memory::ReadMem<u32>(const u32 addr);
 
 // Bus width 16.
 template <>
@@ -236,7 +254,15 @@ void Memory::WriteMem(const u32 addr, const T data) {
     case Region::Rom2_h:
         // Read only.
         break;
-    case Region::SRam:
+    case Region::SRam_l:
+    case Region::SRam_h:
+        if (save_type == SaveType::Unknown) {
+            InitSRam();
+        }
+
+        if (save_type == SaveType::SRam) {
+            WriteSRam(addr, data);
+        }
         break;
     default:
         break;
@@ -312,7 +338,8 @@ int Memory::AccessTime(const u32 addr, AccessType access_type) {
     case Region::Rom2_h:
         access_cycles = RomTime(2);
         break;
-    case Region::SRam:
+    case Region::SRam_l:
+    case Region::SRam_h:
         access_cycles = wait_state_sram;
         break;
     default:
@@ -863,7 +890,8 @@ u32 Memory::ReadOpenBus() const {
             return core.cpu->GetPrefetchedOpcode(1) | (core.cpu->GetPrefetchedOpcode(2) << 16);
         }
     case Region::IO:
-    case Region::SRam:
+    case Region::SRam_l:
+    case Region::SRam_h:
     default:
         // Executing code from these regions is not strictly forbidden, but will likely go poorly. I don't know
         // what open-bus reads will return.

@@ -23,6 +23,7 @@ set(SOURCES
     gba/core/Core.cpp
     gba/memory/Memory.cpp
     gba/memory/CartridgeHeader.cpp
+    gba/memory/Save.cpp
     gba/cpu/Cpu.cpp
     gba/cpu/Instruction.cpp
     gba/cpu/ArmOps.cpp
