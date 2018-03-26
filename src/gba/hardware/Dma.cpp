@@ -147,15 +147,20 @@ int Dma::Transfer(AccessType sequential) {
 
     int cycles = core.mem->AccessTime<T>(source, sequential) + core.mem->AccessTime<T>(dest, sequential);
 
-    switch (SourceControl()) {
-    case Increment:
+    if (source >= BaseAddr::Rom && source < BaseAddr::SRam) {
+        // Sequential accesses to ROM always read from the address incrementer.
         source += TransferWidth();
-        break;
-    case Decrement:
-        source -= TransferWidth();
-        break;
-    default:
-        break;
+    } else {
+        switch (SourceControl()) {
+        case Increment:
+            source += TransferWidth();
+            break;
+        case Decrement:
+            source -= TransferWidth();
+            break;
+        default:
+            break;
+        }
     }
 
     switch (DestControl()) {
