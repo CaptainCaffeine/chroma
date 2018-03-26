@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <fstream>
+#include <stdexcept>
 #include <algorithm>
 #include <fmt/format.h>
 #include <sys/stat.h>
@@ -178,6 +180,28 @@ Gb::Console CheckRomFile(const std::string& filename) {
 
     return Gb::Console::CGB;
 }
+
+template<typename T>
+std::vector<T> LoadRom(const std::string& filename, Gb::Console console) {
+    std::ifstream rom_file(filename);
+    if (!rom_file) {
+        throw std::runtime_error("Error when attempting to open " + filename);
+    }
+
+    const auto rom_size = GetFileSize(rom_file);
+
+    // AGB ROMs vary between 1 to 32MB in size. We expand all ROMs to at least 16MB to avoid requiring a bounds
+    // check before every low ROM access. This isn't an issue on CGB because only 32KB of ROM is mapped at a time.
+    const auto rom_vector_size = (console == Gb::Console::AGB) ? std::max(rom_size, 0x0100'0000ul) : rom_size;
+
+    std::vector<T> rom_contents(rom_vector_size / sizeof(T));
+    rom_file.read(reinterpret_cast<char*>(rom_contents.data()), rom_size);
+
+    return rom_contents;
+}
+
+template std::vector<u8> LoadRom<u8>(const std::string& filename, Gb::Console console);
+template std::vector<u16> LoadRom<u16>(const std::string& filename, Gb::Console console);
 
 std::string SaveGamePath(const std::string& rom_path) {
     std::size_t last_dot = rom_path.rfind('.');

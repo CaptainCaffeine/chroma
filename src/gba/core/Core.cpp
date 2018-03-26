@@ -81,6 +81,8 @@ void Core::UpdateHardware(int cycles) {
     for (auto& timer : timers) {
         timer.Tick(cycles);
     }
+
+    mem->EepromWrite(cycles);
 }
 
 void Core::RegisterCallbacks() {

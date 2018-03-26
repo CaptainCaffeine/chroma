@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdexcept>
+#include <fmt/format.h>
 
 #include "gba/memory/Memory.h"
 #include "gba/core/Core.h"
@@ -36,8 +37,9 @@ Memory::Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom, cons
         , vram(vram_size / sizeof(u16))
         , oam(oam_size / sizeof(u32))
         , rom(_rom)
+        , core(_core)
         , save_path(_save_path)
-        , core(_core) {
+        , large_rom(rom.size() / 2 > 16 * mbyte) {
 
     ReadSaveFile();
 }
@@ -99,17 +101,13 @@ T Memory::ReadBios(const u32 addr) const {
     }
 }
 
-template u8 Memory::ReadBios<u8>(const u32 addr) const;
-template u16 Memory::ReadBios<u16>(const u32 addr) const;
-template u32 Memory::ReadBios<u32>(const u32 addr) const;
-
 // Forward declaring template specializations of ReadIO for ReadMem.
 template <> u32 Memory::ReadIO(const u32 addr) const;
 template <> u16 Memory::ReadIO(const u32 addr) const;
 template <> u8 Memory::ReadIO(const u32 addr) const;
 
 template <typename T>
-T Memory::ReadMem(const u32 addr) {
+T Memory::ReadMem(const u32 addr, bool dma) {
     switch (GetRegion(addr)) {
     case Region::Bios:
         return ReadBios<T>(addr);
@@ -126,12 +124,29 @@ T Memory::ReadMem(const u32 addr) {
     case Region::Oam:
         return ReadOam<T>(addr);
     case Region::Rom0_l:
-    case Region::Rom0_h:
     case Region::Rom1_l:
-    case Region::Rom1_h:
     case Region::Rom2_l:
-    case Region::Rom2_h:
-        return ReadRom<T>(addr);
+        return ReadRomLo<T>(addr);
+    case Region::Rom0_h:
+    case Region::Rom1_h:
+        return ReadRomHi<T>(addr);
+    case Region::Eeprom:
+        if (save_type == SaveType::Eeprom && EepromAddr(addr)) {
+            if (dma && eeprom_ready) {
+                if (eeprom_read_pos < 4) {
+                    static constexpr std::array<u16, 4> eeprom_read_warmup{{0, 1, 1, 1}};
+                    return eeprom_read_warmup[eeprom_read_pos++];
+                } else if (eeprom_read_pos < 68) {
+                    return (eeprom_read_buffer >> (eeprom_read_pos++ - 4)) & 0x1;
+                } else {
+                    return 0;
+                }
+            } else {
+                return eeprom_ready;
+            }
+        } else {
+            return ReadRomHi<T>(addr);
+        }
     case Region::SRam_l:
     case Region::SRam_h:
         if (save_type == SaveType::Unknown) {
@@ -149,9 +164,9 @@ T Memory::ReadMem(const u32 addr) {
     }
 }
 
-template u8 Memory::ReadMem<u8>(const u32 addr);
-template u16 Memory::ReadMem<u16>(const u32 addr);
-template u32 Memory::ReadMem<u32>(const u32 addr);
+template u8 Memory::ReadMem<u8>(const u32 addr, bool dma);
+template u16 Memory::ReadMem<u16>(const u32 addr, bool dma);
+template u32 Memory::ReadMem<u32>(const u32 addr, bool dma);
 
 // Bus width 16.
 template <>
@@ -223,7 +238,7 @@ template <> void Memory::WriteIO(const u32 addr, u16 data, u16 mask);
 template <> void Memory::WriteIO(const u32 addr, u8 data, u16 mask);
 
 template <typename T>
-void Memory::WriteMem(const u32 addr, const T data) {
+void Memory::WriteMem(const u32 addr, const T data, bool dma) {
     switch (GetRegion(addr)) {
     case Region::Bios:
         // Read only.
@@ -251,8 +266,18 @@ void Memory::WriteMem(const u32 addr, const T data) {
     case Region::Rom1_l:
     case Region::Rom1_h:
     case Region::Rom2_l:
-    case Region::Rom2_h:
         // Read only.
+        break;
+    case Region::Eeprom:
+        if (dma && EepromAddr(addr)) {
+            if (save_type == SaveType::Unknown) {
+                save_type = SaveType::Eeprom;
+            }
+
+            if (save_type == SaveType::Eeprom && eeprom_ready) {
+                eeprom_bitstream.push_back(data & 0x1);
+            }
+        }
         break;
     case Region::SRam_l:
     case Region::SRam_h:
@@ -269,9 +294,9 @@ void Memory::WriteMem(const u32 addr, const T data) {
     }
 }
 
-template void Memory::WriteMem<u8>(const u32 addr, const u8 data);
-template void Memory::WriteMem<u16>(const u32 addr, const u16 data);
-template void Memory::WriteMem<u32>(const u32 addr, const u32 data);
+template void Memory::WriteMem<u8>(const u32 addr, const u8 data, bool dma);
+template void Memory::WriteMem<u16>(const u32 addr, const u16 data, bool dma);
+template void Memory::WriteMem<u32>(const u32 addr, const u32 data, bool dma);
 
 template <typename T>
 int Memory::AccessTime(const u32 addr, AccessType access_type) {
@@ -335,7 +360,7 @@ int Memory::AccessTime(const u32 addr, AccessType access_type) {
         access_cycles = RomTime(1);
         break;
     case Region::Rom2_l:
-    case Region::Rom2_h:
+    case Region::Eeprom:
         access_cycles = RomTime(2);
         break;
     case Region::SRam_l:
@@ -393,7 +418,7 @@ void Memory::RunPrefetch(int cycles) {
         wait_states = wait_state_s[1];
         break;
     case Region::Rom2_l:
-    case Region::Rom2_h:
+    case Region::Eeprom:
         wait_states = wait_state_s[2];
         break;
     default:
@@ -881,7 +906,7 @@ u32 Memory::ReadOpenBus() const {
     case Region::Rom1_l:
     case Region::Rom1_h:
     case Region::Rom2_l:
-    case Region::Rom2_h:
+    case Region::Eeprom:
         return core.cpu->GetPrefetchedOpcode(2) | (core.cpu->GetPrefetchedOpcode(2) << 16);
     case Region::IRam:
         if ((core.cpu->GetPc() & 0x3) == 0) {

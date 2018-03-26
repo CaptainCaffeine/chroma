@@ -35,9 +35,9 @@ public:
     ~Memory();
 
     template <typename T>
-    T ReadMem(const u32 addr);
+    T ReadMem(const u32 addr, bool dma = false);
     template <typename T>
-    void WriteMem(const u32 addr, const T data);
+    void WriteMem(const u32 addr, const T data, bool dma = false);
     template <typename T>
     int AccessTime(const u32 addr, AccessType access_type = AccessType::Normal);
 
@@ -51,6 +51,10 @@ public:
     bool InterruptMasterEnable() const { return master_enable.v; }
     bool PendingInterrupts() const { return intr_flags & intr_enable; }
     void RequestInterrupt(u16 intr) { intr_flags |= intr; };
+
+    bool EepromAddr(u32 addr) const { return !large_rom || addr >= 0x0DFF'FF00; }
+    void EepromWrite(int cycles);
+    void ParseEepromCommand();
 
     const std::vector<u16>& PramReference() const { return pram; }
     const std::vector<u16>& VramReference() const { return vram; }
@@ -66,9 +70,8 @@ private:
     std::vector<u16> vram;
     std::vector<u32> oam;
     const std::vector<u16>& rom;
-
     std::vector<u8> sram;
-    const std::string& save_path;
+    std::vector<u64> eeprom;
 
     Core& core;
 
@@ -82,6 +85,16 @@ private:
 
     enum class SaveType;
     SaveType save_type;
+    const std::string& save_path;
+    const bool large_rom;
+
+    int eeprom_addr_len = 0;
+    std::vector<u8> eeprom_bitstream;
+    u16 eeprom_ready = 0x1;
+    int eeprom_write_cycles = 0;
+
+    int eeprom_read_pos = 64;
+    u64 eeprom_read_buffer = 0x0;
 
     static constexpr unsigned int kbyte = 1024;
     static constexpr unsigned int mbyte = kbyte * kbyte;
@@ -98,7 +111,7 @@ private:
                        Rom1_l = 0xA,
                        Rom1_h = 0xB,
                        Rom2_l = 0xC,
-                       Rom2_h = 0xD,
+                       Eeprom = 0xD,
                        SRam_l = 0xE,
                        SRam_h = 0xF};
 
@@ -158,7 +171,9 @@ private:
     template <typename T>
     T ReadOam(const u32 addr) const { return ReadRegion<T>(oam, oam_addr_mask, addr); }
     template <typename T>
-    T ReadRom(const u32 addr) const { return ReadRegion<T>(rom, rom_addr_mask, addr); }
+    T ReadRomLo(const u32 addr) const { return ReadRegion<T>(rom, rom_addr_mask, addr); }
+    template <typename T>
+    T ReadRomHi(const u32 addr) const { return (large_rom) ? ReadRegion<T>(rom, rom_addr_mask, addr) : 0; }
     template <typename T>
     T ReadSRam(const u32 addr) const { return sram[addr & sram_addr_mask] * 0x0101'0101; }
 
@@ -187,6 +202,9 @@ private:
     void ReadSaveFile();
     void WriteSaveFile() const;
     void InitSRam();
+
+    u16 ParseEepromAddr(int stream_size, int non_addr_bits);
+    void InitEeprom(int stream_size, int non_addr_bits);
 
     // IO registers
     static constexpr u32 DISPCNT    = 0x0400'0000;

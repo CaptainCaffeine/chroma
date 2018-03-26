@@ -120,6 +120,10 @@ int Dma::Run() {
             control &= ~enable;
         }
 
+        if (id == 3 && dest >= 0x0D00'0000 && core.mem->EepromAddr(dest)) {
+            core.mem->ParseEepromCommand();
+        }
+
         // Check if there are any other currently active DMA transfers.
         core.cpu->dma_active = std::any_of(core.dma.cbegin(), core.dma.cend(), [](const auto& dma) {
             return dma.Active();
@@ -131,8 +135,8 @@ int Dma::Run() {
 
 template<typename T>
 int Dma::Transfer(AccessType sequential) {
-    T data = core.mem->ReadMem<T>(source);
-    core.mem->WriteMem<T>(dest, data);
+    T data = core.mem->ReadMem<T>(source, true);
+    core.mem->WriteMem<T>(dest, data, true);
 
     int cycles = core.mem->AccessTime<T>(source, sequential) + core.mem->AccessTime<T>(dest, sequential);
 
