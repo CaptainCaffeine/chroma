@@ -54,6 +54,7 @@ private:
     u32 dest = 0x0;
     int remaining_chunks = 1;
 
+    bool bad_source = false;
     bool paused = false;
     bool starting = false;
 

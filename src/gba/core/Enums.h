@@ -61,4 +61,18 @@ enum class AccessType {Normal,
                        Opcode,
                        Sequential};
 
+namespace BaseAddr {
+enum BaseAddr {Bios   = 0x0000'0000,
+               XRam   = 0x0200'0000,
+               IRam   = 0x0300'0000,
+               IO     = 0x0400'0000,
+               PRam   = 0x0500'0000,
+               VRam   = 0x0600'0000,
+               Oam    = 0x0700'0000,
+               Rom    = 0x0800'0000,
+               Eeprom = 0x0D00'0000,
+               SRam   = 0x0E00'0000,
+               Max    = 0x1000'0000};
+}
+
 } // End namespace Gba

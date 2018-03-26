@@ -34,6 +34,8 @@ public:
     Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom, const std::string& _save_path, Core& _core);
     ~Memory();
 
+    u32 transfer_reg = 0x0;
+
     template <typename T>
     T ReadMem(const u32 addr, bool dma = false);
     template <typename T>
@@ -62,6 +64,7 @@ public:
 
     static bool CheckNintendoLogo(const std::vector<u8>& rom_header) noexcept;
     static void CheckHeader(const std::vector<u16>& rom_header);
+
 private:
     const std::vector<u32>& bios;
     std::vector<u16> xram;
@@ -140,9 +143,6 @@ private:
                          SRam,
                          Eeprom,
                          Flash};
-
-    static constexpr u32 io_max = 0x0400'0000 + io_size;
-    static constexpr u32 rom_base_addr = 0x0800'0000;
 
     static constexpr Region GetRegion(const u32 addr) {
         constexpr u32 region_offset = 24;

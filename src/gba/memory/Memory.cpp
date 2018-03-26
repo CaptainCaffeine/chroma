@@ -15,7 +15,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdexcept>
-#include <fmt/format.h>
 
 #include "gba/memory/Memory.h"
 #include "gba/core/Core.h"
@@ -373,8 +372,8 @@ int Memory::AccessTime(const u32 addr, AccessType access_type) {
     }
 
     if (PrefetchEnabled() && access_type == AccessType::Normal
-                          && addr < rom_base_addr
-                          && core.cpu->GetPc() >= rom_base_addr) {
+                          && addr < BaseAddr::Rom
+                          && core.cpu->GetPc() >= BaseAddr::Rom) {
         RunPrefetch(access_cycles);
     }
 

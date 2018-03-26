@@ -50,6 +50,8 @@ void Dma::WriteControl(const u16 data, const u16 mask) {
         source = source_l | (source_h << 16);
         dest = dest_l | (dest_h << 16);
 
+        bad_source = source < BaseAddr::XRam || source >= BaseAddr::Max || (id == 0 && source >= BaseAddr::Rom);
+
         if (TransferWidth() == 4) {
             // Both addresses must be word-aligned.
             source &= ~0x3;
@@ -120,7 +122,7 @@ int Dma::Run() {
             control &= ~enable;
         }
 
-        if (id == 3 && dest >= 0x0D00'0000 && core.mem->EepromAddr(dest)) {
+        if (id == 3 && dest >= BaseAddr::Eeprom && core.mem->EepromAddr(dest)) {
             core.mem->ParseEepromCommand();
         }
 
@@ -135,8 +137,13 @@ int Dma::Run() {
 
 template<typename T>
 int Dma::Transfer(AccessType sequential) {
-    T data = core.mem->ReadMem<T>(source, true);
-    core.mem->WriteMem<T>(dest, data, true);
+    if (!bad_source) {
+        core.mem->transfer_reg = core.mem->ReadMem<T>(source, true);
+        if (sizeof(T) == sizeof(u16)) {
+            core.mem->transfer_reg |= core.mem->transfer_reg << 16;
+        }
+    }
+    core.mem->WriteMem<T>(dest, core.mem->transfer_reg, true);
 
     int cycles = core.mem->AccessTime<T>(source, sequential) + core.mem->AccessTime<T>(dest, sequential);
 

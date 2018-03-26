@@ -98,6 +98,10 @@ void Memory::EepromWrite(int cycles) {
 }
 
 void Memory::ParseEepromCommand() {
+    if (save_type != SaveType::Eeprom) {
+        return;
+    }
+
     const auto stream_size = eeprom_bitstream.size();
     if (!eeprom_ready || stream_size < 9) {
         if (!eeprom_ready) {
