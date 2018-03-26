@@ -124,9 +124,15 @@ void Memory::ParseEepromCommand() {
     }
 
     if (read_request) {
-        eeprom_read_buffer = eeprom[eeprom_addr];
+        if (eeprom_addr <= 0x3FF) {
+            eeprom_read_buffer = eeprom[eeprom_addr];
+        } else {
+            // OOB EEPROM reads return all 1s.
+            eeprom_read_buffer = -1;
+        }
         eeprom_read_pos = 0;
-    } else {
+    } else if (eeprom_addr <= 0x3FF) {
+        // OOB EEPROM writes are ignored.
         u64 value = 0;
         for (int i = 0; i < 64; ++i) {
             value |= static_cast<u64>(eeprom_bitstream[i + 2 + eeprom_addr_len]) << i;
@@ -157,9 +163,6 @@ u16 Memory::ParseEepromAddr(int stream_size, int non_addr_bits) {
         // The EEPROM address is written MSB first.
         eeprom_addr |= static_cast<u16>(eeprom_bitstream[i + 2]) << (eeprom_addr_len - 1 - i);
     }
-
-    // Only the low 10 bits of the address are used.
-    eeprom_addr &= 0x3FF;
 
     return eeprom_addr;
 }
