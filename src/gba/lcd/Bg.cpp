@@ -186,7 +186,7 @@ void Bg::DrawAffineScanline() {
             // Palette entry 0 is transparent.
             scanline[scanline_index] = Lcd::alpha_bit;
         } else {
-            scanline[scanline_index] = lcd.pram[palette_entry];
+            scanline[scanline_index] = lcd.pram[palette_entry] & 0x7FFF;
         }
 
         scanline_index += 1;
@@ -225,7 +225,7 @@ void Bg::DrawBitmapScanline(int bg_mode, int base_addr) {
                 // Palette entry 0 is transparent.
                 scanline[scanline_index++] = Lcd::alpha_bit;
             } else {
-                scanline[scanline_index++] = lcd.pram[palette_entry];
+                scanline[scanline_index++] = lcd.pram[palette_entry] & 0x7FFF;
             }
         } else if (bg_mode == 5) {
             if (tex_x >= 160 || tex_x < 0 || tex_y >= 128 || tex_y < 0) {
