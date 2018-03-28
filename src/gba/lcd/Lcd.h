@@ -61,7 +61,7 @@ public:
         }
 
         if (y_pos + pixel_height > 0xFF) {
-            y_pos -= 0xFF;
+            y_pos -= 0x100;
         }
     }
 
