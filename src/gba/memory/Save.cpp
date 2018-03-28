@@ -27,7 +27,21 @@ void Memory::ReadSaveFile() {
     std::ifstream save_file(save_path);
     if (!save_file) {
         // Save file doesn't exist.
-        save_type = SaveType::Unknown;
+
+        // Read the game code from the ROM header and see if it's in our list of overrides.
+        std::string game_code{reinterpret_cast<const char*>(rom.data()) + 0xAC, 4};
+        if (game_code == "AXVE" || game_code == "BPEE" || game_code == "BPRE"
+                                || game_code == "B24E" || game_code == "AX4E") {
+            fmt::print("128KB Flash override\n");
+            sram.resize(flash_size * 2, 0xFF);
+            save_type = SaveType::Flash;
+
+            sram_addr_mask = flash_size - 1;
+            chip_id = sanyo_id;
+        } else {
+            save_type = SaveType::Unknown;
+        }
+
         return;
     }
 
@@ -41,6 +55,7 @@ void Memory::ReadSaveFile() {
         save_type = SaveType::SRam;
         sram.resize(save_size);
         save_file.read(reinterpret_cast<char*>(sram.data()), save_size);
+        sram_addr_mask = sram_size - 1;
     } else if (save_size == 8 * kbyte || save_size == 512) {
         fmt::print("Found EEPROM save\n");
 
@@ -55,7 +70,16 @@ void Memory::ReadSaveFile() {
         }
     } else if (save_size == 64 * kbyte || save_size == 128 * kbyte) {
         fmt::print("Found Flash save\n");
+
         save_type = SaveType::Flash;
+        sram.resize(save_size);
+        save_file.read(reinterpret_cast<char*>(sram.data()), save_size);
+        sram_addr_mask = flash_size - 1;
+
+        if (save_size == flash_size * 2) {
+            // 128KB flash.
+            chip_id = sanyo_id;
+        }
     } else if (save_size > 128 * kbyte) {
         throw std::runtime_error(fmt::format("Save game size of {} bytes is too large to be a GBA save.", save_size));
     } else {
@@ -64,7 +88,7 @@ void Memory::ReadSaveFile() {
 }
 
 void Memory::WriteSaveFile() const {
-    if (save_type != SaveType::SRam && save_type != SaveType::Eeprom) {
+    if (save_type == SaveType::Unknown) {
         return;
     }
 
@@ -73,7 +97,7 @@ void Memory::WriteSaveFile() const {
     if (!save_file) {
         fmt::print("Error: could not open {} to write save file to disk.\n", save_path);
     } else {
-        if (save_type == SaveType::SRam) {
+        if (save_type == SaveType::SRam || save_type == SaveType::Flash) {
             save_file.write(reinterpret_cast<const char*>(sram.data()), sram.size());
         } else if (save_type == SaveType::Eeprom) {
             save_file.write(reinterpret_cast<const char*>(eeprom.data()), eeprom.size() * sizeof(u64));
@@ -86,13 +110,23 @@ void Memory::InitSRam() {
     fmt::print("SRAM detected\n");
     sram.resize(sram_size, 0xFF);
     save_type = SaveType::SRam;
+
+    sram_addr_mask = sram_size - 1;
 }
 
-void Memory::EepromWrite(int cycles) {
-    if (eeprom_write_cycles > 0) {
-        eeprom_write_cycles -= cycles;
-        if (eeprom_write_cycles <= 0) {
-            eeprom_ready = 1;
+void Memory::InitFlash() {
+    fmt::print("Flash detected\n");
+    sram.resize(flash_size, 0xFF);
+    save_type = SaveType::Flash;
+
+    sram_addr_mask = flash_size - 1;
+}
+
+void Memory::DelayedSaveOp(int cycles) {
+    if (delayed_op.cycles > 0) {
+        delayed_op.cycles -= cycles;
+        if (delayed_op.cycles <= 0) {
+            delayed_op.action();
         }
     }
 }
@@ -144,7 +178,9 @@ void Memory::ParseEepromCommand() {
 
         eeprom[eeprom_addr] = value;
         eeprom_ready = 0;
-        eeprom_write_cycles = 108368;
+        delayed_op = {108368, [this]() {
+            eeprom_ready = 1;
+        }};
     }
 
     eeprom_bitstream.clear();
@@ -186,5 +222,91 @@ void Memory::InitEeprom(int stream_size, int non_addr_bits) {
         return;
     }
 }
+
+template <typename T>
+void Memory::WriteFlash(const u32 addr, const T data) {
+    switch (flash_state) {
+    case FlashState::Command:
+        if (last_flash_cmd == FlashCmd::Write) {
+            delayed_op = {flash_write_cycles, [this, addr, data]() {
+                WriteSRam(addr, data);
+            }};
+        } else if (last_flash_cmd == FlashCmd::BankSwitch) {
+            if (sram.size() == flash_size * 2) {
+                bank_num = data & 0x1;
+            }
+        }
+
+        flash_state = FlashState::NotStarted;
+        last_flash_cmd = FlashCmd::None;
+        break;
+
+    case FlashState::NotStarted:
+        if (data == FlashCmd::Start1 && addr == flash_cmd_addr1) {
+            // Start a new command.
+            flash_state = FlashState::Starting;
+        }
+        break;
+
+    case FlashState::Starting:
+        if (data == FlashCmd::Start2 && addr == flash_cmd_addr2) {
+            flash_state = FlashState::Ready;
+        } else {
+            // Does it actually reset the state machine here if we receive something other than Start2? Or does
+            // it just stay in the starting state?
+            flash_state = FlashState::NotStarted;
+        }
+        break;
+
+    case FlashState::Ready:
+        if (last_flash_cmd == FlashCmd::Erase && data == FlashCmd::EraseSector) {
+            delayed_op = {flash_erase_cycles, [this, addr]() {
+                std::fill_n(sram.begin() + bank_num * flash_size + (addr & 0x0000'F000), 0x1000, 0xFF);
+            }};
+
+            flash_state = FlashState::NotStarted;
+        } else if (addr == flash_cmd_addr1) {
+            flash_state = FlashState::NotStarted;
+
+            switch (data) {
+            case EnterIdMode:
+                flash_id_mode = true;
+                break;
+            case ExitIdmode:
+                flash_id_mode = false;
+                break;
+            case Erase:
+                break;
+            case EraseChip:
+                if (last_flash_cmd == FlashCmd::Erase) {
+                    delayed_op = {flash_erase_cycles, [this]() {
+                        std::fill(sram.begin(), sram.end(), 0xFF);
+                    }};
+                }
+                break;
+            case EraseSector:
+                break;
+            case Write:
+                flash_state = FlashState::Command;
+                break;
+            case BankSwitch:
+                flash_state = FlashState::Command;
+                break;
+            default:
+                break;
+            }
+        }
+
+        last_flash_cmd = static_cast<FlashCmd>(data);
+        break;
+    default:
+        throw std::runtime_error("This shouldn't happen. Remove exception before committing!");
+        break;
+    }
+}
+
+template void Memory::WriteFlash<u8>(const u32 addr, const u8 data);
+template void Memory::WriteFlash<u16>(const u32 addr, const u16 data);
+template void Memory::WriteFlash<u32>(const u32 addr, const u32 data);
 
 } // End namespace Gba

@@ -154,6 +154,16 @@ T Memory::ReadMem(const u32 addr, bool dma) {
 
         if (save_type == SaveType::SRam) {
             return ReadSRam<T>(addr);
+        } else if (save_type == SaveType::Flash) {
+            if (flash_id_mode) {
+                if (addr == flash_man_addr) {
+                    return chip_id & 0xFF;
+                } else if (addr == flash_dev_addr) {
+                    return chip_id >> 8;
+                }
+            }
+
+            return ReadSRam<T>(addr);
         } else {
             // When not present, SRAM reads return either 0x00 or 0xFF. Not sure when 0xFF is returned, though.
             return 0;
@@ -281,11 +291,17 @@ void Memory::WriteMem(const u32 addr, const T data, bool dma) {
     case Region::SRam_l:
     case Region::SRam_h:
         if (save_type == SaveType::Unknown) {
-            InitSRam();
+            if (addr == flash_cmd_addr1 && data == FlashCmd::Start1) {
+                InitFlash();
+            } else {
+                InitSRam();
+            }
         }
 
         if (save_type == SaveType::SRam) {
             WriteSRam(addr, data);
+        } else if (save_type == SaveType::Flash) {
+            WriteFlash(addr, data);
         }
         break;
     default:

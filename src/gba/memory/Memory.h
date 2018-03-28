@@ -19,6 +19,7 @@
 #include <vector>
 #include <array>
 #include <string>
+#include <functional>
 
 #include "common/CommonTypes.h"
 #include "common/CommonFuncs.h"
@@ -55,8 +56,9 @@ public:
     void RequestInterrupt(u16 intr) { intr_flags |= intr; };
 
     bool EepromAddr(u32 addr) const { return !large_rom || addr >= 0x0DFF'FF00; }
-    void EepromWrite(int cycles);
     void ParseEepromCommand();
+
+    void DelayedSaveOp(int cycles);
 
     const std::vector<u16>& PramReference() const { return pram; }
     const std::vector<u16>& VramReference() const { return vram; }
@@ -94,10 +96,47 @@ private:
     int eeprom_addr_len = 0;
     std::vector<u8> eeprom_bitstream;
     u16 eeprom_ready = 0x1;
-    int eeprom_write_cycles = 0;
 
     int eeprom_read_pos = 64;
     u64 eeprom_read_buffer = 0x0;
+
+    static constexpr u32 flash_cmd_addr1    = 0x0E00'5555;
+    static constexpr u32 flash_cmd_addr2    = 0x0E00'2AAA;
+    static constexpr u32 flash_man_addr     = 0x0E00'0000;
+    static constexpr u32 flash_dev_addr     = 0x0E00'0001;
+    static constexpr u16 panasonic_id       = 0x1B32;
+    static constexpr u16 sanyo_id           = 0x1362;
+    static constexpr int flash_erase_cycles = 30000; // Slightly less than 2ms.
+    static constexpr int flash_write_cycles = 300; // Around 18us.
+
+    enum class FlashState {NotStarted, Starting, Ready, Command};
+    enum FlashCmd {Start1      = 0xAA,
+                   Start2      = 0x55,
+                   EnterIdMode = 0x90,
+                   ExitIdmode  = 0xF0,
+                   Erase       = 0x80,
+                   EraseChip   = 0x10,
+                   EraseSector = 0x30,
+                   Write       = 0xA0,
+                   BankSwitch  = 0xB0,
+                   None        = 0x00};
+
+    FlashState flash_state = FlashState::NotStarted;
+    FlashCmd last_flash_cmd = FlashCmd::None;
+    u32 sram_addr_mask;
+    bool flash_id_mode = false;
+    u16 chip_id = panasonic_id;
+    int bank_num = 0;
+
+    struct DelayedOp {
+        DelayedOp(int _cycles, std::function<void()> _action)
+                : cycles(_cycles)
+                , action(_action) {}
+
+        int cycles;
+        std::function<void()> action;
+    };
+    DelayedOp delayed_op{0, [](){}};
 
     static constexpr unsigned int kbyte = 1024;
     static constexpr unsigned int mbyte = kbyte * kbyte;
@@ -118,15 +157,16 @@ private:
                        SRam_l = 0xE,
                        SRam_h = 0xF};
 
-    enum RegionSize {bios_size = 16 * kbyte,
-                     xram_size = 256 * kbyte,
-                     iram_size = 32 * kbyte,
-                     io_size   = kbyte,
-                     pram_size = kbyte,
-                     vram_size = 96 * kbyte,
-                     oam_size  = kbyte,
-                     rom_size  = 32 * mbyte,
-                     sram_size = 32 * kbyte};
+    enum RegionSize {bios_size  = 16 * kbyte,
+                     xram_size  = 256 * kbyte,
+                     iram_size  = 32 * kbyte,
+                     io_size    = kbyte,
+                     pram_size  = kbyte,
+                     vram_size  = 96 * kbyte,
+                     oam_size   = kbyte,
+                     rom_size   = 32 * mbyte,
+                     sram_size  = 32 * kbyte,
+                     flash_size = 64 * kbyte};
 
     enum AddressMask : u32 {bios_addr_mask  = bios_size - 1,
                             xram_addr_mask  = xram_size - 1,
@@ -136,8 +176,7 @@ private:
                             vram_addr_mask1 = 0x0000'FFFF,
                             vram_addr_mask2 = 0x0001'7FFF,
                             oam_addr_mask   = oam_size - 1,
-                            rom_addr_mask   = rom_size - 1,
-                            sram_addr_mask  = sram_size - 1};
+                            rom_addr_mask   = rom_size - 1};
 
     enum class SaveType {Unknown,
                          SRam,
@@ -175,7 +214,7 @@ private:
     template <typename T>
     T ReadRomHi(const u32 addr) const { return (large_rom) ? ReadRegion<T>(rom, rom_addr_mask, addr) : 0; }
     template <typename T>
-    T ReadSRam(const u32 addr) const { return sram[addr & sram_addr_mask] * 0x0101'0101; }
+    T ReadSRam(const u32 addr) const { return sram[bank_num * flash_size + (addr & sram_addr_mask)] * 0x0101'0101; }
 
     template <typename T>
     void WriteXRam(const u32 addr, const T data) { WriteRegion(xram, xram_addr_mask, addr, data); }
@@ -193,8 +232,10 @@ private:
     void WriteOam(const u32 addr, const T data) { WriteRegion(oam, oam_addr_mask, addr, data); }
     template <typename T>
     void WriteSRam(const u32 addr, const T data) {
-        sram[addr & sram_addr_mask] = RotateRight(data, (addr & (sizeof(T) - 1)) * 8);
+        sram[bank_num * flash_size + (addr & sram_addr_mask)] = RotateRight(data, (addr & (sizeof(T) - 1)) * 8);
     }
+    template <typename T>
+    void WriteFlash(const u32 addr, const T data);
 
     void UpdateWaitStates();
     u32 ReadOpenBus() const;
@@ -202,6 +243,8 @@ private:
     void ReadSaveFile();
     void WriteSaveFile() const;
     void InitSRam();
+
+    void InitFlash();
 
     u16 ParseEepromAddr(int stream_size, int non_addr_bits);
     void InitEeprom(int stream_size, int non_addr_bits);

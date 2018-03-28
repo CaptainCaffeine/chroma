@@ -82,7 +82,7 @@ void Core::UpdateHardware(int cycles) {
         timer.Tick(cycles);
     }
 
-    mem->EepromWrite(cycles);
+    mem->DelayedSaveOp(cycles);
 }
 
 void Core::RegisterCallbacks() {
