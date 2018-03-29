@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2017 Matthew Murray
+// Copyright (C) 2016-2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -72,6 +72,7 @@ private:
 
     bool quit = false;
     bool pause = false;
+    bool old_pause = false;
 
     u8 lcd_on_when_stopped = 0x00;
 

@@ -58,6 +58,7 @@ void Core::EmulatorLoop() {
 
         if (pause) {
             SDL_Delay(48);
+            sdl_context.RenderFrame(front_buffer.data());
             continue;
         }
 
@@ -94,6 +95,8 @@ void Core::RegisterCallbacks() {
     sdl_context.RegisterCallback(InputEvent::Fullscreen, [this](bool) { sdl_context.ToggleFullscreen(); });
     sdl_context.RegisterCallback(InputEvent::Screenshot, [](bool) { });
     sdl_context.RegisterCallback(InputEvent::LcdDebug,   [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::HideWindow, [this](bool) { old_pause = pause; pause = true; });
+    sdl_context.RegisterCallback(InputEvent::ShowWindow, [this](bool) { pause = old_pause; });
     sdl_context.RegisterCallback(InputEvent::Up,         [this](bool press) { keypad->Press(Keypad::Up, press); });
     sdl_context.RegisterCallback(InputEvent::Left,       [this](bool press) { keypad->Press(Keypad::Left, press); });
     sdl_context.RegisterCallback(InputEvent::Down,       [this](bool press) { keypad->Press(Keypad::Down, press); });

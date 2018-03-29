@@ -58,6 +58,7 @@ private:
 
     bool quit = false;
     bool pause = false;
+    bool old_pause = false;
 
     void RegisterCallbacks();
 };

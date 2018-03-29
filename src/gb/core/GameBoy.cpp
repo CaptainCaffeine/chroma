@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2017 Matthew Murray
+// Copyright (C) 2016-2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -70,6 +70,7 @@ void GameBoy::EmulatorLoop() {
 
         if (pause) {
             SDL_Delay(48);
+            sdl_context.RenderFrame(front_buffer.data());
             continue;
         }
 
@@ -93,6 +94,8 @@ void GameBoy::RegisterCallbacks() {
     sdl_context.RegisterCallback(InputEvent::Fullscreen, [this](bool) { sdl_context.ToggleFullscreen(); });
     sdl_context.RegisterCallback(InputEvent::Screenshot, [this](bool) { Screenshot(); });
     sdl_context.RegisterCallback(InputEvent::LcdDebug,   [this](bool) { lcd->DumpEverything(); });
+    sdl_context.RegisterCallback(InputEvent::HideWindow, [this](bool) { old_pause = pause; pause = true; });
+    sdl_context.RegisterCallback(InputEvent::ShowWindow, [this](bool) { pause = old_pause; });
     sdl_context.RegisterCallback(InputEvent::Up,         [this](bool press) { joypad->UpPressed(press); });
     sdl_context.RegisterCallback(InputEvent::Left,       [this](bool press) { joypad->LeftPressed(press); });
     sdl_context.RegisterCallback(InputEvent::Down,       [this](bool press) { joypad->DownPressed(press); });

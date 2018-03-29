@@ -32,6 +32,8 @@ enum class InputEvent {Quit,
                        Fullscreen,
                        Screenshot,
                        LcdDebug,
+                       HideWindow,
+                       ShowWindow,
                        Up,
                        Left,
                        Down,
@@ -41,8 +43,7 @@ enum class InputEvent {Quit,
                        L,
                        R,
                        Start,
-                       Select,
-                       None};
+                       Select};
 
 class SDLContext {
 public:
@@ -71,9 +72,9 @@ private:
     int texture_pitch;
     void* texture_pixels;
 
-    std::unordered_map<InputEvent, std::function<void(bool)>> input_callbacks {{ InputEvent::None, [](bool) {} }};
+    std::unordered_map<InputEvent, std::function<void(bool)>> input_callbacks;
 
-    bool FullscreenEnabled() const { return SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP; }
+    bool FullscreenEnabled() const noexcept { return SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP; }
     static const std::string GetSDLErrorString(const std::string& error_function) {
         return {"SDL_" + error_function + " Error: " + SDL_GetError()};
     }

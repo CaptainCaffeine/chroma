@@ -252,6 +252,17 @@ void SDLContext::PollEvents() {
             default:
                 break;
             }
+        } else if (e.type == SDL_WINDOWEVENT) {
+            switch (e.window.event) {
+            case SDL_WINDOWEVENT_HIDDEN:
+                input_callbacks[InputEvent::HideWindow](true);
+                break;
+            case SDL_WINDOWEVENT_SHOWN:
+                input_callbacks[InputEvent::ShowWindow](true);
+                break;
+            default:
+                break;
+            }
         }
     }
 }
