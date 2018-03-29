@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2017 Matthew Murray
+// Copyright (C) 2016-2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -64,6 +64,7 @@ SDLContext::SDLContext(int _width, int _height, unsigned int scale, bool fullscr
     SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_NONE);
 
     if (fullscreen) {
+        SDL_ShowCursor(SDL_DISABLE);
         SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
     }
 
@@ -86,6 +87,11 @@ SDLContext::SDLContext(int _width, int _height, unsigned int scale, bool fullscr
 }
 
 SDLContext::~SDLContext() {
+    if (FullscreenEnabled()) {
+        // We disable fullscreen to prevent the mouse from being moved on shutdown.
+        ToggleFullscreen();
+    }
+
     SDL_CloseAudioDevice(audio_device);
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
@@ -104,8 +110,20 @@ void SDLContext::RenderFrame(const u16* fb_ptr) noexcept {
 }
 
 void SDLContext::ToggleFullscreen() noexcept {
-    u32 fullscreen = SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP;
-    SDL_SetWindowFullscreen(window, fullscreen ^ SDL_WINDOW_FULLSCREEN_DESKTOP);
+    // SDL moves the mouse around when transitioning in and out of fullscreen, so we record the mouse position before
+    // the transition and restore it afterwards.
+    int x, y;
+    SDL_GetGlobalMouseState(&x, &y);
+
+    if (FullscreenEnabled()) {
+        SDL_SetWindowFullscreen(window, 0);
+        SDL_ShowCursor(SDL_ENABLE);
+    } else {
+        SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+        SDL_ShowCursor(SDL_DISABLE);
+    }
+
+    SDL_WarpMouseGlobal(x, y);
 }
 
 void SDLContext::PushBackAudio(const std::array<s16, 1600>& sample_buffer) noexcept {

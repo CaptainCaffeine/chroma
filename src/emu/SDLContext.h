@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2017 Matthew Murray
+// Copyright (C) 2016-2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -73,6 +73,7 @@ private:
 
     std::unordered_map<InputEvent, std::function<void(bool)>> input_callbacks {{ InputEvent::None, [](bool) {} }};
 
+    bool FullscreenEnabled() const { return SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP; }
     static const std::string GetSDLErrorString(const std::string& error_function) {
         return {"SDL_" + error_function + " Error: " + SDL_GetError()};
     }
