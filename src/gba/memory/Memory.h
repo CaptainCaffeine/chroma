@@ -37,6 +37,8 @@ public:
 
     u32 transfer_reg = 0x0;
 
+    bool oam_dirty = true;
+
     template <typename T>
     T ReadMem(const u32 addr, bool dma = false);
     template <typename T>

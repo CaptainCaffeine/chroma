@@ -269,6 +269,7 @@ void Memory::WriteMem(const u32 addr, const T data, bool dma) {
         break;
     case Region::Oam:
         WriteOam(addr, data);
+        oam_dirty = true;
         break;
     case Region::Rom0_l:
     case Region::Rom0_h:

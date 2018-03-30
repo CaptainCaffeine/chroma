@@ -133,7 +133,6 @@ void Lcd::DrawScanline() {
 
     if (ObjEnabled()) {
         ReadOam();
-        GetTileData();
         DrawSprites();
     }
 
@@ -359,15 +358,36 @@ bool Lcd::InWindowContent(int win_id, int layer_id) const {
 }
 
 void Lcd::ReadOam() {
-    sprites.clear();
+    // Only update our sprite objects if OAM has been written to.
+    if (core.mem->oam_dirty) {
+        sprites.clear();
+
+        // Get all enabled, potentially onscreen sprites.
+        for (std::size_t i = 0; i < oam.size(); i += 2) {
+            if (!Sprite::Disabled(oam[i])) {
+                int y_pos = oam[i] & 0xFF;
+                int pixel_height = Sprite::Height(oam[i]);
+                if (y_pos + pixel_height > 0xFF) {
+                    y_pos -= 0x100;
+                }
+                if (y_pos < 160) {
+                    sprites.emplace_back(oam[i], oam[i + 1]);
+                }
+            }
+        }
+
+        // TODO: Need to do this if OBJ VRAM is written to.
+        GetTileData();
+
+        core.mem->oam_dirty = false;
+    }
 
     // The number of sprites that can be drawn on one scanline depends on the number of cycles each sprite takes
     // to render. The maximum rendering time is reduced if HBlank Interval Free is set.
     const int max_render_cycles = HBlankFree() ? 954 : 1210;
     int render_cycles_needed = 0;
-    for (std::size_t i = 0; i < oam.size(); i += 2) {
-        Sprite sprite{oam[i], oam[i + 1]};
-        if (!sprite.Disabled() && sprite.y_pos <= vcount && vcount < sprite.y_pos + sprite.pixel_height) {
+    for (auto& sprite : sprites) {
+        if (sprite.y_pos <= vcount && vcount < sprite.y_pos + sprite.pixel_height) {
             // All sprites, including offscreen ones, contribute to rendering time.
             if (sprite.affine) {
                 render_cycles_needed += sprite.pixel_width * 2 + 10;
@@ -377,15 +397,18 @@ void Lcd::ReadOam() {
 
             // Don't draw any more sprites once we run out of rendering cycles.
             if (render_cycles_needed > max_render_cycles) {
-                break;
+                sprite.drawn = false;
+                continue;
             }
 
             // Only onscreen sprites will actually be drawn.
             // In bitmap BG modes, attempts to use sprite tiles < 512 are not displayed.
             if (sprite.x_pos < h_pixels && sprite.x_pos + sprite.pixel_width >= 0
                     && (BgMode() < 3 || sprite.tile_num >= 512)) {
-                sprites.push_back(sprite);
+                sprite.drawn = true;
             }
+        } else {
+            sprite.drawn = false;
         }
     }
 }
@@ -443,6 +466,10 @@ void Lcd::DrawSprites() {
 
     for (int s = sprites.size() - 1; s >= 0; --s) {
         const auto& sprite = sprites[s];
+
+        if (!sprite.drawn) {
+            continue;
+        }
 
         sprite_scanline_used[sprite.priority] = true;
 

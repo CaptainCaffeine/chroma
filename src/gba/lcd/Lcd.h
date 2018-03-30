@@ -40,25 +40,18 @@ public:
             , mode(static_cast<Mode>((attr1 >> 10) & 0x3))
             , mosaic(attr1 & 0x1000)
             , single_palette(attr1 & 0x2000)
-            , shape(static_cast<Shape>((attr1 >> 14) & 0x3))
             , x_pos(SignExtend((attr1 >> 16) & 0x1FF, 9))
             , affine_select((attr1 >> 25) & 0x1F)
             , h_flip(attr1 & 0x1000'0000)
             , v_flip(attr1 & 0x2000'0000)
-            , size((attr1 >> 30) & 0x3)
             , tile_num(attr2 & 0x3FF)
             , priority((attr2 >> 10) & 0x3)
             , palette((attr2 >> 12) & 0xF)
-            , pixel_width(Width(shape, size))
-            , pixel_height(Height(shape, size))
-            , tile_width(pixel_width / 8)
-            , tile_height(pixel_height / 8)
+            , pixel_width(Width(attr1))
+            , pixel_height(Height(attr1))
+            , tile_width(pixel_width / ((affine && double_size) ? 16 : 8))
+            , tile_height(pixel_height / ((affine && double_size) ? 16 : 8))
             , tiles(tile_width * tile_height) {
-
-        if (affine && double_size) {
-            pixel_width *= 2;
-            pixel_height *= 2;
-        }
 
         if (y_pos + pixel_height > 0xFF) {
             y_pos -= 0x100;
@@ -82,13 +75,11 @@ public:
     Mode mode;
     bool mosaic;
     bool single_palette;
-    Shape shape;
 
     int x_pos;
     int affine_select;
     bool h_flip;
     bool v_flip;
-    int size;
 
     int tile_num;
     int priority;
@@ -99,51 +90,82 @@ public:
     int tile_width;
     int tile_height;
 
+    bool drawn = false;
+
     std::vector<Tile> tiles;
 
-    bool Disabled() const { return !affine && disable; }
+    static bool Disabled(u32 attr1) { return (attr1 & 0x200) && !(attr1 & 0x100); }
+    static Shape GetShape(u32 attr1) { return static_cast<Shape>((attr1 >> 14) & 0x3); }
+    static int GetSize(u32 attr1) { return (attr1 >> 30) & 0x3; }
+    static bool DoubleSize(u32 attr1) { return (attr1 & 0x200) && (attr1 & 0x100); }
 
-    static int Height(Shape shape, int size) {
+    static int Height(u32 attr1) {
+        Shape shape = Sprite::GetShape(attr1);
+        int size = Sprite::GetSize(attr1);
+
+        int pixel_height;
         switch (shape) {
         case Shape::Square:
             // 8, 16, 32, 64
-            return 8 << size;
+            pixel_height = 8 << size;
+            break;
         case Shape::Horizontal:
             // 8, 8, 16, 32
             if (size > 0) {
                 size -= 1;
             }
-            return 8 << size;
+            pixel_height = 8 << size;
+            break;
         case Shape::Vertical:
             // 16, 32, 32, 64
             if (size > 1) {
                 size -= 1;
             }
-            return 16 << size;
+            pixel_height = 16 << size;
+            break;
         default:
             return 0;
         }
+
+        if (DoubleSize(attr1)) {
+            return pixel_height * 2;
+        } else {
+            return pixel_height;
+        }
     }
 
-    static int Width(Shape shape, int size) {
+    static int Width(u32 attr1) {
+        Shape shape = Sprite::GetShape(attr1);
+        int size = Sprite::GetSize(attr1);
+
+        int pixel_width;
         switch (shape) {
         case Shape::Square:
             // 8, 16, 32, 64
-            return 8 << size;
+            pixel_width = 8 << size;
+            break;
         case Shape::Horizontal:
             // 16, 32, 32, 64
             if (size > 1) {
                 size -= 1;
             }
-            return 16 << size;
+            pixel_width = 16 << size;
+            break;
         case Shape::Vertical:
             // 8, 8, 16, 32
             if (size > 0) {
                 size -= 1;
             }
-            return 8 << size;
+            pixel_width = 8 << size;
+            break;
         default:
             return 0;
+        }
+
+        if (DoubleSize(attr1)) {
+            return pixel_width * 2;
+        } else {
+            return pixel_width;
         }
     }
 };
