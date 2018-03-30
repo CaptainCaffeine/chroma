@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdexcept>
+#include <fmt/format.h>
 
 #include "emu/SDLContext.h"
 
@@ -140,6 +141,11 @@ void SDLContext::PauseAudio() noexcept {
 
 void SDLContext::RegisterCallback(InputEvent event, std::function<void(bool)> callback) {
     input_callbacks.insert({event, callback});
+}
+
+void SDLContext::UpdateFrameTimes(float avg_time_us, float max_time_us) {
+    SDL_SetWindowTitle(window, fmt::format("Chroma - avg {:0>4.1f}ms - max {:0>4.1f}ms",
+                                           avg_time_us / 1000, max_time_us / 1000).data());
 }
 
 void SDLContext::PollEvents() {

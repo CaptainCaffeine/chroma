@@ -60,6 +60,8 @@ public:
     void RegisterCallback(InputEvent event, std::function<void(bool)> callback);
     void PollEvents();
 
+    void UpdateFrameTimes(float avg_frame_time, float max_frame_time);
+
 private:
     SDL_Window* window;
     SDL_Renderer* renderer;
