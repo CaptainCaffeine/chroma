@@ -219,6 +219,10 @@ public:
     const std::vector<u16>& vram;
     const std::vector<u32>& oam;
 
+    bool bg_dirty = true;
+    bool obj_dirty = true;
+    bool oam_dirty = true;
+
     static constexpr int h_pixels = 240;
     static constexpr int v_pixels = 160;
     static constexpr u16 alpha_bit = 0x8000;

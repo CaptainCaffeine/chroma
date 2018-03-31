@@ -76,6 +76,9 @@ public:
 
     int enable_delay = 0;
 
+    int previous_row_num = 0xFF;
+    bool dirty = true;
+
     void GetRowMapInfo();
     void GetTileData();
     void DrawRegularScanline();

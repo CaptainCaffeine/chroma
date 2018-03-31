@@ -136,13 +136,20 @@ void Lcd::DrawScanline() {
         DrawSprites();
     }
 
+    if (bg_dirty) {
+        for (auto& bg : bgs) {
+            bg.dirty = true;
+        }
+
+        bg_dirty = false;
+    }
+
     std::array<std::vector<const Bg*>, 4> priorities;
 
     if (BgMode() == 0) {
         for (int b = 0; b < 4; ++b) {
             if (bgs[b].Enabled()) {
                 bgs[b].GetRowMapInfo();
-                bgs[b].GetTileData();
                 bgs[b].DrawRegularScanline();
             }
         }
@@ -158,7 +165,6 @@ void Lcd::DrawScanline() {
         for (int b = 0; b < 2; ++b) {
             if (bgs[b].Enabled()) {
                 bgs[b].GetRowMapInfo();
-                bgs[b].GetTileData();
                 bgs[b].DrawRegularScanline();
             }
         }
@@ -359,7 +365,7 @@ bool Lcd::InWindowContent(int win_id, int layer_id) const {
 
 void Lcd::ReadOam() {
     // Only update our sprite objects if OAM has been written to.
-    if (core.mem->oam_dirty) {
+    if (oam_dirty) {
         sprites.clear();
 
         // Get all enabled, potentially onscreen sprites.
@@ -376,10 +382,11 @@ void Lcd::ReadOam() {
             }
         }
 
-        // TODO: Need to do this if OBJ VRAM is written to.
         GetTileData();
 
-        core.mem->oam_dirty = false;
+        oam_dirty = false;
+    } else if (obj_dirty) {
+        GetTileData();
     }
 
     // The number of sprites that can be drawn on one scanline depends on the number of cycles each sprite takes
@@ -414,7 +421,7 @@ void Lcd::ReadOam() {
 }
 
 void Lcd::GetTileData() {
-    // Get tile data. Each tile is 32 bytes in 16 palette mode, and 64 bytes in single palette mode.
+    // Each tile is 32 bytes in 16 palette mode, and 64 bytes in single palette mode.
     for (auto& sprite : sprites) {
         int tile_bytes = 32;
         if (sprite.single_palette) {
@@ -443,6 +450,8 @@ void Lcd::GetTileData() {
             }
         }
     }
+
+    obj_dirty = false;
 }
 
 void Lcd::DrawSprites() {

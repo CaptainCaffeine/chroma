@@ -37,8 +37,6 @@ public:
 
     u32 transfer_reg = 0x0;
 
-    bool oam_dirty = true;
-
     template <typename T>
     T ReadMem(const u32 addr, bool dma = false);
     template <typename T>
@@ -227,11 +225,9 @@ private:
     template <typename T>
     void WritePRam(const u32 addr, const T data) { WriteRegion(pram, pram_addr_mask, addr, data); }
     template <typename T>
-    void WriteVRam(const u32 addr, const T data) {
-        WriteRegion(vram, (addr & 0x0001'0000) ? vram_addr_mask2 : vram_addr_mask1, addr, data);
-    }
+    void WriteVRam(const u32 addr, const T data);
     template <typename T>
-    void WriteOam(const u32 addr, const T data) { WriteRegion(oam, oam_addr_mask, addr, data); }
+    void WriteOam(const u32 addr, const T data);
     template <typename T>
     void WriteSRam(const u32 addr, const T data) {
         sram[bank_num * flash_size + (addr & sram_addr_mask)] = RotateRight(data, (addr & (sizeof(T) - 1)) * 8);

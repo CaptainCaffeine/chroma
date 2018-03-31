@@ -226,6 +226,23 @@ void Memory::WriteRegion(std::vector<u32>& region, const AddressMask region_mask
     region[region_addr] = (region[region_addr] & ~(0xFF << hi_shift)) | (data << hi_shift);
 }
 
+template <typename T>
+void Memory::WriteVRam(const u32 addr, const T data) {
+    if (addr & 0x0001'0000) {
+        WriteRegion(vram, vram_addr_mask2, addr, data);
+        core.lcd->obj_dirty = true;
+    } else {
+        WriteRegion(vram, vram_addr_mask1, addr, data);
+        core.lcd->bg_dirty = true;
+    }
+}
+
+template <typename T>
+void Memory::WriteOam(const u32 addr, const T data) {
+    WriteRegion(oam, oam_addr_mask, addr, data);
+    core.lcd->oam_dirty = true;
+}
+
 // Specializing 8-bit writes to video memory.
 // BG and Palette RAM: write the byte to both the upper and lower byte of the halfword.
 // OBJ and OAM: ignore the write.
@@ -234,7 +251,7 @@ void Memory::WritePRam(const u32 addr, const u8 data) { WritePRam<u16>(addr & ~0
 template <>
 void Memory::WriteVRam(const u32 addr, const u8 data) {
     // TODO: The starting address of the OBJ region changes in bitmap mode.
-    if ((addr & vram_addr_mask2) < 0x0001'0000) {
+    if ((addr & 0x0001'0000) == 0) {
         WriteVRam<u16>(addr & ~0x1, data * 0x0101);
     }
 }
@@ -269,7 +286,6 @@ void Memory::WriteMem(const u32 addr, const T data, bool dma) {
         break;
     case Region::Oam:
         WriteOam(addr, data);
-        oam_dirty = true;
         break;
     case Region::Rom0_l:
     case Region::Rom0_h:
@@ -602,15 +618,19 @@ void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
         break;
     case BG0CNT:
         core.lcd->bgs[0].control.Write(data, mask);
+        core.lcd->bgs[0].dirty = true;
         break;
     case BG1CNT:
         core.lcd->bgs[1].control.Write(data, mask);
+        core.lcd->bgs[1].dirty = true;
         break;
     case BG2CNT:
         core.lcd->bgs[2].control.Write(data, mask);
+        core.lcd->bgs[2].dirty = true;
         break;
     case BG3CNT:
         core.lcd->bgs[3].control.Write(data, mask);
+        core.lcd->bgs[3].dirty = true;
         break;
     case BG0HOFS:
         core.lcd->bgs[0].scroll_x.Write(data, mask);

@@ -26,14 +26,21 @@ bool Bg::Enabled() const {
 }
 
 void Bg::GetRowMapInfo() {
-    tiles.clear();
-
     int row_num = (scroll_y + lcd.vcount) / 8;
     if (ScreenSize() < 2) {
         row_num %= 32;
     } else {
         row_num %= 64;
     }
+
+    if (row_num == previous_row_num && !dirty) {
+        // Reuse the previously fetched tilemap & tile data.
+        return;
+    }
+
+    previous_row_num = row_num;
+    dirty = false;
+    tiles.clear();
 
     // Get a row of map entries from the specified screenblock.
     auto ReadRowMap = [this, row_num = row_num % 32](int screenblock) {
@@ -72,6 +79,8 @@ void Bg::GetRowMapInfo() {
     default:
         break;
     }
+
+    GetTileData();
 }
 
 void Bg::GetTileData() {
@@ -89,7 +98,6 @@ void Bg::GetTileData() {
             std::fill_n(tile.data.begin(), tile_bytes, 0x8000);
             continue;
         }
-
     }
 }
 
@@ -107,7 +115,7 @@ void Bg::DrawRegularScanline() {
 
     int scanline_index = 0;
     while (scanline_index < Lcd::h_pixels) {
-        auto& tile = tiles[tile_index];
+        const auto& tile = tiles[tile_index];
         tile_index = (tile_index + 1) % horizontal_tiles;
         const int flip_row = tile.v_flip ? (7 - pixel_row) : pixel_row;
 
