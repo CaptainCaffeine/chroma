@@ -189,7 +189,7 @@ void Bg::DrawAffineScanline() {
         const int pixel_addr = tile_addr + pixel_row * 8 + tex_x % 8;
         hi_shift = 8 * (pixel_addr & 0x1);
 
-        u8 palette_entry = (lcd.vram[pixel_addr / 2] >> hi_shift) & 0xFF;
+        const u8 palette_entry = (lcd.vram[pixel_addr / 2] >> hi_shift) & 0xFF;
         if (palette_entry == 0) {
             // Palette entry 0 is transparent.
             scanline[scanline_index] = Lcd::alpha_bit;
@@ -228,7 +228,7 @@ void Bg::DrawBitmapScanline(int bg_mode, int base_addr) {
             // The lower byte is the palette index for even pixels, and the upper byte is for odd pixels.
             const int pixel_addr = base_addr + tex_y * Lcd::h_pixels + tex_x;
             const int odd_shift = 8 * (pixel_addr & 0x1);
-            u8 palette_entry = lcd.vram[pixel_addr / 2] >> odd_shift;
+            const u8 palette_entry = lcd.vram[pixel_addr / 2] >> odd_shift;
             if (palette_entry == 0) {
                 // Palette entry 0 is transparent.
                 scanline[scanline_index++] = Lcd::alpha_bit;

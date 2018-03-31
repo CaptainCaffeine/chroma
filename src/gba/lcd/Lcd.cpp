@@ -532,7 +532,7 @@ void Lcd::DrawRegularSprite(const Sprite& sprite) {
     }
 
     while (scanline_index < h_pixels && tile_index <= last_tile && tile_index >= first_tile) {
-        auto& tile = sprite.tiles[tile_index];
+        const auto& tile = sprite.tiles[tile_index];
         tile_index += tile_direction;
 
         std::array<u16, 8> pixel_colours = GetTilePixels(tile, sprite.single_palette, pixel_row, sprite.palette, 256);
@@ -594,7 +594,7 @@ void Lcd::DrawAffineSprite(const Sprite& sprite) {
     const int pd_sprite_y = pd * sprite_y;
 
     while (scanline_index < last_sprite_pixel) {
-        int sprite_x = scanline_index - sprite_centre_x;
+        const int sprite_x = scanline_index - sprite_centre_x;
 
         int tex_x = ((pa * sprite_x + pb_sprite_y) >> 8) + tex_centre_x;
         int tex_y = ((pc * sprite_x + pd_sprite_y) >> 8) + tex_centre_y;
@@ -612,14 +612,14 @@ void Lcd::DrawAffineSprite(const Sprite& sprite) {
             continue;
         }
 
-        int tile_row = tex_y / 8;
-        int pixel_row = tex_y % 8;
-        int tile_index = tile_row * sprite.tile_width + tex_x / 8;
+        const int tile_row = tex_y / 8;
+        const int pixel_row = tex_y % 8;
+        const int tile_index = tile_row * sprite.tile_width + tex_x / 8;
 
         if (sprite.single_palette) {
             // Each tile byte specifies the 8-bit palette index for a pixel.
             const int pixel_index = pixel_row * 8 + tex_x % 8;
-            u8 palette_entry = sprite.tiles[tile_index][pixel_index];
+            const u8 palette_entry = sprite.tiles[tile_index][pixel_index];
             if (palette_entry != 0) {
                 // Palette entry 0 is transparent.
                 if (ObjWinEnabled() && sprite.mode == Sprite::Mode::ObjWindow) {
@@ -641,7 +641,7 @@ void Lcd::DrawAffineSprite(const Sprite& sprite) {
             // The lower 4 bits are the palette index for even pixels, and the upper 4 bits are for odd pixels.
             const int odd_shift = 4 * ((tex_x % 8) & 0x1);
             const int pixel_index = pixel_row * 4 + (tex_x % 8) / 2;
-            u8 palette_entry = (sprite.tiles[tile_index][pixel_index] >> odd_shift) & 0xF;
+            const u8 palette_entry = (sprite.tiles[tile_index][pixel_index] >> odd_shift) & 0xF;
             if (palette_entry != 0) {
                 // Palette entry 0 is transparent.
                 if (ObjWinEnabled() && sprite.mode == Sprite::Mode::ObjWindow) {
@@ -665,18 +665,19 @@ void Lcd::DrawAffineSprite(const Sprite& sprite) {
     }
 }
 
-std::array<u16, 8> Lcd::GetTilePixels(const Tile& tile, bool single_palette, int pixel_row, int palette, int base) {
+std::array<u16, 8> Lcd::GetTilePixels(const Tile& tile, bool single_palette,
+                                      int pixel_row, int palette, int base) const {
     std::array<u16, 8> pixel_colours;
 
     if (single_palette) {
         // Each tile byte specifies the 8-bit palette index for a pixel.
         for (int i = 0; i < 8; ++i) {
-            u8 palette_entry = tile[pixel_row * 8 + i];
-            pixel_colours[i] = pram[base + palette_entry] & 0x7FFF;
-
+            const u8 palette_entry = tile[pixel_row * 8 + i];
             if (palette_entry == 0) {
                 // Palette entry 0 is transparent.
-                pixel_colours[i] |= alpha_bit;
+                pixel_colours[i] = alpha_bit;
+            } else {
+                pixel_colours[i] = pram[base + palette_entry] & 0x7FFF;
             }
         }
     } else {
@@ -684,12 +685,12 @@ std::array<u16, 8> Lcd::GetTilePixels(const Tile& tile, bool single_palette, int
         for (int i = 0; i < 8; ++i) {
             // The lower 4 bits are the palette index for even pixels, and the upper 4 bits are for odd pixels.
             const int odd_shift = 4 * (i & 0x1);
-            u8 palette_entry = (tile[pixel_row * 4 + i / 2] >> odd_shift) & 0xF;
-            pixel_colours[i] = pram[base + palette * 16 + palette_entry] & 0x7FFF;
-
+            const u8 palette_entry = (tile[pixel_row * 4 + i / 2] >> odd_shift) & 0xF;
             if (palette_entry == 0) {
                 // Palette entry 0 is transparent.
-                pixel_colours[i] |= alpha_bit;
+                pixel_colours[i] = alpha_bit;
+            } else {
+                pixel_colours[i] = pram[base + palette * 16 + palette_entry] & 0x7FFF;
             }
         }
     }

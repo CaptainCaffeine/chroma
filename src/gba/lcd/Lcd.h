@@ -232,7 +232,8 @@ public:
 
     void WriteControl(const u16 data, const u16 mask);
 
-    std::array<u16, 8> GetTilePixels(const Tile& tile, bool single_palette, int pixel_row, int palette, int base);
+    std::array<u16, 8> GetTilePixels(const Tile& tile, bool single_palette,
+                                     int pixel_row, int palette, int base) const;
 
     // Mosaic flags
     int MosaicBgH() const { return (mosaic & 0xF) + 1; }
