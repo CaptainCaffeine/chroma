@@ -31,12 +31,14 @@ public:
     IOReg reload  = {0x0000, 0x0000, 0xFFFF};
     IOReg control = {0x0000, 0x00C7, 0x00C7};
 
+    const int id;
+
     void Tick(int cycles);
     void CounterTick();
     void WriteControl(const u16 data, const u16 mask);
     bool CascadeEnabled() const { return control & 0x0004; }
+    int NextEvent() const;
 private:
-    const int id;
     Core& core;
 
     u32 timer_clock = 0;

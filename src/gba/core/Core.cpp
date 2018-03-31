@@ -105,6 +105,23 @@ void Core::UpdateHardware(int cycles) {
     mem->DelayedSaveOp(cycles);
 }
 
+int Core::HaltCycles(int remaining_cpu_cycles) const {
+    int halt_cycles = lcd->NextEvent();
+
+    for (const auto& timer : timers) {
+        if (!mem->InterruptEnabled(Interrupt::Timer0 << timer.id)) {
+            continue;
+        }
+
+        int next_event_cycles = timer.NextEvent();
+        if (next_event_cycles != 0) {
+            halt_cycles = std::min(halt_cycles, next_event_cycles);
+        }
+    }
+
+    return std::min(halt_cycles + 1, remaining_cpu_cycles);
+}
+
 void Core::RegisterCallbacks() {
     using Emu::InputEvent;
 

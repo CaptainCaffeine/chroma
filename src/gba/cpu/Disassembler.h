@@ -53,7 +53,7 @@ public:
     void DisassembleThumb(Thumb opcode, const std::array<u32, 16>& regs, u32 cpsr);
     void DisassembleArm(Arm opcode, const std::array<u32, 16>& regs, u32 cpsr);
 
-    void IncHaltCycles() { ++halt_cycles; }
+    void IncHaltCycles(int cycles) { halt_cycles += cycles; }
     void LogHalt();
 
     void SwitchLogLevel();

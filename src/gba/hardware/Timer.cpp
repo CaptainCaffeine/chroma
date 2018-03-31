@@ -39,7 +39,8 @@ void Timer::Tick(int cycles) {
 
     while (cycles-- > 0) {
         timer_clock += 1;
-        if (delay-- > 0) {
+        if (delay > 0) {
+            delay -= 1;
             continue;
         }
 
@@ -82,6 +83,18 @@ void Timer::WriteControl(const u16 data, const u16 mask) {
         counter = reload;
         // Timers have a two cycle start up delay.
         delay = 2;
+    }
+}
+
+int Timer::NextEvent() const {
+    if (!TimerRunning()) {
+        return 0;
+    } else if (CascadeEnabled()) {
+        return core.timers[id - 1].NextEvent();
+    } else {
+        int remaining_cycles_this_tick = CyclesPerTick() - (timer_clock & (CyclesPerTick() - 1));
+        int remaining_ticks = (0xFFFF - counter) * CyclesPerTick();
+        return delay + remaining_cycles_this_tick + remaining_ticks;
     }
 }
 

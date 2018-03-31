@@ -124,6 +124,16 @@ void Lcd::WriteControl(const u16 data, const u16 mask) {
     }
 }
 
+int Lcd::NextEvent() const {
+    if (scanline_cycles < 960) {
+        return 960 - scanline_cycles;
+    } else if (scanline_cycles < 1006) {
+        return 1006 - scanline_cycles;
+    } else {
+        return 1232 - scanline_cycles;
+    }
+}
+
 void Lcd::DrawScanline() {
     if (ForcedBlank()) {
         // Scanlines are drawn white when forced blank is enabled.

@@ -54,6 +54,7 @@ public:
     bool InterruptMasterEnable() const { return master_enable.v; }
     bool PendingInterrupts() const { return intr_flags & intr_enable; }
     void RequestInterrupt(u16 intr) { intr_flags |= intr; };
+    bool InterruptEnabled(u16 intr) const { return intr_enable & intr; };
 
     bool EepromAddr(u32 addr) const { return !large_rom || addr >= 0x0DFF'FF00; }
     void ParseEepromCommand();

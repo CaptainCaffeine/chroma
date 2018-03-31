@@ -67,9 +67,10 @@ int Cpu::Execute(int cycles) {
         }
 
         if (halted) {
-            core.UpdateHardware(1);
-            disasm->IncHaltCycles();
-            cycles -= 1;
+            const int halt_cycles = core.HaltCycles(cycles);
+            core.UpdateHardware(halt_cycles);
+            disasm->IncHaltCycles(halt_cycles);
+            cycles -= halt_cycles;
             continue;
         }
 

@@ -229,8 +229,8 @@ public:
     static constexpr int sprite_tile_base = 0x1'0000;
 
     void Update(int cycles);
-
     void WriteControl(const u16 data, const u16 mask);
+    int NextEvent() const;
 
     std::array<u16, 8> GetTilePixels(const Tile& tile, bool single_palette,
                                      int pixel_row, int palette, int base) const;
