@@ -84,6 +84,7 @@ private:
 
     const std::vector<Instruction<Thumb>> thumb_instructions;
     const std::vector<Instruction<Arm>> arm_instructions;
+    std::array<const std::function<int(Cpu& cpu, Thumb opcode)> *, 0x400> thumb_decode_table;
 
     std::array<u32, 3> pipeline{};
     bool pc_written = false;
@@ -158,8 +159,9 @@ private:
     u32 GetCarry()    const { return (cpsr & carry_flag)    >> 29; }
     u32 GetOverflow() const { return (cpsr & overflow_flag) >> 28; }
 
-    std::function<int(Cpu& cpu, Thumb opcode)> DecodeThumb(Thumb opcode) const;
-    std::function<int(Cpu& cpu, Arm opcode)> DecodeArm(Arm opcode) const;
+    void PopulateThumbDecodeTable();
+    const std::function<int(Cpu& cpu, Thumb opcode)>& DecodeThumb(Thumb opcode) const;
+    const std::function<int(Cpu& cpu, Arm opcode)>& DecodeArm(Arm opcode) const;
 
     // ARM primitives
     static constexpr ResultWithCarry ArmExpandImmediate_C(u32 value) noexcept {

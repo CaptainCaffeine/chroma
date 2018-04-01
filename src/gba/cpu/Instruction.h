@@ -34,14 +34,12 @@ class Instruction {
 public:
     template<typename... Args>
     Instruction(const char* instr_layout, int(Cpu::* impl)(Args...)) {
-
         auto fields = CreateMasks(instr_layout);
         impl_func = GetImplFunction(impl, fields, std::index_sequence_for<Args...>{});
     }
 
     template<typename... Args>
     Instruction(const char* instr_layout, std::string(Disassembler::* impl)(Args...)) {
-
         auto fields = CreateMasks(instr_layout);
         disasm_func = GetImplFunction(impl, fields, std::index_sequence_for<Args...>{});
     }
@@ -55,6 +53,7 @@ public:
 
     std::function<int(Cpu& cpu, T opcode)> impl_func;
     std::function<std::string(Disassembler& dis, T opcode)> disasm_func;
+
 private:
     static constexpr auto num_bits = sizeof(T) * 8;
 

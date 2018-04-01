@@ -31,7 +31,10 @@ Cpu::Cpu(Memory& _mem, Core& _core, LogLevel level)
         , mem(_mem)
         , core(_core)
         , thumb_instructions(Instruction<Thumb>::GetInstructionTable<Cpu>())
-        , arm_instructions(Instruction<Arm>::GetInstructionTable<Cpu>()) {}
+        , arm_instructions(Instruction<Arm>::GetInstructionTable<Cpu>()) {
+
+    PopulateThumbDecodeTable();
+}
 
 // Needed to declare std::vector with forward-declared type in the header file.
 Cpu::~Cpu() = default;
@@ -86,7 +89,7 @@ int Cpu::Execute(int cycles) {
             cycles_taken = 0;
 
             disasm->DisassembleThumb(pipeline[0], regs, cpsr);
-            auto impl = DecodeThumb(pipeline[0]);
+            const auto& impl = DecodeThumb(pipeline[0]);
             cycles_taken += impl(*this, pipeline[0]);
 
             if (!pc_written) {
@@ -105,7 +108,7 @@ int Cpu::Execute(int cycles) {
             cycles_taken = 0;
 
             disasm->DisassembleArm(pipeline[0], regs, cpsr);
-            auto impl = DecodeArm(pipeline[0]);
+            const auto& impl = DecodeArm(pipeline[0]);
             cycles_taken += impl(*this, pipeline[0]);
 
             if (!pc_written) {
@@ -125,18 +128,24 @@ int Cpu::Execute(int cycles) {
     return cycles;
 }
 
-std::function<int(Cpu& cpu, Thumb opcode)> Cpu::DecodeThumb(Thumb opcode) const {
-    for (const auto& instr : thumb_instructions) {
-        if (instr.Match(opcode)) {
-            return instr.impl_func;
+void Cpu::PopulateThumbDecodeTable() {
+    // The lower 6 bits of all Thumb opcodes are variable, so we only need to use the top 10 bits to identify
+    // which instruction implementation to use.
+    for (u16 opcode = 0; opcode < 0x400; ++opcode) {
+        for (const auto& instr : thumb_instructions) {
+            if (instr.Match(opcode << 6)) {
+                thumb_decode_table[opcode] = &instr.impl_func;
+                break;
+            }
         }
     }
-
-    // Undefined instruction.
-    return thumb_instructions.back().impl_func;
 }
 
-std::function<int(Cpu& cpu, Arm opcode)> Cpu::DecodeArm(Arm opcode) const {
+const std::function<int(Cpu& cpu, Thumb opcode)>& Cpu::DecodeThumb(Thumb opcode) const {
+    return *thumb_decode_table[opcode >> 6];
+}
+
+const std::function<int(Cpu& cpu, Arm opcode)>& Cpu::DecodeArm(Arm opcode) const {
     for (const auto& instr : arm_instructions) {
         if (instr.Match(opcode)) {
             return instr.impl_func;
