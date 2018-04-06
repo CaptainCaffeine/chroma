@@ -17,6 +17,7 @@
 #pragma once
 
 #include <vector>
+#include <array>
 #include <string>
 #include <functional>
 #include <utility>
@@ -34,13 +35,13 @@ class Instruction {
 public:
     template<typename... Args>
     Instruction(const char* instr_layout, int(Cpu::* impl)(Args...)) {
-        auto fields = CreateMasks(instr_layout);
+        auto fields = CreateMasks<sizeof...(Args)>(instr_layout);
         impl_func = GetImplFunction(impl, fields, std::index_sequence_for<Args...>{});
     }
 
     template<typename... Args>
     Instruction(const char* instr_layout, std::string(Disassembler::* impl)(Args...)) {
-        auto fields = CreateMasks(instr_layout);
+        auto fields = CreateMasks<sizeof...(Args)>(instr_layout);
         disasm_func = GetImplFunction(impl, fields, std::index_sequence_for<Args...>{});
     }
 
@@ -61,16 +62,16 @@ private:
     T instr_mask = 0;
 
     struct FieldMask {
-        FieldMask(T _mask, int _shift) : mask(_mask), shift(_shift) {}
-
         T mask;
         int shift;
     };
 
-    std::vector<FieldMask> CreateMasks(const std::string& instr_layout) {
+    template<std::size_t N>
+    std::array<FieldMask, N> CreateMasks(const std::string& instr_layout) {
         char last_bit = '0';
         T current_mask = 0;
-        std::vector<FieldMask> fields;
+        std::array<FieldMask, N> fields;
+        int field_index = 0;
 
         for (std::size_t i = 0; i < instr_layout.size(); ++i) {
             const char bit = instr_layout[i];
@@ -78,7 +79,7 @@ private:
             const T bit_mask = 1 << shift;
 
             if (bit != last_bit && last_bit != '0' && last_bit != '1') {
-                fields.emplace_back(current_mask, shift + 1);
+                fields[field_index++] = {current_mask, shift + 1};
                 current_mask = 0;
             }
 
@@ -95,13 +96,16 @@ private:
             last_bit = bit;
         }
 
-        fields.emplace_back(current_mask, 0);
+        if (current_mask != 0) {
+            fields[field_index++] = {current_mask, 0};
+        }
 
         return fields;
     }
 
     template<typename ReturnType, typename D, typename... Args, std::size_t... Is>
-    auto GetImplFunction(ReturnType(D::* impl)(Args...), std::vector<FieldMask> fields, std::index_sequence<Is...>) {
+    auto GetImplFunction(ReturnType(D::* impl)(Args...), std::array<FieldMask, sizeof...(Args)> fields,
+                         std::index_sequence<Is...>) {
         return [impl, fields](D& dis, T opcode) -> ReturnType {
             return (dis.*impl)(static_cast<Args>((opcode & fields[Is].mask) >> fields[Is].shift)...);
         };
