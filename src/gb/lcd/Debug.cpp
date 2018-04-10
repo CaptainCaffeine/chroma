@@ -107,7 +107,7 @@ void LCD::DumpTileSet(int bank) {
 
                 u8 palette = 0xE4;
                 for (auto& colour : pixel_colours) {
-                        colour = shades[(palette >> (colour * 2)) & 0x03];
+                    colour = shades[(palette >> (colour * 2)) & 0x03];
                 }
 
                 // Copy the pixels to the row buffer.

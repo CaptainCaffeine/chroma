@@ -110,7 +110,8 @@ void Lcd::Update(int cycles) {
 }
 
 void Lcd::WriteControl(const u16 data, const u16 mask) {
-    std::array<bool, 4> was_disabled{{!bgs[0].Enabled(), !bgs[1].Enabled(), !bgs[2].Enabled(), !bgs[3].Enabled()}};
+    const std::array<bool, 4> was_disabled{{!bgs[0].Enabled(), !bgs[1].Enabled(),
+                                            !bgs[2].Enabled(), !bgs[3].Enabled()}};
     control.Write(data, mask);
 
     for (int i = 0; i < 4; ++i) {
@@ -159,7 +160,6 @@ void Lcd::DrawScanline() {
     if (BgMode() == 0) {
         for (int b = 0; b < 4; ++b) {
             if (bgs[b].Enabled()) {
-                bgs[b].GetRowMapInfo();
                 bgs[b].DrawRegularScanline();
             }
         }
@@ -174,7 +174,6 @@ void Lcd::DrawScanline() {
     } else if (BgMode() == 1) {
         for (int b = 0; b < 2; ++b) {
             if (bgs[b].Enabled()) {
-                bgs[b].GetRowMapInfo();
                 bgs[b].DrawRegularScanline();
             }
         }

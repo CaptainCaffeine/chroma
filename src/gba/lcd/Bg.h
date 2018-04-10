@@ -46,7 +46,7 @@ struct BgTile {
 
 class Bg {
 public:
-    Bg(int _id, Lcd& _lcd)
+    Bg(int _id, const Lcd& _lcd)
             : id(_id)
             , lcd(_lcd) {
         // The wraparound bit is not writeable on BG0 and BG1.
@@ -79,8 +79,6 @@ public:
     int previous_row_num = 0xFF;
     bool dirty = true;
 
-    void GetRowMapInfo();
-    void GetTileData();
     void DrawRegularScanline();
     void DrawAffineScanline();
     void DrawBitmapScanline(int bg_mode, int base_addr);
@@ -90,21 +88,30 @@ public:
 
     bool Enabled() const;
     int Priority() const { return control & 0x3; }
+    bool SinglePalette() const { return control & 0x80; }
+
+    void DumpBg() const;
 
 private:
-    Lcd& lcd;
+    const Lcd& lcd;
 
     std::vector<BgTile> tiles;
 
     s32 ref_point_x;
     s32 ref_point_y;
 
+    void ReadTileMapRow();
+    void ReadTileData(std::vector<BgTile>& input_tiles) const;
+
+    std::vector<BgTile> ReadEntireTileMap() const;
+    void DrawOverlay(std::array<u16, 8>& pixel_colours, int scanline_index, int vertical_index,
+                     int pixel_width, int pixel_height) const;
+
     // Control flags
     static constexpr int kbyte = 1024;
 
     int TileBase() const { return ((control >> 2) & 0x3) * 16 * kbyte; }
     bool Mosaic() const { return control & 0x40; }
-    bool SinglePalette() const { return control & 0x80; }
     int MapBase() const { return ((control >> 8) & 0x1F) * 2 * kbyte; }
     bool WrapAround() const { return control & 0x2000; }
 

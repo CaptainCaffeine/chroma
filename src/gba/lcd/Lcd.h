@@ -232,6 +232,10 @@ public:
     void WriteControl(const u16 data, const u16 mask);
     int NextEvent() const;
 
+    void DumpDebugInfo() const;
+    void DumpSprites() const;
+    void DumpTileset(int base, bool single_palette) const;
+
     std::array<u16, 8> GetTilePixels(const Tile& tile, bool single_palette,
                                      int pixel_row, int palette, int base) const;
 

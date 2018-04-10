@@ -33,6 +33,7 @@ set(SOURCES
     gba/cpu/ThumbDisasm.cpp
     gba/lcd/Lcd.cpp
     gba/lcd/Bg.cpp
+    gba/lcd/Debug.cpp
     gba/hardware/Timer.cpp
     gba/hardware/Dma.cpp
     gba/hardware/Keypad.cpp

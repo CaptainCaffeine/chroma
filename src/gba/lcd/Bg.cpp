@@ -25,7 +25,7 @@ bool Bg::Enabled() const {
     return (lcd.control & (0x100 << id)) && enable_delay == 0;
 }
 
-void Bg::GetRowMapInfo() {
+void Bg::ReadTileMapRow() {
     int row_num = (scroll_y + lcd.vcount) / 8;
     if (ScreenSize() < 2) {
         row_num %= 32;
@@ -79,14 +79,12 @@ void Bg::GetRowMapInfo() {
     default:
         break;
     }
-
-    GetTileData();
 }
 
-void Bg::GetTileData() {
+void Bg::ReadTileData(std::vector<BgTile>& input_tiles) const {
     // Get tile data. Each tile is 32 bytes in 16 palette mode, and 64 bytes in single palette mode.
     const int tile_bytes = SinglePalette() ? 64 : 32;
-    for (auto& tile : tiles) {
+    for (auto& tile : input_tiles) {
         const int tile_addr = TileBase() + tile.num * tile_bytes;
         if (tile_addr < Lcd::sprite_tile_base) {
             for (int i = 0; i < tile_bytes; i += 2) {
@@ -106,6 +104,9 @@ void Bg::DrawRegularScanline() {
         // Reuse the previous scanline.
         return;
     }
+
+    ReadTileMapRow();
+    ReadTileData(tiles);
 
     const int pixel_row = (scroll_y + lcd.vcount) % 8;
 

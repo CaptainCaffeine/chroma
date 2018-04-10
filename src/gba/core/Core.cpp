@@ -27,6 +27,7 @@
 #include "gba/hardware/Keypad.h"
 #include "gba/hardware/Serial.h"
 #include "emu/SDLContext.h"
+#include "common/Screenshot.h"
 
 namespace Gba {
 
@@ -129,8 +130,8 @@ void Core::RegisterCallbacks() {
     sdl_context.RegisterCallback(InputEvent::Pause,      [this](bool) { pause = !pause; });
     sdl_context.RegisterCallback(InputEvent::LogLevel,   [this](bool) { cpu->disasm->SwitchLogLevel(); });
     sdl_context.RegisterCallback(InputEvent::Fullscreen, [this](bool) { sdl_context.ToggleFullscreen(); });
-    sdl_context.RegisterCallback(InputEvent::Screenshot, [](bool) { });
-    sdl_context.RegisterCallback(InputEvent::LcdDebug,   [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::Screenshot, [this](bool) { Screenshot(); });
+    sdl_context.RegisterCallback(InputEvent::LcdDebug,   [this](bool) { lcd->DumpDebugInfo(); Screenshot(); });
     sdl_context.RegisterCallback(InputEvent::HideWindow, [this](bool) { old_pause = pause; pause = true; });
     sdl_context.RegisterCallback(InputEvent::ShowWindow, [this](bool) { pause = old_pause; });
     sdl_context.RegisterCallback(InputEvent::Up,         [this](bool press) { keypad->Press(Keypad::Up, press); });
@@ -143,6 +144,10 @@ void Core::RegisterCallbacks() {
     sdl_context.RegisterCallback(InputEvent::R,          [this](bool press) { keypad->Press(Keypad::R, press); });
     sdl_context.RegisterCallback(InputEvent::Start,      [this](bool press) { keypad->Press(Keypad::Start, press); });
     sdl_context.RegisterCallback(InputEvent::Select,     [this](bool press) { keypad->Press(Keypad::Select, press); });
+}
+
+void Core::Screenshot() const {
+    Common::WritePPMFile(Common::BGR5ToRGB8(front_buffer), "screenshot.ppm", 240, 160);
 }
 
 } // End namespace Gba

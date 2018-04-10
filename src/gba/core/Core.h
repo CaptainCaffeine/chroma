@@ -53,6 +53,8 @@ public:
     void UpdateHardware(int cycles);
     int HaltCycles(int remaining_cpu_cycles) const;
     void SwapBuffers(std::vector<u16>& back_buffer) { front_buffer.swap(back_buffer); }
+
+    void Screenshot() const;
 private:
     Emu::SDLContext& sdl_context;
     std::vector<u16> front_buffer;
