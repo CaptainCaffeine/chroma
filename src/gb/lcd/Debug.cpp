@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "common/Screenshot.h"
 #include "gb/lcd/LCD.h"
 #include "gb/memory/Memory.h"
+#include "common/Screenshot.h"
 
 namespace Gb {
 

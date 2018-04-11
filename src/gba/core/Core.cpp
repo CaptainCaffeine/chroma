@@ -62,7 +62,7 @@ void Core::EmulatorLoop() {
     int frame_count = 0;
 
     while (!quit) {
-        auto start_time = steady_clock::now();
+        const auto start_time = steady_clock::now();
 
         sdl_context.PollEvents();
 

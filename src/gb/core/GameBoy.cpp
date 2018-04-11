@@ -14,7 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "common/Screenshot.h"
+#include <chrono>
+
 #include "gb/core/GameBoy.h"
 #include "gb/cpu/CPU.h"
 #include "gb/memory/Memory.h"
@@ -26,6 +27,7 @@
 #include "gb/hardware/Joypad.h"
 #include "gb/logging/Logging.h"
 #include "emu/SDLContext.h"
+#include "common/Screenshot.h"
 
 namespace Gb {
 
@@ -65,7 +67,14 @@ void GameBoy::EmulatorLoop() {
 
     sdl_context.UnpauseAudio();
 
+    using namespace std::chrono;
+    auto max_frame_time = 0us;
+    auto avg_frame_time = 0us;
+    int frame_count = 0;
+
     while (!quit) {
+        const auto start_time = steady_clock::now();
+
         sdl_context.PollEvents();
 
         if (pause) {
@@ -77,6 +86,16 @@ void GameBoy::EmulatorLoop() {
         // Overspent cycles is always zero or negative.
         int target_cycles = (cycles_per_frame << mem->double_speed) + overspent_cycles;
         overspent_cycles = cpu->RunFor(target_cycles);
+
+        auto frame_time = duration_cast<microseconds>(steady_clock::now() - start_time);
+        max_frame_time = std::max(max_frame_time, frame_time);
+        avg_frame_time += frame_time;
+        if (++frame_count == 60) {
+            sdl_context.UpdateFrameTimes(avg_frame_time.count() / 60, max_frame_time.count());
+            max_frame_time = 0us;
+            avg_frame_time = 0us;
+            frame_count = 0;
+        }
 
         sdl_context.PushBackAudio(audio->output_buffer);
         sdl_context.RenderFrame(front_buffer.data());
