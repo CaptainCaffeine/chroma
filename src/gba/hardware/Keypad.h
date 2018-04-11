@@ -52,7 +52,7 @@ private:
     // Control flags
     static constexpr u16 irq_enable = 0x4000;
     static constexpr u16 irq_condition = 0x8000;
-    u16 SelectedIrqButtons() { return control & 0x03FF; }
+    u16 SelectedIrqButtons() const { return control & 0x03FF; }
 };
 
 } // End namespace Gba

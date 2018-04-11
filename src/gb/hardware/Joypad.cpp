@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2017 Matthew Murray
+// Copyright (C) 2016-2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -28,12 +28,13 @@ void Joypad::UpdateJoypad() {
     }
 
     if (DirectionKeysSelected()) {
-        p1 = (p1 & 0xF0) | (button_states & 0x0F);
+        // AND button states with p1 in case the button keys are also selected.
+        p1 = (p1 & 0xF0) | (button_states & p1);
     }
 
     bool interrupt_signal = (p1 & 0x0F) == 0x0F;
 
-    signal_went_low = !interrupt_signal && prev_interrupt_signal;
+    bool signal_went_low = !interrupt_signal && prev_interrupt_signal;
     if (signal_went_low) {
         mem->RequestInterrupt(Interrupt::Joypad);
     }

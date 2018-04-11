@@ -83,6 +83,8 @@ void GameBoy::EmulatorLoop() {
             continue;
         }
 
+        joypad->UpdateJoypad();
+
         // Overspent cycles is always zero or negative.
         int target_cycles = (cycles_per_frame << mem->double_speed) + overspent_cycles;
         overspent_cycles = cpu->RunFor(target_cycles);
@@ -115,16 +117,16 @@ void GameBoy::RegisterCallbacks() {
     sdl_context.RegisterCallback(InputEvent::LcdDebug,   [this](bool) { lcd->DumpEverything(); });
     sdl_context.RegisterCallback(InputEvent::HideWindow, [this](bool) { old_pause = pause; pause = true; });
     sdl_context.RegisterCallback(InputEvent::ShowWindow, [this](bool) { pause = old_pause; });
-    sdl_context.RegisterCallback(InputEvent::Up,         [this](bool press) { joypad->UpPressed(press); });
-    sdl_context.RegisterCallback(InputEvent::Left,       [this](bool press) { joypad->LeftPressed(press); });
-    sdl_context.RegisterCallback(InputEvent::Down,       [this](bool press) { joypad->DownPressed(press); });
-    sdl_context.RegisterCallback(InputEvent::Right,      [this](bool press) { joypad->RightPressed(press); });
-    sdl_context.RegisterCallback(InputEvent::A,          [this](bool press) { joypad->APressed(press); });
-    sdl_context.RegisterCallback(InputEvent::B,          [this](bool press) { joypad->BPressed(press); });
+    sdl_context.RegisterCallback(InputEvent::Up,         [this](bool press) { joypad->Press(Joypad::Up, press); });
+    sdl_context.RegisterCallback(InputEvent::Left,       [this](bool press) { joypad->Press(Joypad::Left, press); });
+    sdl_context.RegisterCallback(InputEvent::Down,       [this](bool press) { joypad->Press(Joypad::Down, press); });
+    sdl_context.RegisterCallback(InputEvent::Right,      [this](bool press) { joypad->Press(Joypad::Right, press); });
+    sdl_context.RegisterCallback(InputEvent::A,          [this](bool press) { joypad->Press(Joypad::A, press); });
+    sdl_context.RegisterCallback(InputEvent::B,          [this](bool press) { joypad->Press(Joypad::B, press); });
     sdl_context.RegisterCallback(InputEvent::L,          [](bool) { });
     sdl_context.RegisterCallback(InputEvent::R,          [](bool) { });
-    sdl_context.RegisterCallback(InputEvent::Start,      [this](bool press) { joypad->StartPressed(press); });
-    sdl_context.RegisterCallback(InputEvent::Select,     [this](bool press) { joypad->SelectPressed(press); });
+    sdl_context.RegisterCallback(InputEvent::Start,      [this](bool press) { joypad->Press(Joypad::Start, press); });
+    sdl_context.RegisterCallback(InputEvent::Select,     [this](bool press) { joypad->Press(Joypad::Select, press); });
 }
 
 void GameBoy::SwapBuffers(std::vector<u16>& back_buffer) {
@@ -153,7 +155,6 @@ void GameBoy::HardwareTick(unsigned int cycles) {
         timer->UpdateTimer();
         serial->UpdateSerial();
         lcd->UpdateLCD();
-        joypad->UpdateJoypad();
 
         // The APU always updates at 2MHz, regardless of double speed mode. So we need to update it twice an M-cycle
         // in single-speed mode.
@@ -178,7 +179,6 @@ void GameBoy::HaltedTick(unsigned int cycles) {
         timer->UpdateTimer();
         serial->UpdateSerial();
         lcd->UpdateLCD();
-        joypad->UpdateJoypad();
 
         // The APU always updates at 2MHz, regardless of double speed mode. So we need to update it twice an M-cycle
         // in single-speed mode.

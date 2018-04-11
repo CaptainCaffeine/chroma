@@ -517,6 +517,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     // P1 -- Joypad
     case 0xFF00:
         joypad.p1 = (joypad.p1 & 0x0F) | (data & 0x30);
+        joypad.UpdateJoypad();
         break;
     // SB -- Serial Data Transfer
     case 0xFF01:
