@@ -236,7 +236,7 @@ public:
     void DumpSprites() const;
     void DumpTileset(int base, bool single_palette) const;
 
-    std::array<u16, 8> GetTilePixels(const Tile& tile, bool single_palette,
+    std::array<u16, 8> GetTilePixels(const Tile& tile, bool single_palette, bool h_flip,
                                      int pixel_row, int palette, int base) const;
 
     // Mosaic flags

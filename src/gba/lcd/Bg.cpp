@@ -120,11 +120,8 @@ void Bg::DrawRegularScanline() {
         tile_index = (tile_index + 1) % horizontal_tiles;
         const int flip_row = tile.v_flip ? (7 - pixel_row) : pixel_row;
 
-        std::array<u16, 8> pixel_colours = lcd.GetTilePixels(tile.data, SinglePalette(), flip_row, tile.palette, 0);
-
-        if (tile.h_flip) {
-            std::reverse(pixel_colours.begin(), pixel_colours.end());
-        }
+        const std::array<u16, 8> pixel_colours = lcd.GetTilePixels(tile.data, SinglePalette(), tile.h_flip,
+                                                                   flip_row, tile.palette, 0);
 
         // The first and last tiles may be partially scrolled off-screen.
         const int end_offset = std::min(Lcd::h_pixels - scanline_index, 8);

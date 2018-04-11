@@ -544,11 +544,8 @@ void Lcd::DrawRegularSprite(const Sprite& sprite) {
         const auto& tile = sprite.tiles[tile_index];
         tile_index += tile_direction;
 
-        std::array<u16, 8> pixel_colours = GetTilePixels(tile, sprite.single_palette, pixel_row, sprite.palette, 256);
-
-        if (sprite.h_flip) {
-            std::reverse(pixel_colours.begin(), pixel_colours.end());
-        }
+        std::array<u16, 8> pixel_colours = GetTilePixels(tile, sprite.single_palette, sprite.h_flip, pixel_row,
+                                                         sprite.palette, 256);
 
         // The first and last tiles may be partially scrolled off-screen.
         const int end_offset = std::min(h_pixels - scanline_index, 8);
@@ -674,7 +671,7 @@ void Lcd::DrawAffineSprite(const Sprite& sprite) {
     }
 }
 
-std::array<u16, 8> Lcd::GetTilePixels(const Tile& tile, bool single_palette,
+std::array<u16, 8> Lcd::GetTilePixels(const Tile& tile, bool single_palette, bool h_flip,
                                       int pixel_row, int palette, int base) const {
     std::array<u16, 8> pixel_colours;
 
@@ -682,11 +679,12 @@ std::array<u16, 8> Lcd::GetTilePixels(const Tile& tile, bool single_palette,
         // Each tile byte specifies the 8-bit palette index for a pixel.
         for (int i = 0; i < 8; ++i) {
             const u8 palette_entry = tile[pixel_row * 8 + i];
+            const int pixel_index = h_flip ? (7 - i) : i;
             if (palette_entry == 0) {
                 // Palette entry 0 is transparent.
-                pixel_colours[i] = alpha_bit;
+                pixel_colours[pixel_index] = alpha_bit;
             } else {
-                pixel_colours[i] = pram[base + palette_entry] & 0x7FFF;
+                pixel_colours[pixel_index] = pram[base + palette_entry] & 0x7FFF;
             }
         }
     } else {
@@ -695,11 +693,12 @@ std::array<u16, 8> Lcd::GetTilePixels(const Tile& tile, bool single_palette,
             // The lower 4 bits are the palette index for even pixels, and the upper 4 bits are for odd pixels.
             const int odd_shift = 4 * (i & 0x1);
             const u8 palette_entry = (tile[pixel_row * 4 + i / 2] >> odd_shift) & 0xF;
+            const int pixel_index = h_flip ? (7 - i) : i;
             if (palette_entry == 0) {
                 // Palette entry 0 is transparent.
-                pixel_colours[i] = alpha_bit;
+                pixel_colours[pixel_index] = alpha_bit;
             } else {
-                pixel_colours[i] = pram[base + palette * 16 + palette_entry] & 0x7FFF;
+                pixel_colours[pixel_index] = pram[base + palette * 16 + palette_entry] & 0x7FFF;
             }
         }
     }

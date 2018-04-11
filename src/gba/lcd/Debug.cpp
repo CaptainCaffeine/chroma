@@ -69,12 +69,8 @@ void Lcd::DumpSprites() const {
             while (scanline_index < sprite.pixel_width) {
                 const auto& tile = sprite.tiles[tile_index];
                 tile_index += tile_direction;
-                std::array<u16, 8> pixel_colours = GetTilePixels(tile, sprite.single_palette, pixel_row,
-                                                                 sprite.palette, 256);
-
-                if (sprite.h_flip) {
-                    std::reverse(pixel_colours.begin(), pixel_colours.end());
-                }
+                const std::array<u16, 8> pixel_colours = GetTilePixels(tile, sprite.single_palette, sprite.h_flip,
+                                                                       pixel_row, sprite.palette, 256);
 
                 for (int i = 0; i < 8; ++i) {
                     sprite_buffer[vertical_index * sprite.pixel_width + scanline_index++] = pixel_colours[i];
@@ -168,11 +164,8 @@ void Bg::DumpBg() const {
             const int pixel_row = (vertical_index) % 8;
             const int flip_row = tile.v_flip ? (7 - pixel_row) : pixel_row;
 
-            std::array<u16, 8> pixel_colours = lcd.GetTilePixels(tile.data, SinglePalette(), flip_row, tile.palette, 0);
-
-            if (tile.h_flip) {
-                std::reverse(pixel_colours.begin(), pixel_colours.end());
-            }
+            std::array<u16, 8> pixel_colours = lcd.GetTilePixels(tile.data, SinglePalette(), tile.h_flip,
+                                                                 flip_row, tile.palette, 0);
 
             DrawOverlay(pixel_colours, scanline_index, vertical_index, pixel_width, pixel_height);
 
@@ -267,7 +260,7 @@ void Lcd::DumpTileset(int base, bool single_palette) const {
 
             std::array<u16, 8> pixel_colours;
             if (single_palette) {
-                pixel_colours = GetTilePixels(tile, single_palette, pixel_row, 0, 0);
+                pixel_colours = GetTilePixels(tile, single_palette, false, pixel_row, 0, 0);
             } else {
                 // Each tile byte specifies the 4-bit palette indices for two pixels.
                 for (int i = 0; i < 8; ++i) {
