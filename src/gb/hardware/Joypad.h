@@ -35,7 +35,35 @@ public:
                       Start  = 0x80};
 
     void UpdateJoypad();
-    void Press(Button button, bool pressed) { (pressed) ? (button_states &= ~button) : (button_states |= button); }
+    void Press(Button button, bool pressed) {
+        if (pressed) {
+            // When pressing a directional button, record if the opposite direction was currently pressed and
+            // unpress it.
+            if (button == Button::Up || button == Button::Right) {
+                was_unset |= ~button_states & (button << 1);
+                button_states |= button << 1;
+            } else if (button == Button::Down || button == Button::Left) {
+                was_unset |= ~button_states & (button >> 1);
+                button_states |= button >> 1;
+            }
+
+            button_states &= ~button;
+        } else {
+            // When releasing a directional button, re-press the opposite direction if we unpressed it earlier and
+            // the player hasn't unpressed it yet.
+            if (button == Button::Up || button == Button::Right) {
+                was_unset &= ~button;
+                button_states &= ~(was_unset & (button << 1));
+                was_unset &= ~(button << 1);
+            } else if (button == Button::Down || button == Button::Left) {
+                was_unset &= ~button;
+                button_states &= ~(was_unset & (button >> 1));
+                was_unset &= ~(button >> 1);
+            }
+
+            button_states |= button;
+        }
+    }
 
     constexpr void LinkToMemory(Memory* memory) { mem = memory; }
     constexpr bool JoypadPress() const { return (p1 & 0x0F) != 0x0F; }
@@ -52,8 +80,8 @@ public:
 private:
     Memory* mem = nullptr;
 
-    // Start, Select, B, A, Down, Up, Left, Right.
     u8 button_states = 0xFF;
+    u8 was_unset = 0x00;
 
     bool prev_interrupt_signal = false;
 
