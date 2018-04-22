@@ -179,6 +179,9 @@ void SDLContext::PollEvents() {
             case SDLK_y:
                 input_callbacks[InputEvent::LcdDebug](true);
                 break;
+            case SDLK_n:
+                input_callbacks[InputEvent::FrameAdvance](true);
+                break;
 
             case SDLK_w:
                 input_callbacks[InputEvent::Up](true);

@@ -77,11 +77,13 @@ void GameBoy::EmulatorLoop() {
 
         sdl_context.PollEvents();
 
-        if (pause) {
+        if (pause && !frame_advance) {
             SDL_Delay(48);
             sdl_context.RenderFrame(front_buffer.data());
             continue;
         }
+
+        frame_advance = false;
 
         joypad->UpdateJoypad();
 
@@ -109,24 +111,26 @@ void GameBoy::EmulatorLoop() {
 void GameBoy::RegisterCallbacks() {
     using Emu::InputEvent;
 
-    sdl_context.RegisterCallback(InputEvent::Quit,       [this](bool) { quit = true; });
-    sdl_context.RegisterCallback(InputEvent::Pause,      [this](bool) { pause = !pause; });
-    sdl_context.RegisterCallback(InputEvent::LogLevel,   [this](bool) { logging.SwitchLogLevel(); });
-    sdl_context.RegisterCallback(InputEvent::Fullscreen, [this](bool) { sdl_context.ToggleFullscreen(); });
-    sdl_context.RegisterCallback(InputEvent::Screenshot, [this](bool) { Screenshot(); });
-    sdl_context.RegisterCallback(InputEvent::LcdDebug,   [this](bool) { lcd->DumpEverything(); });
-    sdl_context.RegisterCallback(InputEvent::HideWindow, [this](bool) { old_pause = pause; pause = true; });
-    sdl_context.RegisterCallback(InputEvent::ShowWindow, [this](bool) { pause = old_pause; });
-    sdl_context.RegisterCallback(InputEvent::Up,         [this](bool press) { joypad->Press(Joypad::Up, press); });
-    sdl_context.RegisterCallback(InputEvent::Left,       [this](bool press) { joypad->Press(Joypad::Left, press); });
-    sdl_context.RegisterCallback(InputEvent::Down,       [this](bool press) { joypad->Press(Joypad::Down, press); });
-    sdl_context.RegisterCallback(InputEvent::Right,      [this](bool press) { joypad->Press(Joypad::Right, press); });
-    sdl_context.RegisterCallback(InputEvent::A,          [this](bool press) { joypad->Press(Joypad::A, press); });
-    sdl_context.RegisterCallback(InputEvent::B,          [this](bool press) { joypad->Press(Joypad::B, press); });
-    sdl_context.RegisterCallback(InputEvent::L,          [](bool) { });
-    sdl_context.RegisterCallback(InputEvent::R,          [](bool) { });
-    sdl_context.RegisterCallback(InputEvent::Start,      [this](bool press) { joypad->Press(Joypad::Start, press); });
-    sdl_context.RegisterCallback(InputEvent::Select,     [this](bool press) { joypad->Press(Joypad::Select, press); });
+    sdl_context.RegisterCallback(InputEvent::Quit,         [this](bool) { quit = true; });
+    sdl_context.RegisterCallback(InputEvent::Pause,        [this](bool) { pause = !pause; });
+    sdl_context.RegisterCallback(InputEvent::LogLevel,     [this](bool) { logging.SwitchLogLevel(); });
+    sdl_context.RegisterCallback(InputEvent::Fullscreen,   [this](bool) { sdl_context.ToggleFullscreen(); });
+    sdl_context.RegisterCallback(InputEvent::Screenshot,   [this](bool) { Screenshot(); });
+    sdl_context.RegisterCallback(InputEvent::LcdDebug,     [this](bool) { lcd->DumpEverything(); });
+    sdl_context.RegisterCallback(InputEvent::HideWindow,   [this](bool) { old_pause = pause; pause = true; });
+    sdl_context.RegisterCallback(InputEvent::ShowWindow,   [this](bool) { pause = old_pause; });
+    sdl_context.RegisterCallback(InputEvent::FrameAdvance, [this](bool) { frame_advance = true; });
+
+    sdl_context.RegisterCallback(InputEvent::Up,     [this](bool press) { joypad->Press(Joypad::Up, press); });
+    sdl_context.RegisterCallback(InputEvent::Left,   [this](bool press) { joypad->Press(Joypad::Left, press); });
+    sdl_context.RegisterCallback(InputEvent::Down,   [this](bool press) { joypad->Press(Joypad::Down, press); });
+    sdl_context.RegisterCallback(InputEvent::Right,  [this](bool press) { joypad->Press(Joypad::Right, press); });
+    sdl_context.RegisterCallback(InputEvent::A,      [this](bool press) { joypad->Press(Joypad::A, press); });
+    sdl_context.RegisterCallback(InputEvent::B,      [this](bool press) { joypad->Press(Joypad::B, press); });
+    sdl_context.RegisterCallback(InputEvent::L,      [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::R,      [](bool) { });
+    sdl_context.RegisterCallback(InputEvent::Start,  [this](bool press) { joypad->Press(Joypad::Start, press); });
+    sdl_context.RegisterCallback(InputEvent::Select, [this](bool press) { joypad->Press(Joypad::Select, press); });
 }
 
 void GameBoy::SwapBuffers(std::vector<u16>& back_buffer) {

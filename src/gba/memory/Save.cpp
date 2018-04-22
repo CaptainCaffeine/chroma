@@ -300,7 +300,6 @@ void Memory::WriteFlash(const u32 addr, const T data) {
         last_flash_cmd = static_cast<FlashCmd>(data);
         break;
     default:
-        throw std::runtime_error("This shouldn't happen. Remove exception before committing!");
         break;
     }
 }

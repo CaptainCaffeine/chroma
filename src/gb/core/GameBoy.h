@@ -73,6 +73,7 @@ private:
     bool quit = false;
     bool pause = false;
     bool old_pause = false;
+    bool frame_advance = false;
 
     u8 lcd_on_when_stopped = 0x00;
 

@@ -66,11 +66,13 @@ void Core::EmulatorLoop() {
 
         sdl_context.PollEvents();
 
-        if (pause) {
+        if (pause && !frame_advance) {
             SDL_Delay(48);
             sdl_context.RenderFrame(front_buffer.data());
             continue;
         }
+
+        frame_advance = false;
 
         keypad->CheckKeypadInterrupt();
 
@@ -126,24 +128,26 @@ int Core::HaltCycles(int remaining_cpu_cycles) const {
 void Core::RegisterCallbacks() {
     using Emu::InputEvent;
 
-    sdl_context.RegisterCallback(InputEvent::Quit,       [this](bool) { quit = true; });
-    sdl_context.RegisterCallback(InputEvent::Pause,      [this](bool) { pause = !pause; });
-    sdl_context.RegisterCallback(InputEvent::LogLevel,   [this](bool) { cpu->disasm->SwitchLogLevel(); });
-    sdl_context.RegisterCallback(InputEvent::Fullscreen, [this](bool) { sdl_context.ToggleFullscreen(); });
-    sdl_context.RegisterCallback(InputEvent::Screenshot, [this](bool) { Screenshot(); });
-    sdl_context.RegisterCallback(InputEvent::LcdDebug,   [this](bool) { lcd->DumpDebugInfo(); Screenshot(); });
-    sdl_context.RegisterCallback(InputEvent::HideWindow, [this](bool) { old_pause = pause; pause = true; });
-    sdl_context.RegisterCallback(InputEvent::ShowWindow, [this](bool) { pause = old_pause; });
-    sdl_context.RegisterCallback(InputEvent::Up,         [this](bool press) { keypad->Press(Keypad::Up, press); });
-    sdl_context.RegisterCallback(InputEvent::Left,       [this](bool press) { keypad->Press(Keypad::Left, press); });
-    sdl_context.RegisterCallback(InputEvent::Down,       [this](bool press) { keypad->Press(Keypad::Down, press); });
-    sdl_context.RegisterCallback(InputEvent::Right,      [this](bool press) { keypad->Press(Keypad::Right, press); });
-    sdl_context.RegisterCallback(InputEvent::A,          [this](bool press) { keypad->Press(Keypad::A, press); });
-    sdl_context.RegisterCallback(InputEvent::B,          [this](bool press) { keypad->Press(Keypad::B, press); });
-    sdl_context.RegisterCallback(InputEvent::L,          [this](bool press) { keypad->Press(Keypad::L, press); });
-    sdl_context.RegisterCallback(InputEvent::R,          [this](bool press) { keypad->Press(Keypad::R, press); });
-    sdl_context.RegisterCallback(InputEvent::Start,      [this](bool press) { keypad->Press(Keypad::Start, press); });
-    sdl_context.RegisterCallback(InputEvent::Select,     [this](bool press) { keypad->Press(Keypad::Select, press); });
+    sdl_context.RegisterCallback(InputEvent::Quit,         [this](bool) { quit = true; });
+    sdl_context.RegisterCallback(InputEvent::Pause,        [this](bool) { pause = !pause; });
+    sdl_context.RegisterCallback(InputEvent::LogLevel,     [this](bool) { cpu->disasm->SwitchLogLevel(); });
+    sdl_context.RegisterCallback(InputEvent::Fullscreen,   [this](bool) { sdl_context.ToggleFullscreen(); });
+    sdl_context.RegisterCallback(InputEvent::Screenshot,   [this](bool) { Screenshot(); });
+    sdl_context.RegisterCallback(InputEvent::LcdDebug,     [this](bool) { lcd->DumpDebugInfo(); Screenshot(); });
+    sdl_context.RegisterCallback(InputEvent::HideWindow,   [this](bool) { old_pause = pause; pause = true; });
+    sdl_context.RegisterCallback(InputEvent::ShowWindow,   [this](bool) { pause = old_pause; });
+    sdl_context.RegisterCallback(InputEvent::FrameAdvance, [this](bool) { frame_advance = true; });
+
+    sdl_context.RegisterCallback(InputEvent::Up,     [this](bool press) { keypad->Press(Keypad::Up, press); });
+    sdl_context.RegisterCallback(InputEvent::Left,   [this](bool press) { keypad->Press(Keypad::Left, press); });
+    sdl_context.RegisterCallback(InputEvent::Down,   [this](bool press) { keypad->Press(Keypad::Down, press); });
+    sdl_context.RegisterCallback(InputEvent::Right,  [this](bool press) { keypad->Press(Keypad::Right, press); });
+    sdl_context.RegisterCallback(InputEvent::A,      [this](bool press) { keypad->Press(Keypad::A, press); });
+    sdl_context.RegisterCallback(InputEvent::B,      [this](bool press) { keypad->Press(Keypad::B, press); });
+    sdl_context.RegisterCallback(InputEvent::L,      [this](bool press) { keypad->Press(Keypad::L, press); });
+    sdl_context.RegisterCallback(InputEvent::R,      [this](bool press) { keypad->Press(Keypad::R, press); });
+    sdl_context.RegisterCallback(InputEvent::Start,  [this](bool press) { keypad->Press(Keypad::Start, press); });
+    sdl_context.RegisterCallback(InputEvent::Select, [this](bool press) { keypad->Press(Keypad::Select, press); });
 }
 
 void Core::Screenshot() const {
