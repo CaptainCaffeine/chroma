@@ -35,13 +35,13 @@ class Instruction {
 public:
     template<typename... Args>
     Instruction(const char* instr_layout, int(Cpu::* impl)(Args...)) {
-        auto fields = CreateMasks<sizeof...(Args)>(instr_layout);
+        const auto fields = CreateMasks<sizeof...(Args)>(instr_layout);
         impl_func = GetImplFunction(impl, fields, std::index_sequence_for<Args...>{});
     }
 
     template<typename... Args>
     Instruction(const char* instr_layout, std::string(Disassembler::* impl)(Args...)) {
-        auto fields = CreateMasks<sizeof...(Args)>(instr_layout);
+        const auto fields = CreateMasks<sizeof...(Args)>(instr_layout);
         disasm_func = GetImplFunction(impl, fields, std::index_sequence_for<Args...>{});
     }
 
@@ -104,7 +104,7 @@ private:
     }
 
     template<typename ReturnType, typename D, typename... Args, std::size_t... Is>
-    auto GetImplFunction(ReturnType(D::* impl)(Args...), std::array<FieldMask, sizeof...(Args)> fields,
+    auto GetImplFunction(ReturnType(D::* impl)(Args...), const std::array<FieldMask, sizeof...(Args)>& fields,
                          std::index_sequence<Is...>) {
         return [impl, fields](D& dis, T opcode) -> ReturnType {
             return (dis.*impl)(static_cast<Args>((opcode & fields[Is].mask) >> fields[Is].shift)...);
