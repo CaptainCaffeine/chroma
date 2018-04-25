@@ -51,15 +51,15 @@ std::string GetOptionParam(const std::vector<std::string>& tokens, const std::st
 void DisplayHelp() {
     fmt::print("Usage: chroma [options] <path/to/rom>\n\n");
     fmt::print("Options:\n");
-    fmt::print("  -h                       display help\n");
-    fmt::print("  -m [dmg, cgb, agb]       specify device to emulate\n");
-    fmt::print("  -l [regular, timer, lcd] specify log level (default: none)\n");
-    fmt::print("  -s [1-15]                specify resolution scale (default: 2)\n");
-    fmt::print("  -f                       activate fullscreen mode\n");
-    fmt::print("  --filter [iir, nearest]  choose audio filtering method (default: iir)\n");
-    fmt::print("                               IIR (slow, better quality)\n");
-    fmt::print("                               nearest-neighbour (fast, lesser quality)\n");
-    fmt::print("  --multicart              emulate this game using an MBC1M\n");
+    fmt::print("  -h                           display help\n");
+    fmt::print("  -m [dmg, cgb, agb]           specify device to emulate\n");
+    fmt::print("  -l [trace, regs, timer, lcd] specify log level (default: none)\n");
+    fmt::print("  -s [1-15]                    specify resolution scale (default: 2)\n");
+    fmt::print("  -f                           activate fullscreen mode\n");
+    fmt::print("  --filter [iir, nearest]      choose audio filtering method (default: iir)\n");
+    fmt::print("                                   IIR (slow, better quality)\n");
+    fmt::print("                                   nearest-neighbour (fast, lesser quality)\n");
+    fmt::print("  --multicart                  emulate this game using an MBC1M\n");
 }
 
 Gb::Console GetGameBoyType(const std::vector<std::string>& tokens) {
@@ -85,7 +85,7 @@ LogLevel GetLogLevel(const std::vector<std::string>& tokens) {
     if (!log_string.empty()) {
         if (log_string == "trace") {
             return LogLevel::Trace;
-        } else if (log_string == "regs") {
+        } else if (log_string == "regs" || log_string == "registers") {
             return LogLevel::Registers;
         } else if (log_string == "timer") {
             return LogLevel::Timer;

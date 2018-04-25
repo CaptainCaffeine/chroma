@@ -19,26 +19,17 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <utility>
+#include <fmt/ostream.h>
 
 #include "common/CommonTypes.h"
 #include "common/CommonFuncs.h"
 #include "common/CommonEnums.h"
 #include "gba/core/Enums.h"
 
-namespace fmt {
-
-template<typename Char>
-class ArgFormatter;
-
-template<typename CharType, typename ArgFormatter>
-class BasicFormatter;
-
-}
-
 namespace Gba {
 
-class Memory;
-class Cpu;
+class Core;
 
 template<typename T>
 class Instruction;
@@ -47,11 +38,18 @@ struct ImmediateShift;
 
 class Disassembler {
 public:
-    Disassembler(Memory& _mem, const Cpu& _cpu, LogLevel level);
+    Disassembler(Core& _core, LogLevel level);
     ~Disassembler();
 
     void DisassembleThumb(Thumb opcode, const std::array<u32, 16>& regs, u32 cpsr);
     void DisassembleArm(Arm opcode, const std::array<u32, 16>& regs, u32 cpsr);
+
+    template<typename... Args>
+    void Log(const std::string& log_msg, bool always, Args&&... args) {
+        if (always || log_level != LogLevel::None) {
+            fmt::print(log_stream, log_msg, std::forward<Args>(args)...);
+        }
+    }
 
     void IncHaltCycles(int cycles) { halt_cycles += cycles; }
     void LogHalt();
@@ -59,14 +57,13 @@ public:
     void SwitchLogLevel();
 
 private:
-    Memory& mem;
-    const Cpu& cpu;
+    Core& core;
 
     const std::vector<Instruction<Thumb>> thumb_instructions;
     const std::vector<Instruction<Arm>> arm_instructions;
 
-    LogLevel log_level;
-    LogLevel alt_level = LogLevel::None;
+    LogLevel log_level = LogLevel::None;
+    LogLevel alt_level;
     std::ofstream log_stream;
 
     int halt_cycles = 0;

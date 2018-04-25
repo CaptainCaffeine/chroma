@@ -29,6 +29,7 @@ namespace Gba {
 
 class Memory;
 class Cpu;
+class Disassembler;
 class Lcd;
 class Timer;
 class Dma;
@@ -43,6 +44,7 @@ public:
 
     std::unique_ptr<Memory> mem;
     std::unique_ptr<Cpu> cpu;
+    std::unique_ptr<Disassembler> disasm;
     std::unique_ptr<Lcd> lcd;
     std::vector<Timer> timers;
     std::vector<Dma> dma;

@@ -15,11 +15,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <bitset>
-#include <fmt/format.h>
 
 #include "gba/cpu/Disassembler.h"
 #include "gba/cpu/Cpu.h"
 #include "gba/memory/Memory.h"
+#include "gba/core/Core.h"
 
 namespace Gba {
 
@@ -198,7 +198,7 @@ std::string Disassembler::Thumb_BT2(u32 imm11) {
 std::string Disassembler::Thumb_BlH1(u32 imm11) {
     s32 signed_imm32 = SignExtend(imm11 << 12, 23);
 
-    u16 next_instr = mem.ReadMem<u16>(cpu.GetPc() - 2);
+    u16 next_instr = core.mem->ReadMem<u16>(core.cpu->GetPc() - 2);
     if ((next_instr & 0xF800) == 0xF800) {
         // If the next instruction is BlH2, disassemble as full BL.
         u32 imm_lo = (next_instr & ~0xF800) << 1;
@@ -210,7 +210,7 @@ std::string Disassembler::Thumb_BlH1(u32 imm11) {
 }
 
 std::string Disassembler::Thumb_BlH2(u32 imm11) {
-    u16 prev_instr = mem.ReadMem<u16>(cpu.GetPc() - 6);
+    u16 prev_instr = core.mem->ReadMem<u16>(core.cpu->GetPc() - 6);
     if ((prev_instr & 0xF800) != 0xF000) {
         // If the previous instruction was not BlH1, disassemble as an independent BLH2.
         return fmt::format("BLH2 #{:0>8X}", imm11 << 1);

@@ -34,7 +34,8 @@ namespace Gba {
 Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom,
            const std::string& save_path, LogLevel level)
         : mem(std::make_unique<Memory>(bios, rom, save_path, *this))
-        , cpu(std::make_unique<Cpu>(*mem, *this, level))
+        , cpu(std::make_unique<Cpu>(*mem, *this))
+        , disasm(std::make_unique<Disassembler>(*this, level))
         , lcd(std::make_unique<Lcd>(mem->PramReference(), mem->VramReference(), mem->OamReference(), *this))
         , timers{{0, *this}, {1, *this}, {2, *this}, {3, *this}}
         , dma{{0, *this}, {1, *this}, {2, *this}, {3, *this}}
@@ -52,9 +53,6 @@ Core::~Core() = default;
 void Core::EmulatorLoop() {
     constexpr int cycles_per_frame = 280896;
     int overspent_cycles = 0;
-
-    // Start with logging disabled.
-    cpu->disasm->SwitchLogLevel();
 
     using namespace std::chrono;
     auto max_frame_time = 0us;
@@ -130,7 +128,7 @@ void Core::RegisterCallbacks() {
 
     sdl_context.RegisterCallback(InputEvent::Quit,         [this](bool) { quit = true; });
     sdl_context.RegisterCallback(InputEvent::Pause,        [this](bool) { pause = !pause; });
-    sdl_context.RegisterCallback(InputEvent::LogLevel,     [this](bool) { cpu->disasm->SwitchLogLevel(); });
+    sdl_context.RegisterCallback(InputEvent::LogLevel,     [this](bool) { disasm->SwitchLogLevel(); });
     sdl_context.RegisterCallback(InputEvent::Fullscreen,   [this](bool) { sdl_context.ToggleFullscreen(); });
     sdl_context.RegisterCallback(InputEvent::Screenshot,   [this](bool) { Screenshot(); });
     sdl_context.RegisterCallback(InputEvent::LcdDebug,     [this](bool) { lcd->DumpDebugInfo(); Screenshot(); });

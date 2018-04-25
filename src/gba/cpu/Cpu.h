@@ -19,18 +19,15 @@
 #include <array>
 #include <vector>
 #include <functional>
-#include <memory>
 #include <tuple>
 
 #include "common/CommonTypes.h"
 #include "common/CommonFuncs.h"
-#include "common/CommonEnums.h"
 #include "gba/core/Enums.h"
 
 namespace Gba {
 
 class Memory;
-class Disassembler;
 class Core;
 
 template<typename T>
@@ -44,10 +41,8 @@ struct ImmediateShift {
 
 class Cpu {
 public:
-    Cpu(Memory& _mem, Core& _core, LogLevel level);
+    Cpu(Memory& _mem, Core& _core);
     ~Cpu();
-
-    std::unique_ptr<Disassembler> disasm;
 
     bool dma_active = false;
     u32 last_bios_fetch = 0x0;

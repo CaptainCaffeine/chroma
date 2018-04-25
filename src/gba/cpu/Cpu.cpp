@@ -26,9 +26,8 @@
 
 namespace Gba {
 
-Cpu::Cpu(Memory& _mem, Core& _core, LogLevel level)
-        : disasm(std::make_unique<Disassembler>(_mem, *this, level))
-        , mem(_mem)
+Cpu::Cpu(Memory& _mem, Core& _core)
+        : mem(_mem)
         , core(_core)
         , thumb_instructions(Instruction<Thumb>::GetInstructionTable<Cpu>())
         , arm_instructions(Instruction<Arm>::GetInstructionTable<Cpu>()) {
@@ -61,7 +60,7 @@ int Cpu::Execute(int cycles) {
         if (mem.PendingInterrupts()) {
             if (halted) {
                 halted = false;
-                disasm->LogHalt();
+                core.disasm->LogHalt();
             }
 
             if (InterruptsEnabled()) {
@@ -72,7 +71,7 @@ int Cpu::Execute(int cycles) {
         if (halted) {
             const int halt_cycles = core.HaltCycles(cycles);
             core.UpdateHardware(halt_cycles);
-            disasm->IncHaltCycles(halt_cycles);
+            core.disasm->IncHaltCycles(halt_cycles);
             cycles -= halt_cycles;
             continue;
         }
@@ -88,7 +87,7 @@ int Cpu::Execute(int cycles) {
             cycles -= cycles_taken;
             cycles_taken = 0;
 
-            disasm->DisassembleThumb(pipeline[0], regs, cpsr);
+            core.disasm->DisassembleThumb(pipeline[0], regs, cpsr);
             const auto& impl = DecodeThumb(pipeline[0]);
             cycles_taken += impl(*this, pipeline[0]);
 
@@ -107,7 +106,7 @@ int Cpu::Execute(int cycles) {
             cycles -= cycles_taken;
             cycles_taken = 0;
 
-            disasm->DisassembleArm(pipeline[0], regs, cpsr);
+            core.disasm->DisassembleArm(pipeline[0], regs, cpsr);
             const auto& impl = DecodeArm(pipeline[0]);
             cycles_taken += impl(*this, pipeline[0]);
 

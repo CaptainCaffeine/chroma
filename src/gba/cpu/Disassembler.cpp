@@ -16,8 +16,6 @@
 
 #include <bitset>
 #include <stdexcept>
-#include <fmt/format.h>
-#include <fmt/ostream.h>
 
 #include "gba/cpu/Disassembler.h"
 #include "gba/cpu/Cpu.h"
@@ -25,12 +23,11 @@
 
 namespace Gba {
 
-Disassembler::Disassembler(Memory& _mem, const Cpu& _cpu, LogLevel level)
-        : mem(_mem)
-        , cpu(_cpu)
+Disassembler::Disassembler(Core& _core, LogLevel level)
+        : core(_core)
         , thumb_instructions(Instruction<Thumb>::GetInstructionTable<Disassembler>())
         , arm_instructions(Instruction<Arm>::GetInstructionTable<Disassembler>())
-        , log_level(level) {
+        , alt_level(level) {
     // Leave log_stream unopened if logging disabled.
     if (level != LogLevel::None) {
         log_stream = std::ofstream("log.txt");
@@ -42,7 +39,7 @@ Disassembler::Disassembler(Memory& _mem, const Cpu& _cpu, LogLevel level)
 
     if (level == LogLevel::LCD || level == LogLevel::Timer) {
         // Not implemented in GBA mode.
-        log_level = LogLevel::Trace;
+        alt_level = LogLevel::Trace;
     }
 }
 
@@ -56,7 +53,7 @@ void Disassembler::DisassembleThumb(Thumb opcode, const std::array<u32, 16>& reg
 
     for (const auto& instr : thumb_instructions) {
         if (instr.Match(opcode)) {
-            fmt::print(log_stream, "0x{:0>8X}, T: {}\n", cpu.GetPc(), instr.disasm_func(*this, opcode));
+            fmt::print(log_stream, "0x{:0>8X}, T: {}\n", regs[pc], instr.disasm_func(*this, opcode));
             break;
         }
     }
@@ -73,7 +70,7 @@ void Disassembler::DisassembleArm(Arm opcode, const std::array<u32, 16>& regs, u
 
     for (const auto& instr : arm_instructions) {
         if (instr.Match(opcode)) {
-            fmt::print(log_stream, "0x{:0>8X}, A: {}\n", cpu.GetPc(), instr.disasm_func(*this, opcode));
+            fmt::print(log_stream, "0x{:0>8X}, A: {}\n", regs[pc], instr.disasm_func(*this, opcode));
             break;
         }
     }
