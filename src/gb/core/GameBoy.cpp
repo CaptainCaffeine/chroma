@@ -32,25 +32,23 @@
 namespace Gb {
 
 GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Logging& logger, Emu::SDLContext& context,
-                 const std::string& save_file, const std::vector<u8>& rom, std::vector<u8>& save_game, bool enable_iir)
+                 const std::string& save_path, const std::vector<u8>& rom, bool enable_iir)
         : logging(logger)
         , timer(std::make_unique<Timer>(*this))
         , serial(std::make_unique<Serial>(*this))
         , lcd(std::make_unique<LCD>(*this))
         , joypad(std::make_unique<Joypad>(*this))
         , audio(std::make_unique<Audio>(enable_iir, *this))
-        , mem(std::make_unique<Memory>(gb_type, header, rom, save_game, *this))
+        , mem(std::make_unique<Memory>(gb_type, header, rom, save_path, *this))
         , cpu(std::make_unique<CPU>(*mem, *this))
         , sdl_context(context)
-        , front_buffer(160 * 144)
-        , save_path(save_file) {
+        , front_buffer(160 * 144) {
 
     RegisterCallbacks();
 }
 
-GameBoy::~GameBoy() {
-    mem->SaveExternalRAM(save_path);
-}
+// Needed to declare std::unique_ptr with forward-declared type in the header file.
+GameBoy::~GameBoy() = default;
 
 void GameBoy::EmulatorLoop() {
     constexpr int cycles_per_frame = 70224;

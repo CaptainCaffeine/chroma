@@ -75,12 +75,10 @@ int main(int argc, char** argv) {
             const Gb::CartridgeHeader cart_header{gameboy_type, rom, multicart};
 
             const std::string save_path{Emu::SaveGamePath(rom_path)};
-            std::vector<u8> save_game{Emu::LoadSaveGame(cart_header, save_path)};
 
             Gb::Logging logger{log_level};
             Emu::SDLContext sdl_context{160, 144, pixel_scale, fullscreen};
-            Gb::GameBoy gameboy_core{gameboy_type, cart_header, logger, sdl_context, save_path, rom, save_game,
-                                     enable_iir};
+            Gb::GameBoy gameboy_core{gameboy_type, cart_header, logger, sdl_context, save_path, rom, enable_iir};
 
             gameboy_core.EmulatorLoop();
         }

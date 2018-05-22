@@ -27,7 +27,7 @@
 namespace Gb {
 
 Memory::Memory(const Console gb_type, const CartridgeHeader& header, const std::vector<u8>& _rom,
-               std::vector<u8>& save_game, GameBoy& _gameboy)
+               const std::string& _save_path, GameBoy& _gameboy)
         : console(gb_type)
         , game_mode(header.game_mode)
         , gameboy(_gameboy)
@@ -41,15 +41,19 @@ Memory::Memory(const Console gb_type, const CartridgeHeader& header, const std::
         , vram((game_mode == GameMode::DMG) ? 0x2000 : 0x4000)
         , wram((game_mode == GameMode::DMG) ? 0x2000 : 0x8000)
         , hram(0x7F)
-        , ext_ram(save_game)
-        , rtc((rtc_present) ? std::make_unique<RTC>(ext_ram) : nullptr) {
+        , save_path(_save_path) {
 
     IORegisterInit();
     VRAMInit();
+    ReadSaveFile(header.ram_size);
+    if (rtc_present) {
+        rtc = std::make_unique<RTC>(ext_ram);
+    }
 }
 
-// Needed to declare std::unique_ptr with forward-declared type in the header file.
-Memory::~Memory() = default;
+Memory::~Memory() {
+    WriteSaveFile();
+}
 
 void Memory::IORegisterInit() {
     if (game_mode == GameMode::DMG) {

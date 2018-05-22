@@ -40,7 +40,7 @@ class Logging;
 class GameBoy {
 public:
     GameBoy(const Console gb_type, const CartridgeHeader& header, Logging& logger, Emu::SDLContext& context,
-            const std::string& save_file, const std::vector<u8>& rom, std::vector<u8>& save_game, bool enable_iir);
+            const std::string& save_file, const std::vector<u8>& rom, bool enable_iir);
     ~GameBoy();
 
     Logging& logging;
@@ -67,8 +67,6 @@ public:
 private:
     Emu::SDLContext& sdl_context;
     std::vector<u16> front_buffer;
-
-    const std::string save_path;
 
     bool quit = false;
     bool pause = false;

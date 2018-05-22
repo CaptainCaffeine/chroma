@@ -42,8 +42,6 @@ Gb::Console CheckRomFile(const std::string& filename);
 template<typename T>
 std::vector<T> LoadRom(const std::string& filename, Gb::Console console);
 std::string SaveGamePath(const std::string& rom_path);
-std::vector<u8> LoadSaveGame(const Gb::CartridgeHeader& cart_header, const std::string& save_path);
-std::vector<u8> ReadSaveFile(const std::string& filename);
 std::vector<u32> LoadGbaBios();
 void CheckPathIsRegularFile(const std::string& filename);
 

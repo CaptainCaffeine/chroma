@@ -40,7 +40,7 @@ class Memory {
     friend class Logging;
 public:
     Memory(const Console gb_type, const CartridgeHeader& header, const std::vector<u8>& _rom,
-           std::vector<u8>& save_game, GameBoy& _gameboy);
+           const std::string& _save_path, GameBoy& _gameboy);
     ~Memory();
 
     const Console console;
@@ -83,8 +83,6 @@ public:
         std::copy_n(vram.cbegin() + (start_addr - 0x8000) + 0x2000 * bank_num, num_bytes, dest);
     }
 
-    // MBC/Saving functions
-    void SaveExternalRAM(const std::string& save_path) const;
 private:
     GameBoy& gameboy;
 
@@ -99,8 +97,10 @@ private:
     std::vector<u8> vram;
     std::vector<u8> wram;
     std::vector<u8> hram;
-    std::vector<u8>& ext_ram;
+    std::vector<u8> ext_ram;
     std::unique_ptr<RTC> rtc;
+
+    const std::string& save_path;
 
     // Init functions
     void IORegisterInit();
@@ -130,7 +130,10 @@ private:
     void ExecuteHDMA();
     u8 DMACopy(const u16 addr) const;
 
-    // MBC functions
+    // MBC/Saving functions
+    void ReadSaveFile(unsigned int cart_ram_size);
+    void WriteSaveFile();
+
     u8 ReadExternalRAM(const u16 addr) const;
     void WriteExternalRAM(const u16 addr, const u8 data);
     void WriteMBCControlRegisters(const u16 addr, const u8 data);
@@ -329,7 +332,7 @@ private:
     u8 interrupt_enable = 0x00;
 
     // Undocumented CGB registers: 0xFF6C, 0xFF72, 0xFF73, 0xFF74, 0xFF75, 0xFF76, 0xFF77
-    std::array<u8, 5> undocumented{{ 0x00, 0x00, 0x00, 0x00, 0x00 }};
+    std::array<u8, 5> undocumented{{0x00, 0x00, 0x00, 0x00, 0x00}};
 
     // ******** MBC control registers ******** 
     int rom_bank_num = 0x01;

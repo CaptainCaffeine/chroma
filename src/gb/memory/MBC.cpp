@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2017 Matthew Murray
+// Copyright (C) 2016-2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,15 +14,55 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <stdexcept>
 #include <fstream>
 #include <fmt/format.h>
 
 #include "gb/memory/Memory.h"
+#include "gb/memory/CartridgeHeader.h"
 #include "gb/memory/RTC.h"
+#include "emu/ParseOptions.h"
 
 namespace Gb {
 
-void Memory::SaveExternalRAM(const std::string& save_path) const {
+void Memory::ReadSaveFile(unsigned int cart_ram_size) {
+    if (!ext_ram_present) {
+        return;
+    }
+
+    std::ifstream save_file(save_path);
+    if (!save_file) {
+        // Save file doesn't exist.
+        //ext_ram = std::vector<u8>(cart_header.ram_size);
+        ext_ram.resize(cart_ram_size);
+        return;
+    }
+
+    Emu::CheckPathIsRegularFile(save_path);
+
+    const auto save_size = Emu::GetFileSize(save_file);
+
+    if (save_size > 0x20030) {
+        throw std::runtime_error(fmt::format("Save game size of {} bytes is too large to be a Game Boy save.",
+                                 save_size));
+    }
+
+    ext_ram.resize(save_size);
+    save_file.read(reinterpret_cast<char*>(ext_ram.data()), save_size);
+
+    if (rtc_present) {
+        // Account for size of RTC save data, if present at the end of the save file.
+        if (ext_ram.size() % 0x400 == 0x30) {
+            cart_ram_size += 0x30;
+        }
+    }
+
+    if (cart_ram_size != ext_ram.size()) {
+        throw std::runtime_error("Save game size does not match external RAM size given in cartridge header.");
+    }
+}
+
+void Memory::WriteSaveFile() {
     if (ext_ram_present) {
         std::ofstream save_ostream(save_path);
 

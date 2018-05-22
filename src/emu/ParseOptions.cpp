@@ -217,54 +217,6 @@ std::string SaveGamePath(const std::string& rom_path) {
     return rom_path.substr(0, last_dot) + ".sav";
 }
 
-std::vector<u8> LoadSaveGame(const Gb::CartridgeHeader& cart_header, const std::string& save_path) {
-    std::vector<u8> save_game;
-    if (cart_header.ext_ram_present) {
-        save_game = Emu::ReadSaveFile(save_path);
-
-        if (save_game.size() != 0) {
-            unsigned int cart_ram_size = cart_header.ram_size;
-            if (cart_header.rtc_present) {
-                // Account for size of RTC save data, if present at the end of the save file.
-                if (save_game.size() % 0x400 == 0x30) {
-                    cart_ram_size += 0x30;
-                }
-            }
-
-            if (cart_ram_size != save_game.size()) {
-                throw std::runtime_error("Save game size does not match external RAM size given in cartridge header.");
-            }
-        } else {
-            // No preexisting save game.
-            save_game = std::vector<u8>(cart_header.ram_size);
-        }
-    }
-
-    return save_game;
-}
-
-std::vector<u8> ReadSaveFile(const std::string& filename) {
-    std::ifstream save_file(filename);
-    if (!save_file) {
-        // Save file doesn't exist.
-        return std::vector<u8>();
-    }
-
-    CheckPathIsRegularFile(filename);
-
-    const auto save_size = GetFileSize(save_file);
-
-    if (save_size > 0x20030) {
-        throw std::runtime_error("Save game size of " + std::to_string(save_size)
-                                 + " bytes is too large to be a Game Boy save.");
-    }
-
-    std::vector<u8> save_contents(save_size);
-    save_file.read(reinterpret_cast<char*>(save_contents.data()), save_size);
-
-    return save_contents;
-}
-
 std::vector<u32> LoadGbaBios() {
     std::string bios_path = "gba_bios.bin";
     std::ifstream bios_file(bios_path);
