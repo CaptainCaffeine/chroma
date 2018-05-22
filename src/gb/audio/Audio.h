@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2017 Matthew Murray
+// Copyright (C) 2017-2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -26,20 +26,20 @@
 
 namespace Gb {
 
-class Memory;
+class GameBoy;
 
 struct Biquad {
     Biquad(std::size_t interpolated_buffer_size, double fc, double qu)
-        : sampling_frequency(interpolated_buffer_size * 60.0)
-        , cutoff_frequency(fc)
-        , q(qu)
-        , k(std::tan(M_PI * cutoff_frequency / sampling_frequency))
-        , norm(1 / (1 + k / q + k * k))
-        , b0(k * k * norm)
-        , b1(2 * b0)
-        , b2(b0)
-        , a1(2 * (k * k - 1) * norm)
-        , a2((1 - k / q + k * k) * norm) {}
+            : sampling_frequency(interpolated_buffer_size * 60.0)
+            , cutoff_frequency(fc)
+            , q(qu)
+            , k(std::tan(M_PI * cutoff_frequency / sampling_frequency))
+            , norm(1 / (1 + k / q + k * k))
+            , b0(k * k * norm)
+            , b1(2 * b0)
+            , b2(b0)
+            , a1(2 * (k * k - 1) * norm)
+            , a2((1 - k / q + k * k) * norm) {}
 
     const double sampling_frequency;
     const double cutoff_frequency;
@@ -60,11 +60,9 @@ struct Biquad {
 
 class Audio {
 public:
-    Audio(bool enable_filter);
+    Audio(bool enable_filter, const GameBoy& _gameboy);
 
     void UpdateAudio();
-
-    void LinkToMemory(Memory* memory) { mem = memory; }
 
     bool IsPoweredOn() const { return audio_on; }
     u8 ReadNR52() const;
@@ -183,7 +181,7 @@ public:
     std::array<u8, 0x10> wave_ram{{0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
                                    0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF}};
 private:
-    const Memory* mem;
+    const GameBoy& gameboy;
 
     bool audio_on = true;
 

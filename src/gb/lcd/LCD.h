@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2017 Matthew Murray
+// Copyright (C) 2016-2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@
 
 namespace Gb {
 
-class Memory;
 class GameBoy;
 class Logging;
 
@@ -53,12 +52,9 @@ struct SpriteAttrs {
 class LCD {
     friend class Logging;
 public:
-    LCD();
+    LCD(GameBoy& _gameboy);
 
     void UpdateLCD();
-
-    void LinkToMemory(Memory* memory) { mem = memory; }
-    void LinkToGameBoy(GameBoy* gb) { gameboy = gb; }
 
     void SetSTATSignal() { stat_interrupt_signal = true; }
 
@@ -149,8 +145,7 @@ public:
     std::array<u8, 64> obj_palette_data{};
 
 private:
-    Memory* mem;
-    GameBoy* gameboy;
+    GameBoy& gameboy;
 
     bool lcd_on = true;
     void UpdatePowerOnState();

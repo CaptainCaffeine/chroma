@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2017 Matthew Murray
+// Copyright (C) 2016-2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@
 namespace Gb {
 
 class CartridgeHeader;
+class GameBoy;
 class Timer;
 class Serial;
 class LCD;
@@ -38,8 +39,8 @@ class Logging;
 class Memory {
     friend class Logging;
 public:
-    Memory(const Console gb_type, const CartridgeHeader& header, Timer& tima, Serial& sio, LCD& display,
-           Joypad& pad, Audio& audio, const std::vector<u8>& rom_contents, std::vector<u8>& save_game);
+    Memory(const Console gb_type, const CartridgeHeader& header, const std::vector<u8>& _rom,
+           std::vector<u8>& save_game, GameBoy& _gameboy);
     ~Memory();
 
     const Console console;
@@ -85,11 +86,7 @@ public:
     // MBC/Saving functions
     void SaveExternalRAM(const std::string& save_path) const;
 private:
-    Timer& timer;
-    Serial& serial;
-    LCD& lcd;
-    Joypad& joypad;
-    Audio& audio;
+    GameBoy& gameboy;
 
     const MBC mbc_mode;
     const bool ext_ram_present;

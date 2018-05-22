@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2017 Matthew Murray
+// Copyright (C) 2016-2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
 #include <algorithm>
 
 #include "gb/memory/Memory.h"
+#include "gb/core/GameBoy.h"
 #include "gb/lcd/LCD.h"
 
 namespace Gb {
@@ -50,7 +51,7 @@ void Memory::UpdateOAM_DMA() {
         }
     } else if (oam_dma_state == DMAState::Active) {
         // Write the byte which was read last cycle to OAM.
-        lcd.oam[bytes_read - 1] = oam_transfer_byte;
+        gameboy.lcd->oam[bytes_read - 1] = oam_transfer_byte;
 
         if (bytes_read == 160) {
             // Don't read on the last cycle.
@@ -111,7 +112,7 @@ void Memory::InitHDMA() {
 
     hdma_control &= 0x7F;
 
-    if (hdma_type == HDMAType::HDMA && (lcd.stat & 0x03) != 0) {
+    if (hdma_type == HDMAType::HDMA && (gameboy.lcd->stat & 0x03) != 0) {
         hdma_state = DMAState::Paused;
     } else {
         hdma_state = DMAState::Starting;
@@ -135,7 +136,7 @@ void Memory::ExecuteHDMA() {
     bytes_to_copy -= num_bytes;
 
     for (int i = 0; i < num_bytes; ++i) {
-        if ((lcd.stat & 0x03) != 3) {
+        if ((gameboy.lcd->stat & 0x03) != 3) {
             vram[hdma_dest - 0x8000 + 0x2000 * vram_bank_num] = DMACopy(hdma_source);
         }
 
@@ -175,7 +176,7 @@ u8 Memory::DMACopy(const u16 addr) const {
     } else if (addr < 0xA000) {
         // VRAM -- switchable in CGB mode
         // Not accessible during screen mode 3. HDMA/GDMA cannot read VRAM.
-        if ((lcd.stat & 0x03) != 3 && hdma_state != DMAState::Active) {
+        if ((gameboy.lcd->stat & 0x03) != 3 && hdma_state != DMAState::Active) {
             return vram[addr - 0x8000 + 0x2000 * vram_bank_num];
         } else {
             return 0xFF;

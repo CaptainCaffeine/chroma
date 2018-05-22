@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2017 Matthew Murray
+// Copyright (C) 2017-2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -23,7 +23,10 @@
 
 namespace Gb {
 
-enum class Generator : u8 {Square1=0x01, Square2=0x02, Wave=0x04, Noise=0x08};
+enum class Generator : u8 {Square1 = 0x01,
+                           Square2 = 0x02,
+                           Wave    = 0x04,
+                           Noise   = 0x08};
 
 class Audio;
 

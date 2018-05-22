@@ -23,7 +23,7 @@
 
 namespace Gba {
 
-Disassembler::Disassembler(Core& _core, LogLevel level)
+Disassembler::Disassembler(LogLevel level, Core& _core)
         : core(_core)
         , thumb_instructions(Instruction<Thumb>::GetInstructionTable<Disassembler>())
         , arm_instructions(Instruction<Arm>::GetInstructionTable<Disassembler>())

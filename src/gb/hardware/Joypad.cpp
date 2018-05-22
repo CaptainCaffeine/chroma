@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "gb/hardware/Joypad.h"
+#include "gb/core/GameBoy.h"
 #include "gb/memory/Memory.h"
 
 namespace Gb {
@@ -36,7 +37,7 @@ void Joypad::UpdateJoypad() {
 
     bool signal_went_low = !interrupt_signal && prev_interrupt_signal;
     if (signal_went_low) {
-        mem->RequestInterrupt(Interrupt::Joypad);
+        gameboy.mem->RequestInterrupt(Interrupt::Joypad);
     }
 
     prev_interrupt_signal = interrupt_signal;

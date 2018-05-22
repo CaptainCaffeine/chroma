@@ -69,6 +69,8 @@ public:
     static void CheckHeader(const std::vector<u16>& rom_header);
 
 private:
+    Core& core;
+
     const std::vector<u32>& bios;
     std::vector<u16> xram;
     std::vector<u32> iram;
@@ -78,8 +80,6 @@ private:
     const std::vector<u16>& rom;
     std::vector<u8> sram;
     std::vector<u64> eeprom;
-
-    Core& core;
 
     u32 last_addr = 0x0;
     int prefetch_cycles = 0;

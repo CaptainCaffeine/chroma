@@ -36,6 +36,7 @@ public:
     unsigned int num_rom_banks;
     bool rtc_present = false;
     bool rumble_present = false;
+
 private:
     void GetRAMSize(const std::vector<u8>& rom);
     void GetMBCType(const std::vector<u8>& rom);

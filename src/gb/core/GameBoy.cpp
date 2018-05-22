@@ -34,25 +34,16 @@ namespace Gb {
 GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Logging& logger, Emu::SDLContext& context,
                  const std::string& save_file, const std::vector<u8>& rom, std::vector<u8>& save_game, bool enable_iir)
         : logging(logger)
+        , timer(std::make_unique<Timer>(*this))
+        , serial(std::make_unique<Serial>(*this))
+        , lcd(std::make_unique<LCD>(*this))
+        , joypad(std::make_unique<Joypad>(*this))
+        , audio(std::make_unique<Audio>(enable_iir, *this))
+        , mem(std::make_unique<Memory>(gb_type, header, rom, save_game, *this))
+        , cpu(std::make_unique<CPU>(*mem, *this))
         , sdl_context(context)
-        , front_buffer(160*144)
-        , save_path(save_file)
-        , timer(std::make_unique<Timer>())
-        , serial(std::make_unique<Serial>())
-        , lcd(std::make_unique<LCD>())
-        , joypad(std::make_unique<Joypad>())
-        , audio(std::make_unique<Audio>(enable_iir))
-        , mem(std::make_unique<Memory>(gb_type, header, *timer, *serial, *lcd, *joypad, *audio, rom, save_game))
-        , cpu(std::make_unique<CPU>(*mem)) {
-
-    // Link together circular dependencies after all components are constructed.
-    lcd->LinkToGameBoy(this);
-    cpu->LinkToGameBoy(this);
-    timer->LinkToMemory(mem.get());
-    serial->LinkToMemory(mem.get());
-    lcd->LinkToMemory(mem.get());
-    joypad->LinkToMemory(mem.get());
-    audio->LinkToMemory(mem.get());
+        , front_buffer(160 * 144)
+        , save_path(save_file) {
 
     RegisterCallbacks();
 }

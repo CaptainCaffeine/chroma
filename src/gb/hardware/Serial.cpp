@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2017 Matthew Murray
+// Copyright (C) 2016-2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "gb/hardware/Serial.h"
+#include "gb/core/GameBoy.h"
 #include "gb/memory/Memory.h"
 
 namespace Gb {
@@ -57,7 +58,7 @@ void Serial::ShiftSerialBit() {
     if (--bits_to_shift == 0) {
         // The transfer has completed.
         serial_control &= 0x7F;
-        mem->RequestInterrupt(Interrupt::Serial);
+        gameboy.mem->RequestInterrupt(Interrupt::Serial);
     }
 }
 
@@ -65,7 +66,7 @@ u8 Serial::SelectClockBit() const {
     // In CBG mode, bit 1 of SC can be used to set the speed of the serial transfer. The transfer runs at the usual 
     // speed (using bit 7 of the serial clock) if it's 0, and runs fast (using bit 2 of the serial clock) if it's 1.
     // In DMG mode, bit 1 of SC returns 1 even though the transfer runs at the usual speed.
-    if (mem->game_mode == GameMode::CGB) {
+    if (gameboy.mem->game_mode == GameMode::CGB) {
         return (serial_control & 0x02) ? 0x04 : 0x80;
     } else {
         return 0x80;

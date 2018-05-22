@@ -29,14 +29,14 @@
 namespace Gba {
 
 Memory::Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom, const std::string& _save_path, Core& _core)
-        : bios(_bios)
+        : core(_core)
+        , bios(_bios)
         , xram(xram_size / sizeof(u16))
         , iram(iram_size / sizeof(u32))
         , pram(pram_size / sizeof(u16))
         , vram(vram_size / sizeof(u16))
         , oam(oam_size / sizeof(u32))
         , rom(_rom)
-        , core(_core)
         , save_path(_save_path)
         , large_rom(rom.size() / 2 > 16 * mbyte) {
 

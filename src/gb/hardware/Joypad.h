@@ -21,10 +21,13 @@
 
 namespace Gb {
 
-class Memory;
+class GameBoy;
 
 class Joypad {
 public:
+    Joypad(GameBoy& _gameboy)
+            : gameboy(_gameboy) {}
+
     enum Button : u8 {Right  = 0x01,
                       Left   = 0x02,
                       Up     = 0x04,
@@ -65,8 +68,7 @@ public:
         }
     }
 
-    constexpr void LinkToMemory(Memory* memory) { mem = memory; }
-    constexpr bool JoypadPress() const { return (p1 & 0x0F) != 0x0F; }
+    bool JoypadPress() const { return (p1 & 0x0F) != 0x0F; }
 
     // ******** Joypad I/O register ********
     // P1 register: 0xFF00
@@ -78,15 +80,15 @@ public:
     //     bit 0: P10 Input Right or A (0=Pressed)
     u8 p1 = 0x00;
 private:
-    Memory* mem = nullptr;
+    GameBoy& gameboy;
 
     u8 button_states = 0xFF;
     u8 was_unset = 0x00;
 
     bool prev_interrupt_signal = false;
 
-    constexpr bool ButtonKeysSelected() const { return !(p1 & 0x20); }
-    constexpr bool DirectionKeysSelected() const { return !(p1 & 0x10); }
+    bool ButtonKeysSelected() const { return !(p1 & 0x20); }
+    bool DirectionKeysSelected() const { return !(p1 & 0x10); }
 };
 
 } // End namespace Gb

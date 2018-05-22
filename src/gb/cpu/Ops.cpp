@@ -50,7 +50,7 @@ void CPU::Load16Immediate(Reg16Addr r, u16 val) {
 
 void CPU::LoadHLIntoSP() {
     regs.reg16[SP] = regs.reg16[HL];
-    gameboy->HardwareTick(4);
+    gameboy.HardwareTick(4);
 }
 
 void CPU::LoadSPnIntoHL(s8 val) {
@@ -65,7 +65,7 @@ void CPU::LoadSPnIntoHL(s8 val) {
     regs.reg16[HL] = regs.reg16[SP] + val;
     
     // Internal delay
-    gameboy->HardwareTick(4);
+    gameboy.HardwareTick(4);
 }
 
 void CPU::LoadSPIntoMem(u16 addr) {
@@ -75,7 +75,7 @@ void CPU::LoadSPIntoMem(u16 addr) {
 
 void CPU::Push(Reg16Addr r) {
     // Internal delay
-    gameboy->HardwareTick(4);
+    gameboy.HardwareTick(4);
 
     WriteMemAndTick(--regs.reg16[SP], regs.reg8[ToReg8AddrHi(r)]);
     WriteMemAndTick(--regs.reg16[SP], regs.reg8[ToReg8AddrLo(r)]);
@@ -277,7 +277,7 @@ void CPU::AddHL(Reg16Addr r) {
     SetCarry((regs.reg16[HL] + regs.reg16[r]) & 0x10000);
     regs.reg16[HL] += regs.reg16[r];
 
-    gameboy->HardwareTick(4);
+    gameboy.HardwareTick(4);
 }
 
 void CPU::AddSP(s8 val) {
@@ -292,17 +292,17 @@ void CPU::AddSP(s8 val) {
     regs.reg16[SP] += val;
 
     // Two internal delays.
-    gameboy->HardwareTick(8);
+    gameboy.HardwareTick(8);
 }
 
 void CPU::IncReg16(Reg16Addr r) {
     ++regs.reg16[r];
-    gameboy->HardwareTick(4);
+    gameboy.HardwareTick(4);
 }
 
 void CPU::DecReg16(Reg16Addr r) {
     --regs.reg16[r];
-    gameboy->HardwareTick(4);
+    gameboy.HardwareTick(4);
 }
 
 // Miscellaneous arithmetic
@@ -573,7 +573,7 @@ void CPU::SetBitOfMemAtHL(unsigned int bit) {
 // Jumps
 void CPU::Jump(u16 addr) {
     // Internal delay
-    gameboy->HardwareTick(4);
+    gameboy.HardwareTick(4);
 
     pc = addr;
 }
@@ -584,7 +584,7 @@ void CPU::JumpToHL() {
 
 void CPU::RelativeJump(s8 val) {
     // Internal delay
-    gameboy->HardwareTick(4);
+    gameboy.HardwareTick(4);
 
     pc += val;
 }
@@ -592,7 +592,7 @@ void CPU::RelativeJump(s8 val) {
 // Calls and Returns
 void CPU::Call(u16 addr) {
     // Internal delay
-    gameboy->HardwareTick(4);
+    gameboy.HardwareTick(4);
 
     WriteMemAndTick(--regs.reg16[SP], static_cast<u8>(pc >> 8));
     WriteMemAndTick(--regs.reg16[SP], static_cast<u8>(pc));
@@ -607,7 +607,7 @@ void CPU::Return() {
     pc = (static_cast<u16>(byte_hi) << 8) | static_cast<u16>(byte_lo);
 
     // Internal delay
-    gameboy->HardwareTick(4);
+    gameboy.HardwareTick(4);
 }
 
 // System Control
@@ -625,10 +625,10 @@ void CPU::Halt() {
 void CPU::Stop() {
     // STOP is a two-byte long opcode. If the opcode following STOP is not 0x00, the LCD supposedly turns on?
     ++pc;
-    gameboy->HaltedTick(4);
+    gameboy.HaltedTick(4);
 
     // Turn off the LCD.
-    gameboy->StopLCD();
+    gameboy.StopLCD();
 
     // During STOP mode, the clock increases as usual, but normal interrupts are not serviced or checked. Regardless
     // if the joypad interrupt is enabled in the IE register, a stopped Game Boy will intercept any joypad presses

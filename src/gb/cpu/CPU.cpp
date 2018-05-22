@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2017 Matthew Murray
+// Copyright (C) 2016-2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,14 +16,16 @@
 
 #include <stdexcept>
 
-#include "gb/logging/Logging.h"
 #include "gb/cpu/CPU.h"
 #include "gb/memory/Memory.h"
 #include "gb/core/GameBoy.h"
+#include "gb/logging/Logging.h"
 
 namespace Gb {
 
-CPU::CPU(Memory& memory) : mem(memory) {
+CPU::CPU(Memory& _mem, GameBoy& _gameboy)
+        : mem(_mem)
+        , gameboy(_gameboy) {
     // Initial register values
     if (mem.game_mode == GameMode::DMG) {
         if (mem.console == Console::DMG) {
@@ -61,13 +63,13 @@ CPU::CPU(Memory& memory) : mem(memory) {
 
 u8 CPU::ReadMemAndTick(const u16 addr) {
     const u8 data = mem.ReadMem(addr);
-    gameboy->HardwareTick(4);
+    gameboy.HardwareTick(4);
     return data;
 }
 
 void CPU::WriteMemAndTick(const u16 addr, const u8 val) {
     mem.WriteMem(addr, val);
-    gameboy->HardwareTick(4);
+    gameboy.HardwareTick(4);
 }
 
 u8 CPU::GetImmediateByte() {
@@ -90,15 +92,15 @@ int CPU::RunFor(int cycles) {
             continue;
         } else if (mem.HDMAInProgress() && cpu_mode != CPUMode::Halted) {
             mem.UpdateHDMA();
-            gameboy->HaltedTick(4);
+            gameboy.HaltedTick(4);
             cycles -= 4;
             continue;
         }
 
         cycles -= HandleInterrupts();
 
-        if (gameboy->logging.log_level != LogLevel::None) {
-            gameboy->logging.LogCPURegisterState(mem, *this);
+        if (gameboy.logging.log_level != LogLevel::None) {
+            gameboy.logging.LogCPURegisterState(mem, *this);
         }
 
         if (cpu_mode == CPUMode::Running) {
@@ -107,7 +109,7 @@ int CPU::RunFor(int cycles) {
             cycles -= ExecuteNext(mem.ReadMem(pc));
             cpu_mode = CPUMode::Running;
         } else if (cpu_mode == CPUMode::Halted) {
-            gameboy->HaltedTick(4);
+            gameboy.HaltedTick(4);
             cycles -= 4;
         }
     }
@@ -119,8 +121,8 @@ int CPU::RunFor(int cycles) {
 int CPU::HandleInterrupts() {
     if (interrupt_master_enable) {
         if (mem.RequestedEnabledInterrupts()) {
-            if (gameboy->logging.log_level != LogLevel::None) {
-                gameboy->logging.LogInterrupt(mem);
+            if (gameboy.logging.log_level != LogLevel::None) {
+                gameboy.logging.LogInterrupt(mem);
             }
 
             // Disable interrupts.
@@ -130,9 +132,9 @@ int CPU::HandleInterrupts() {
             // and waits a total of 4 M-cycles before it reads IF & IE again to see which interrupt to service. As
             // a result, if a higher priority interrupt occurs before the second IF read, it will be serviced instead
             // of the one that triggered the interrupt handler.
-            gameboy->HardwareTick(8);
+            gameboy.HardwareTick(8);
             WriteMemAndTick(--regs.reg16[SP], static_cast<u8>(pc >> 8));
-            gameboy->HardwareTick(4);
+            gameboy.HardwareTick(4);
 
             u16 interrupt_vector = 0x0000;
             if (mem.IsPending(Interrupt::VBLANK)) {
@@ -179,9 +181,9 @@ void CPU::EnableInterruptsDelayed() {
 }
 
 void CPU::StoppedTick() {
-    gameboy->HaltedTick(4);
+    gameboy.HaltedTick(4);
 
-    if (gameboy->JoypadPress()) {
+    if (gameboy.JoypadPress()) {
         if (speed_switch_cycles != 0) {
             // The CPU hangs if there is an enabled joypad press during a speed switch.
             throw std::runtime_error("The CPU has hung. Reason: enabled joypad press during a speed switch.");
@@ -195,7 +197,7 @@ void CPU::StoppedTick() {
     if (speed_switch_cycles > 0) {
         if (speed_switch_cycles == 4) {
             // Speed switch finished.
-            gameboy->SpeedSwitch();
+            gameboy.SpeedSwitch();
 
             // Exit STOP mode.
             cpu_mode = CPUMode::Running;
@@ -206,7 +208,7 @@ void CPU::StoppedTick() {
 }
 
 unsigned int CPU::ExecuteNext(const u8 opcode) {
-    gameboy->HardwareTick(4);
+    gameboy.HardwareTick(4);
 
     switch (opcode) {
     // ******** 8-bit loads ********
@@ -1038,7 +1040,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             Jump(GetImmediateWord());
             return 16;
         } else {
-            gameboy->HardwareTick(8);
+            gameboy.HardwareTick(8);
             pc += 2;
             return 12;
         }
@@ -1047,7 +1049,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             Jump(GetImmediateWord());
             return 16;
         } else {
-            gameboy->HardwareTick(8);
+            gameboy.HardwareTick(8);
             pc += 2;
             return 12;
         }
@@ -1056,7 +1058,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             Jump(GetImmediateWord());
             return 16;
         } else {
-            gameboy->HardwareTick(8);
+            gameboy.HardwareTick(8);
             pc += 2;
             return 12;
         }
@@ -1065,7 +1067,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             Jump(GetImmediateWord());
             return 16;
         } else {
-            gameboy->HardwareTick(8);
+            gameboy.HardwareTick(8);
             pc += 2;
             return 12;
         }
@@ -1088,7 +1090,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             RelativeJump(GetImmediateByte());
             return 12;
         } else {
-            gameboy->HardwareTick(4);
+            gameboy.HardwareTick(4);
             ++pc;
             return 8;
         }
@@ -1097,7 +1099,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             RelativeJump(GetImmediateByte());
             return 12;
         } else {
-            gameboy->HardwareTick(4);
+            gameboy.HardwareTick(4);
             ++pc;
             return 8;
         }
@@ -1106,7 +1108,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             RelativeJump(GetImmediateByte());
             return 12;
         } else {
-            gameboy->HardwareTick(4);
+            gameboy.HardwareTick(4);
             ++pc;
             return 8;
         }
@@ -1115,7 +1117,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             RelativeJump(GetImmediateByte());
             return 12;
         } else {
-            gameboy->HardwareTick(4);
+            gameboy.HardwareTick(4);
             ++pc;
             return 8;
         }
@@ -1138,7 +1140,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             Call(GetImmediateWord());
             return 24;
         } else {
-            gameboy->HardwareTick(8);
+            gameboy.HardwareTick(8);
             pc += 2;
             return 12;
         }
@@ -1147,7 +1149,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             Call(GetImmediateWord());
             return 24;
         } else {
-            gameboy->HardwareTick(8);
+            gameboy.HardwareTick(8);
             pc += 2;
             return 12;
         }
@@ -1156,7 +1158,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             Call(GetImmediateWord());
             return 24;
         } else {
-            gameboy->HardwareTick(8);
+            gameboy.HardwareTick(8);
             pc += 2;
             return 12;
         }
@@ -1165,7 +1167,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             Call(GetImmediateWord());
             return 24;
         } else {
-            gameboy->HardwareTick(8);
+            gameboy.HardwareTick(8);
             pc += 2;
             return 12;
         }
@@ -1182,7 +1184,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
     //     NC: Carry flag reset
     //     Z:  Carry flag set
     case 0xC0:
-        gameboy->HardwareTick(4); // For the comparison.
+        gameboy.HardwareTick(4); // For the comparison.
         if (!Zero()) {
             Return();
             return 20;
@@ -1190,7 +1192,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             return 8;
         }
     case 0xC8:
-        gameboy->HardwareTick(4); // For the comparison.
+        gameboy.HardwareTick(4); // For the comparison.
         if (Zero()) {
             Return();
             return 20;
@@ -1198,7 +1200,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             return 8;
         }
     case 0xD0:
-        gameboy->HardwareTick(4); // For the comparison.
+        gameboy.HardwareTick(4); // For the comparison.
         if (!Carry()) {
             Return();
             return 20;
@@ -1206,7 +1208,7 @@ unsigned int CPU::ExecuteNext(const u8 opcode) {
             return 8;
         }
     case 0xD8:
-        gameboy->HardwareTick(4); // For the comparison.
+        gameboy.HardwareTick(4); // For the comparison.
         if (Carry()) {
             Return();
             return 20;

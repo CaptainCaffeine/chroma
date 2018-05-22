@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2017 Matthew Murray
+// Copyright (C) 2016-2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "gb/hardware/Timer.h"
+#include "gb/core/GameBoy.h"
 #include "gb/memory/Memory.h"
 
 namespace Gb {
@@ -37,7 +38,7 @@ void Timer::UpdateTimer() {
             tima_overflow_not_interrupted = true;
             tima = tma;
             // If the IF register was written this cycle, the written value will remain.
-            mem->RequestInterrupt(Interrupt::Timer);
+            gameboy.mem->RequestInterrupt(Interrupt::Timer);
         } else {
             tima_overflow_not_interrupted = false;
         }

@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <vector>
+#include <string>
 
 #include "common/CommonTypes.h"
 #include "gb/core/Enums.h"
@@ -38,11 +39,19 @@ class Logging;
 
 class GameBoy {
 public:
-    Logging& logging;
-
     GameBoy(const Console gb_type, const CartridgeHeader& header, Logging& logger, Emu::SDLContext& context,
             const std::string& save_file, const std::vector<u8>& rom, std::vector<u8>& save_game, bool enable_iir);
     ~GameBoy();
+
+    Logging& logging;
+
+    std::unique_ptr<Timer> timer;
+    std::unique_ptr<Serial> serial;
+    std::unique_ptr<LCD> lcd;
+    std::unique_ptr<Joypad> joypad;
+    std::unique_ptr<Audio> audio;
+    std::unique_ptr<Memory> mem;
+    std::unique_ptr<CPU> cpu;
 
     void EmulatorLoop();
     void SwapBuffers(std::vector<u16>& back_buffer);
@@ -60,15 +69,6 @@ private:
     std::vector<u16> front_buffer;
 
     const std::string save_path;
-
-    // Game Boy hardware components.
-    std::unique_ptr<Timer> timer;
-    std::unique_ptr<Serial> serial;
-    std::unique_ptr<LCD> lcd;
-    std::unique_ptr<Joypad> joypad;
-    std::unique_ptr<Audio> audio;
-    std::unique_ptr<Memory> mem;
-    std::unique_ptr<CPU> cpu;
 
     bool quit = false;
     bool pause = false;

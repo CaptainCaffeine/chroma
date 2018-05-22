@@ -35,7 +35,7 @@ Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::ve
            const std::string& save_path, LogLevel level)
         : mem(std::make_unique<Memory>(bios, rom, save_path, *this))
         , cpu(std::make_unique<Cpu>(*mem, *this))
-        , disasm(std::make_unique<Disassembler>(*this, level))
+        , disasm(std::make_unique<Disassembler>(level, *this))
         , lcd(std::make_unique<Lcd>(mem->PramReference(), mem->VramReference(), mem->OamReference(), *this))
         , timers{{0, *this}, {1, *this}, {2, *this}, {3, *this}}
         , dma{{0, *this}, {1, *this}, {2, *this}, {3, *this}}

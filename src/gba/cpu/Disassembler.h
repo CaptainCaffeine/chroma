@@ -38,7 +38,7 @@ struct ImmediateShift;
 
 class Disassembler {
 public:
-    Disassembler(Core& _core, LogLevel level);
+    Disassembler(LogLevel level, Core& _core);
     ~Disassembler();
 
     void DisassembleThumb(Thumb opcode, const std::array<u32, 16>& regs, u32 cpsr);

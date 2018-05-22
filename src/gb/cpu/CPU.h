@@ -28,17 +28,16 @@ class Logging;
 class CPU {
     friend class Logging;
 public:
-    CPU(Memory& memory);
+    CPU(Memory& _mem, GameBoy& _gameboy);
 
     int RunFor(int cycles);
 
-    void LinkToGameBoy(GameBoy* gb) { gameboy = gb; }
     void EnableInterruptsDelayed();
 
     bool IsHalted() const { return cpu_mode == CPUMode::Halted; }
 private:
     Memory& mem;
-    GameBoy* gameboy;
+    GameBoy& gameboy;
 
     // Registers
     union Registers {

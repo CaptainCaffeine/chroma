@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2017 Matthew Murray
+// Copyright (C) 2016-2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,14 +21,16 @@
 
 namespace Gb {
 
-class Memory;
+class GameBoy;
 
 class Serial {
 public:
+    Serial(GameBoy& _gameboy)
+            : gameboy(_gameboy) {}
+
     void UpdateSerial();
 
-    constexpr void InitSerialClock(u8 init_val) { serial_clock = init_val; }
-    constexpr void LinkToMemory(Memory* memory) { mem = memory; }
+    void InitSerialClock(u8 init_val) { serial_clock = init_val; }
 
     // ******** Serial I/O registers ********
     // SB register: 0xFF01
@@ -39,7 +41,7 @@ public:
     //     bit 0: Shift Clock (0=External Clock, 1=Internal Clock 8192Hz)
     u8 serial_control = 0x00;
 private:
-    Memory* mem = nullptr;
+    GameBoy& gameboy;
 
     u8 serial_clock = 0x00;
     int bits_to_shift = 0;
@@ -50,7 +52,7 @@ private:
 
     void ShiftSerialBit();
     u8 SelectClockBit() const;
-    constexpr bool UsingInternalClock() const { return serial_control & 0x01; }
+    bool UsingInternalClock() const { return serial_control & 0x01; }
 };
 
 } // End namespace Gb

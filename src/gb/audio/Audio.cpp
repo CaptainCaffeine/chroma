@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2017 Matthew Murray
+// Copyright (C) 2017-2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,12 +15,14 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "gb/audio/Audio.h"
+#include "gb/core/GameBoy.h"
 #include "gb/memory/Memory.h"
 
 namespace Gb {
 
-Audio::Audio(bool enable_filter)
-        : enable_iir(enable_filter)
+Audio::Audio(bool enable_filter, const GameBoy& _gameboy)
+        : gameboy(_gameboy)
+        , enable_iir(enable_filter)
         , left_upsampled((enable_filter) ? interpolated_buffer_size : 0)
         , right_upsampled((enable_filter) ? interpolated_buffer_size : 0) {
 
@@ -40,10 +42,10 @@ void Audio::UpdateAudio() {
         return;
     }
 
-    square1.CheckTrigger(mem->console);
-    square2.CheckTrigger(mem->console);
-    wave.CheckTrigger(mem->console);
-    noise.CheckTrigger(mem->console);
+    square1.CheckTrigger(gameboy.mem->console);
+    square2.CheckTrigger(gameboy.mem->console);
+    wave.CheckTrigger(gameboy.mem->console);
+    noise.CheckTrigger(gameboy.mem->console);
 
     square1.SweepTick();
 
@@ -133,10 +135,10 @@ void Audio::UpdatePowerOnState() {
 }
 
 void Audio::ClearRegisters() {
-    square1.ClearRegisters(mem->console);
-    square2.ClearRegisters(mem->console);
-    wave.ClearRegisters(mem->console);
-    noise.ClearRegisters(mem->console);
+    square1.ClearRegisters(gameboy.mem->console);
+    square2.ClearRegisters(gameboy.mem->console);
+    wave.ClearRegisters(gameboy.mem->console);
+    noise.ClearRegisters(gameboy.mem->console);
 
     master_volume = 0x00;
     sound_select = 0x00;

@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2017 Matthew Murray
+// Copyright (C) 2016-2018 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,15 +22,16 @@
 
 namespace Gb {
 
-class Memory;
+class GameBoy;
 class Logging;
 
 class Timer {
     friend class Logging;
 public:
-    void UpdateTimer();
+    Timer(GameBoy& _gameboy)
+            : gameboy(_gameboy) {}
 
-    constexpr void LinkToMemory(Memory* memory) { mem = memory; }
+    void UpdateTimer();
 
     // ******** Timer I/O registers ********
     // DIV register: 0xFF04
@@ -44,7 +45,7 @@ public:
     //     bits 1&0: Main Frequency Divider (0=every 1024 cycles, 1=16 cycles, 2=64 cycles, 3=256 cycles)
     u8 tac = 0x00;
 private:
-    Memory* mem = nullptr;
+    GameBoy& gameboy;
 
     bool prev_tima_inc = false;
     bool tima_overflow = false;
@@ -53,8 +54,8 @@ private:
 
     const std::array<unsigned int, 4> select_div_bit{{0x0200, 0x0008, 0x0020, 0x0080}};
 
-    constexpr bool DivFrequencyBitSet() const { return select_div_bit[tac & 0x03] & divider; }
-    constexpr bool TimerEnabled() const { return tac & 0x04; }
+    bool DivFrequencyBitSet() const { return select_div_bit[tac & 0x03] & divider; }
+    bool TimerEnabled() const { return tac & 0x04; }
 };
 
 } // End namespace Gb
