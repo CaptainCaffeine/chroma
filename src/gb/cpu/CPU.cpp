@@ -27,30 +27,30 @@ CPU::CPU(Memory& _mem, GameBoy& _gameboy)
         : mem(_mem)
         , gameboy(_gameboy) {
     // Initial register values
-    if (mem.game_mode == GameMode::DMG) {
-        if (mem.console == Console::DMG) {
+    if (gameboy.GameModeDmg()) {
+        if (gameboy.console == Console::DMG) {
             regs.reg16[AF] = 0x01B0;
             regs.reg16[BC] = 0x0013;
             regs.reg16[DE] = 0x00D8;
             regs.reg16[HL] = 0x014D;
-        } else if (mem.console == Console::CGB) {
+        } else if (gameboy.console == Console::CGB) {
             regs.reg16[AF] = 0x1180;
             regs.reg16[BC] = 0x0000;
             regs.reg16[DE] = 0x0008;
             regs.reg16[HL] = 0x007C;
-        } else if (mem.console == Console::AGB) {
+        } else if (gameboy.console == Console::AGB) {
             regs.reg16[AF] = 0x1100;
             regs.reg16[BC] = 0x0100;
             regs.reg16[DE] = 0x0008;
             regs.reg16[HL] = 0x007C;
         }
-    } else if (mem.game_mode == GameMode::CGB) {
-        if (mem.console == Console::CGB) {
+    } else if (gameboy.GameModeCgb()) {
+        if (gameboy.console == Console::CGB) {
             regs.reg16[AF] = 0x1180;
             regs.reg16[BC] = 0x0000;
             regs.reg16[DE] = 0xFF56;
             regs.reg16[HL] = 0x000D;
-        } else if (mem.console == Console::AGB) {
+        } else if (gameboy.console == Console::AGB) {
             regs.reg16[AF] = 0x1100;
             regs.reg16[BC] = 0x0100;
             regs.reg16[DE] = 0xFF56;

@@ -16,7 +16,6 @@
 
 #include "gb/audio/Audio.h"
 #include "gb/core/GameBoy.h"
-#include "gb/memory/Memory.h"
 
 namespace Gb {
 
@@ -42,10 +41,10 @@ void Audio::UpdateAudio() {
         return;
     }
 
-    square1.CheckTrigger(gameboy.mem->console);
-    square2.CheckTrigger(gameboy.mem->console);
-    wave.CheckTrigger(gameboy.mem->console);
-    noise.CheckTrigger(gameboy.mem->console);
+    square1.CheckTrigger(gameboy.console);
+    square2.CheckTrigger(gameboy.console);
+    wave.CheckTrigger(gameboy.console);
+    noise.CheckTrigger(gameboy.console);
 
     square1.SweepTick();
 
@@ -135,10 +134,10 @@ void Audio::UpdatePowerOnState() {
 }
 
 void Audio::ClearRegisters() {
-    square1.ClearRegisters(gameboy.mem->console);
-    square2.ClearRegisters(gameboy.mem->console);
-    wave.ClearRegisters(gameboy.mem->console);
-    noise.ClearRegisters(gameboy.mem->console);
+    square1.ClearRegisters(gameboy.console);
+    square2.ClearRegisters(gameboy.console);
+    wave.ClearRegisters(gameboy.console);
+    noise.ClearRegisters(gameboy.console);
 
     master_volume = 0x00;
     sound_select = 0x00;

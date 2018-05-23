@@ -26,11 +26,9 @@
 
 namespace Gb {
 
-Memory::Memory(const Console gb_type, const CartridgeHeader& header, const std::vector<u8>& _rom,
-               const std::string& _save_path, GameBoy& _gameboy)
-        : console(gb_type)
-        , game_mode(header.game_mode)
-        , gameboy(_gameboy)
+Memory::Memory(const CartridgeHeader& header, const std::vector<u8>& _rom, const std::string& _save_path,
+               GameBoy& _gameboy)
+        : gameboy(_gameboy)
         , mbc_mode(header.mbc_mode)
         , ext_ram_present(header.ext_ram_present)
         , rtc_present(header.rtc_present)
@@ -38,8 +36,8 @@ Memory::Memory(const Console gb_type, const CartridgeHeader& header, const std::
         , num_rom_banks(header.num_rom_banks)
         , num_ram_banks((header.ram_size) ? std::max(header.ram_size / 0x2000, 1u) : 0)
         , rom(_rom)
-        , vram((game_mode == GameMode::DMG) ? 0x2000 : 0x4000)
-        , wram((game_mode == GameMode::DMG) ? 0x2000 : 0x8000)
+        , vram((gameboy.GameModeDmg()) ? 0x2000 : 0x4000)
+        , wram((gameboy.GameModeDmg()) ? 0x2000 : 0x8000)
         , hram(0x7F)
         , save_path(_save_path) {
 
@@ -56,8 +54,8 @@ Memory::~Memory() {
 }
 
 void Memory::IORegisterInit() {
-    if (game_mode == GameMode::DMG) {
-        if (IsConsoleDmg()) {
+    if (gameboy.GameModeDmg()) {
+        if (gameboy.ConsoleDmg()) {
             gameboy.joypad->p1 = 0xCF; // DMG starts with joypad inputs enabled.
             gameboy.timer->divider = 0xABCC;
 
@@ -99,7 +97,7 @@ void Memory::IORegisterInit() {
 
 void Memory::VRAMInit() {
     // The CGB boot ROM does something different.
-    if (game_mode == GameMode::DMG) {
+    if (gameboy.GameModeDmg()) {
         // Initialize the tile map.
         u8 init_tile_map = 0x19;
         vram[0x1910] = init_tile_map--;
@@ -306,7 +304,7 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         return gameboy.serial->serial_data;
     // SC -- Serial control
     case 0xFF02:
-        return gameboy.serial->serial_control | ((game_mode == GameMode::CGB) ? 0x7C : 0x7E);
+        return gameboy.serial->serial_control | ((gameboy.GameModeCgb()) ? 0x7C : 0x7E);
     // DIV -- Divider Register
     case 0xFF04:
         return static_cast<u8>(gameboy.timer->divider >> 8);
@@ -396,7 +394,7 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         if (gameboy.audio->wave.channel_on) {
             // While the wave channel is enabled, reads to wave RAM return the byte containing the sample
             // currently being played.
-            if (console != Console::DMG || gameboy.audio->wave.reading_sample) {
+            if (gameboy.ConsoleCgb() || gameboy.audio->wave.reading_sample) {
                 return gameboy.audio->wave_ram[gameboy.audio->wave.wave_pos >> 1];
             } else {
                 // On DMG, the wave RAM can only be accessed within 2 cycles after the sample position has been
@@ -444,24 +442,24 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         return gameboy.lcd->window_x;
     // KEY1 -- Speed Switch
     case 0xFF4D:
-        return speed_switch | ((game_mode == GameMode::CGB) ? 0x7E : 0xFF);
+        return speed_switch | ((gameboy.GameModeCgb()) ? 0x7E : 0xFF);
     // VBK -- VRAM bank number
     case 0xFF4F:
-        if (IsConsoleCgb()) {
+        if (gameboy.ConsoleCgb()) {
             // CGB in DMG mode always has bank 0 selected.
-            return ((game_mode == GameMode::CGB) ? (static_cast<u8>(vram_bank_num) | 0xFE) : 0xFE);
+            return ((gameboy.GameModeCgb()) ? (static_cast<u8>(vram_bank_num) | 0xFE) : 0xFE);
         } else {
             return 0xFF;
         }
     // HDMA5 -- HDMA Length, Mode, and Start
     case 0xFF55:
-        return ((game_mode == GameMode::CGB) ? hdma_control : 0xFF);
+        return ((gameboy.GameModeCgb()) ? hdma_control : 0xFF);
     // RP -- Infrared Communications
     case 0xFF56:
-        return ((game_mode == GameMode::CGB) ? (infrared | 0x3C) : 0xFF);
+        return ((gameboy.GameModeCgb()) ? (infrared | 0x3C) : 0xFF);
     // BGPI -- BG Palette Index (CGB only)
     case 0xFF68:
-        if (IsConsoleCgb()) {
+        if (gameboy.ConsoleCgb()) {
             return gameboy.lcd->bg_palette_index | 0x40;
         } else {
             return 0xFF;
@@ -469,14 +467,14 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
     // BGPD -- BG Palette Data (CGB mode only)
     case 0xFF69:
         // Palette RAM is not accessible during mode 3.
-        if (game_mode == GameMode::CGB && (gameboy.lcd->stat & 0x03) != 3) {
+        if (gameboy.GameModeCgb() && (gameboy.lcd->stat & 0x03) != 3) {
             return gameboy.lcd->bg_palette_data[gameboy.lcd->bg_palette_index & 0x3F];
         } else {
             return 0xFF;
         }
     // OBPI -- Sprite Palette Index (CGB only)
     case 0xFF6A:
-        if (IsConsoleCgb()) {
+        if (gameboy.ConsoleCgb()) {
             return gameboy.lcd->obj_palette_index | 0x40;
         } else {
             return 0xFF;
@@ -484,28 +482,28 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
     // OBPD -- Sprite Palette Data (CGB mode only)
     case 0xFF6B:
         // Palette RAM is not accessible during mode 3.
-        if (game_mode == GameMode::CGB && (gameboy.lcd->stat & 0x03) != 3) {
+        if (gameboy.GameModeCgb() && (gameboy.lcd->stat & 0x03) != 3) {
             return gameboy.lcd->obj_palette_data[gameboy.lcd->obj_palette_index & 0x3F];
         } else {
             return 0xFF;
         }
     // SVBK -- WRAM bank number
     case 0xFF70:
-        return ((game_mode == GameMode::CGB) ? (static_cast<u8>(wram_bank_num) | 0xF8) : 0xFF);
+        return ((gameboy.GameModeCgb()) ? (static_cast<u8>(wram_bank_num) | 0xF8) : 0xFF);
     // Undocumented
     case 0xFF6C:
-        return ((game_mode == GameMode::CGB) ? (undocumented[1] | 0xFE) : 0xFF);
+        return ((gameboy.GameModeCgb()) ? (undocumented[1] | 0xFE) : 0xFF);
     case 0xFF72:
-        return ((IsConsoleCgb()) ? undocumented[2] : 0xFF);
+        return ((gameboy.ConsoleCgb()) ? undocumented[2] : 0xFF);
     case 0xFF73:
-        return ((IsConsoleCgb()) ? undocumented[3] : 0xFF);
+        return ((gameboy.ConsoleCgb()) ? undocumented[3] : 0xFF);
     case 0xFF74:
-        return ((game_mode == GameMode::CGB) ? undocumented[4] : 0xFF);
+        return ((gameboy.GameModeCgb()) ? undocumented[4] : 0xFF);
     case 0xFF75:
-        return ((IsConsoleCgb()) ? (undocumented[5] | 0x8F) : 0xFF);
+        return ((gameboy.ConsoleCgb()) ? (undocumented[5] | 0x8F) : 0xFF);
     case 0xFF76:
     case 0xFF77:
-        return ((IsConsoleCgb()) ? 0x00 : 0xFF);
+        return ((gameboy.ConsoleCgb()) ? 0x00 : 0xFF);
 
     // Unused/unusable I/O registers all return 0xFF when read.
     default:
@@ -526,7 +524,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // SC -- Serial control
     case 0xFF02:
-        gameboy.serial->serial_control = data & ((game_mode == GameMode::CGB) ? 0x83 : 0x81);
+        gameboy.serial->serial_control = data & ((gameboy.GameModeCgb()) ? 0x83 : 0x81);
         break;
     // DIV -- Divider Register
     case 0xFF04:
@@ -561,7 +559,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // NR11 -- Channel 1 Wave Pattern & Sound Length
     case 0xFF11:
-        if (gameboy.audio->IsPoweredOn() || IsConsoleDmg()) {
+        if (gameboy.audio->IsPoweredOn() || gameboy.ConsoleDmg()) {
             gameboy.audio->square1.sound_length = data;
             gameboy.audio->square1.ReloadLengthCounter();
             gameboy.audio->square1.SetDutyCycle();
@@ -591,7 +589,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // NR21 --  Channel 2 Wave Pattern & Sound Length
     case 0xFF16:
-        if (gameboy.audio->IsPoweredOn() || IsConsoleDmg()) {
+        if (gameboy.audio->IsPoweredOn() || gameboy.ConsoleDmg()) {
             gameboy.audio->square2.sound_length = data;
             gameboy.audio->square2.ReloadLengthCounter();
             gameboy.audio->square2.SetDutyCycle();
@@ -630,7 +628,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // NR31 -- Channel 3 Sound Length
     case 0xFF1B:
-        if (gameboy.audio->IsPoweredOn() || IsConsoleDmg()) {
+        if (gameboy.audio->IsPoweredOn() || gameboy.ConsoleDmg()) {
             gameboy.audio->wave.sound_length = data;
             gameboy.audio->wave.ReloadLengthCounter();
         }
@@ -656,7 +654,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // NR41 -- Channel 4 Sound Length
     case 0xFF20:
-        if (gameboy.audio->IsPoweredOn() || IsConsoleDmg()) {
+        if (gameboy.audio->IsPoweredOn() || gameboy.ConsoleDmg()) {
             gameboy.audio->noise.sound_length = data & 0x3F;
             gameboy.audio->noise.ReloadLengthCounter();
         }
@@ -705,7 +703,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         if (gameboy.audio->wave.channel_on) {
             // While the wave channel is enabled, writes to wave RAM write the byte containing the sample
             // currently being played.
-            if (console != Console::DMG || gameboy.audio->wave.reading_sample) {
+            if (gameboy.ConsoleCgb() || gameboy.audio->wave.reading_sample) {
                 // On DMG, the wave RAM can only be accessed within 2 cycles after the sample position has been
                 // incremented, while the APU is reading the sample.
                 gameboy.audio->wave_ram[gameboy.audio->wave.wave_pos >> 1] = data;
@@ -723,7 +721,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         gameboy.lcd->stat = (data & 0x78) | (gameboy.lcd->stat & 0x07);
         // On DMG, if the STAT register is written during mode 1 or 0 while the LCD is on, bit 1 of the IF register
         // is set. This causes a STAT interrupt if it's enabled in IE.
-        if (IsConsoleDmg() && (gameboy.lcd->lcdc & 0x80) && !(gameboy.lcd->stat & 0x02)) {
+        if (gameboy.ConsoleDmg() && (gameboy.lcd->lcdc & 0x80) && !(gameboy.lcd->stat & 0x02)) {
             gameboy.lcd->SetSTATSignal();
         }
         break;
@@ -774,7 +772,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // VBK -- VRAM bank number
     case 0xFF4F:
-        if (game_mode == GameMode::CGB) {
+        if (gameboy.GameModeCgb()) {
             vram_bank_num = data & 0x01;
         }
         break;
@@ -797,26 +795,26 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     // HDMA5 -- HDMA Length, Mode, and Start
     case 0xFF55:
         hdma_control = data;
-        if (game_mode == GameMode::CGB) {
+        if (gameboy.GameModeCgb()) {
             hdma_reg_written = true;
         }
         break;
     // RP -- Infrared Communications
     case 0xFF56:
-        if (game_mode == GameMode::CGB) {
+        if (gameboy.GameModeCgb()) {
             infrared = (infrared & 0x02) | (data & 0xC1);
         }
         break;
     // BGPI -- BG Palette Index (CGB mode only)
     case 0xFF68:
-        if (game_mode == GameMode::CGB) {
+        if (gameboy.GameModeCgb()) {
             gameboy.lcd->bg_palette_index = data & 0xBF;
         }
         break;
     // BGPD -- BG Palette Data (CGB mode only)
     case 0xFF69:
         // Palette RAM is not accessible during mode 3.
-        if (game_mode == GameMode::CGB && (gameboy.lcd->stat & 0x03) != 3) {
+        if (gameboy.GameModeCgb() && (gameboy.lcd->stat & 0x03) != 3) {
             gameboy.lcd->bg_palette_data[gameboy.lcd->bg_palette_index & 0x3F] = data;
             // Increment index if auto-increment specified.
             if (gameboy.lcd->bg_palette_index & 0x80) {
@@ -826,14 +824,14 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // OBPI -- Sprite Palette Index (CGB mode only)
     case 0xFF6A:
-        if (game_mode == GameMode::CGB) {
+        if (gameboy.GameModeCgb()) {
             gameboy.lcd->obj_palette_index = data & 0xBF;
         }
         break;
     // OBPD -- Sprite Palette Data (CGB mode only)
     case 0xFF6B:
         // Palette RAM is not accessible during mode 3.
-        if (game_mode == GameMode::CGB && (gameboy.lcd->stat & 0x03) != 3) {
+        if (gameboy.GameModeCgb() && (gameboy.lcd->stat & 0x03) != 3) {
             gameboy.lcd->obj_palette_data[gameboy.lcd->obj_palette_index & 0x3F] = data;
             // Increment index if auto-increment specified.
             if (gameboy.lcd->obj_palette_index & 0x80) {
@@ -843,33 +841,33 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // SVBK -- WRAM bank number
     case 0xFF70:
-        if (game_mode == GameMode::CGB) {
+        if (gameboy.GameModeCgb()) {
             wram_bank_num = data & 0x07;
         }
         break;
     // Undocumented
     case 0xFF6C:
-        if (game_mode == GameMode::CGB) {
+        if (gameboy.GameModeCgb()) {
             undocumented[1] = data & 0x01;
         }
         break;
     case 0xFF72:
-        if (IsConsoleCgb()) {
+        if (gameboy.ConsoleCgb()) {
             undocumented[2] = data;
         }
         break;
     case 0xFF73:
-        if (IsConsoleCgb()) {
+        if (gameboy.ConsoleCgb()) {
             undocumented[3] = data;
         }
         break;
     case 0xFF74:
-        if (game_mode == GameMode::CGB) {
+        if (gameboy.GameModeCgb()) {
             undocumented[4] = data;
         }
         break;
     case 0xFF75:
-        if (IsConsoleCgb()) {
+        if (gameboy.ConsoleCgb()) {
             undocumented[5] = data & 0x70;
         }
         break;

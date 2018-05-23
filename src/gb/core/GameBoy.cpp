@@ -31,15 +31,17 @@
 
 namespace Gb {
 
-GameBoy::GameBoy(const Console gb_type, const CartridgeHeader& header, Logging& logger, Emu::SDLContext& context,
+GameBoy::GameBoy(const Console _console, const CartridgeHeader& header, Logging& logger, Emu::SDLContext& context,
                  const std::string& save_path, const std::vector<u8>& rom, bool enable_iir)
-        : logging(logger)
+        : console(_console)
+        , game_mode(header.game_mode)
+        , logging(logger)
         , timer(std::make_unique<Timer>(*this))
         , serial(std::make_unique<Serial>(*this))
         , lcd(std::make_unique<LCD>(*this))
         , joypad(std::make_unique<Joypad>(*this))
         , audio(std::make_unique<Audio>(enable_iir, *this))
-        , mem(std::make_unique<Memory>(gb_type, header, rom, save_path, *this))
+        , mem(std::make_unique<Memory>(header, rom, save_path, *this))
         , cpu(std::make_unique<CPU>(*mem, *this))
         , sdl_context(context)
         , front_buffer(160 * 144) {

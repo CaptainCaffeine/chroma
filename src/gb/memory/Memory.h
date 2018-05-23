@@ -39,12 +39,10 @@ class Logging;
 class Memory {
     friend class Logging;
 public:
-    Memory(const Console gb_type, const CartridgeHeader& header, const std::vector<u8>& _rom,
-           const std::string& _save_path, GameBoy& _gameboy);
+    Memory(const CartridgeHeader& header, const std::vector<u8>& _rom, const std::string& _save_path,
+           GameBoy& _gameboy);
     ~Memory();
 
-    const Console console;
-    const GameMode game_mode;
     unsigned int double_speed = 0;
 
     u8 ReadMem(const u16 addr) const;
@@ -54,9 +52,6 @@ public:
         speed_switch = (speed_switch ^ 0x80) & 0x80;
         double_speed ^= 1;
     };
-
-    bool IsConsoleDmg() const { return console == Console::DMG; }
-    bool IsConsoleCgb() const { return console == Console::CGB || console == Console::AGB; }
 
     // Interrupt functions
     void RequestInterrupt(Interrupt intr) {

@@ -66,7 +66,7 @@ u8 Serial::SelectClockBit() const {
     // In CBG mode, bit 1 of SC can be used to set the speed of the serial transfer. The transfer runs at the usual 
     // speed (using bit 7 of the serial clock) if it's 0, and runs fast (using bit 2 of the serial clock) if it's 1.
     // In DMG mode, bit 1 of SC returns 1 even though the transfer runs at the usual speed.
-    if (gameboy.mem->game_mode == GameMode::CGB) {
+    if (gameboy.GameModeCgb()) {
         return (serial_control & 0x02) ? 0x04 : 0x80;
     } else {
         return 0x80;

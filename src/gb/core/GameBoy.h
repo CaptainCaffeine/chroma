@@ -39,9 +39,12 @@ class Logging;
 
 class GameBoy {
 public:
-    GameBoy(const Console gb_type, const CartridgeHeader& header, Logging& logger, Emu::SDLContext& context,
-            const std::string& save_file, const std::vector<u8>& rom, bool enable_iir);
+    GameBoy(const Console _console, const CartridgeHeader& header, Logging& logger, Emu::SDLContext& context,
+            const std::string& save_path, const std::vector<u8>& rom, bool enable_iir);
     ~GameBoy();
+
+    const Console console;
+    const GameMode game_mode;
 
     Logging& logging;
 
@@ -60,10 +63,16 @@ public:
     void HardwareTick(unsigned int cycles);
     void HaltedTick(unsigned int cycles);
 
+    bool ConsoleDmg() const { return console == Console::DMG; }
+    bool ConsoleCgb() const { return console == Console::CGB || console == Console::AGB; }
+    bool GameModeDmg() const { return game_mode == GameMode::DMG; }
+    bool GameModeCgb() const { return game_mode == GameMode::CGB; }
+
     // Speed Switch and STOP mode functions.
     bool JoypadPress() const;
     void StopLCD();
     void SpeedSwitch();
+
 private:
     Emu::SDLContext& sdl_context;
     std::vector<u16> front_buffer;

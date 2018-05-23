@@ -69,9 +69,9 @@ void LCD::UpdateLCD() {
     if (current_scanline <= 143) {
         // AntonioND claims that except for scanline 0, the Mode 2 STAT interrupt happens the cycle before Mode 2
         // is entered. However, doing this causes most of Mooneye-GB's STAT timing tests to fail.
-        if (scanline_cycles == ((gameboy.mem->game_mode == GameMode::DMG || gameboy.mem->double_speed) ? 4 : 0)) {
+        if (scanline_cycles == ((gameboy.GameModeDmg() || gameboy.mem->double_speed) ? 4 : 0)) {
             SetSTATMode(2);
-        } else if (scanline_cycles == ((gameboy.mem->game_mode == GameMode::DMG) ? 84 : (80 << gameboy.mem->double_speed))) {
+        } else if (scanline_cycles == ((gameboy.GameModeDmg()) ? 84 : (80 << gameboy.mem->double_speed))) {
             SetSTATMode(3);
             RenderScanline();
         } else if (scanline_cycles == Mode3Cycles()) {
@@ -79,12 +79,12 @@ void LCD::UpdateLCD() {
             gameboy.mem->SignalHDMA();
         }
     } else if (current_scanline == 144) {
-        if (scanline_cycles == 0 && gameboy.mem->IsConsoleCgb()) {
+        if (scanline_cycles == 0 && gameboy.ConsoleCgb()) {
             stat_interrupt_signal |= Mode2CheckEnabled();
         } else if (scanline_cycles == 4 << gameboy.mem->double_speed) {
             gameboy.mem->RequestInterrupt(Interrupt::VBLANK);
             SetSTATMode(1);
-            if (gameboy.mem->IsConsoleDmg()) {
+            if (gameboy.ConsoleDmg()) {
                 // The OAM STAT interrupt is also triggered on entering Mode 1.
                 stat_interrupt_signal |= Mode2CheckEnabled();
             }
@@ -132,7 +132,7 @@ void LCD::UpdateLY() {
         ly = 0;
     }
 
-    if (gameboy.mem->game_mode == GameMode::CGB && !gameboy.mem->double_speed && scanline_cycles == 452) {
+    if (gameboy.GameModeCgb() && !gameboy.mem->double_speed && scanline_cycles == 452) {
         StrangeLY();
     }
 
@@ -140,14 +140,14 @@ void LCD::UpdateLY() {
         // Reset scanline cycle counter.
         scanline_cycles = 0;
 
-        if (gameboy.mem->game_mode == GameMode::CGB && !gameboy.mem->double_speed && current_scanline != 153) {
+        if (gameboy.GameModeCgb() && !gameboy.mem->double_speed && current_scanline != 153) {
             ly = current_scanline;
         }
 
         // LY does not increase at the end of scanline 153, it stays 0 until the end of scanline 0.
         // Otherwise, increment LY.
         if (current_scanline == 153) {
-            if (gameboy.mem->IsConsoleDmg()) {
+            if (gameboy.ConsoleDmg()) {
                 SetSTATMode(0); // Does this actually happen? Or does DMG spend the first cycle in mode 1?
             }
 
@@ -162,9 +162,9 @@ void LCD::UpdateLY() {
 
 int LCD::Line153Cycles() const {
     // The number of cycles where LY=153 depending on device configuration.
-    if (gameboy.mem->IsConsoleDmg()) {
+    if (gameboy.ConsoleDmg()) {
         return 4;
-    } else if (gameboy.mem->game_mode == GameMode::DMG) {
+    } else if (gameboy.GameModeDmg()) {
         return 8;
     } else if (gameboy.mem->double_speed) {
         return 12;
@@ -213,7 +213,7 @@ void LCD::StrangeLY() {
 // interrupt can be fired. This will not be interrupted even if LY changes again on the second cycle (which happens 
 // on scanline 153). In that case, the two events caused by an LY change begin on the following cycle.
 void LCD::UpdateLYCompareSignal() {
-    if (gameboy.mem->IsConsoleDmg()) {
+    if (gameboy.ConsoleDmg()) {
         if (ly_compare_equal_forced_zero) {
             SetLYCompare(ly_compare == ly_last_cycle);
 
@@ -273,7 +273,7 @@ void LCD::RenderScanline() {
         num_bg_pixels = 160;
     }
 
-    if (gameboy.mem->game_mode == GameMode::DMG) {
+    if (gameboy.GameModeDmg()) {
         if (BGEnabled()) {
             RenderBackground(num_bg_pixels);
         } else {
@@ -285,7 +285,7 @@ void LCD::RenderScanline() {
     }
 
     // On CGB in DMG mode, disabling the background will also disable the window.
-    if (gameboy.mem->IsConsoleCgb() && gameboy.mem->game_mode == GameMode::DMG) {
+    if (gameboy.ConsoleCgb() && gameboy.GameModeDmg()) {
         if (BGEnabled() && WindowEnabled()) {
             RenderWindow(num_bg_pixels);
         }
@@ -342,7 +342,7 @@ void LCD::RenderBackground(std::size_t num_bg_pixels) {
         }
         row_pixel -= 8;
 
-        if (gameboy.mem->game_mode == GameMode::DMG) {
+        if (gameboy.GameModeDmg()) {
             GetPixelColoursFromPaletteDMG(bg_palette_dmg, false);
         } else {
             GetPixelColoursFromPaletteCGB(tile_iter->palette_num, false);
@@ -396,7 +396,7 @@ void LCD::RenderWindow(std::size_t num_bg_pixels) {
         }
         row_pixel -= 8;
 
-        if (gameboy.mem->game_mode == GameMode::DMG) {
+        if (gameboy.GameModeDmg()) {
             GetPixelColoursFromPaletteDMG(bg_palette_dmg, false);
         } else {
             GetPixelColoursFromPaletteCGB(tile_iter->palette_num, false);
@@ -432,7 +432,7 @@ std::size_t LCD::RenderFirstTile(std::size_t start_pixel, std::size_t start_tile
     }
     start_pixel -= 8 - throwaway;
 
-    if (gameboy.mem->game_mode == GameMode::DMG) {
+    if (gameboy.GameModeDmg()) {
         GetPixelColoursFromPaletteDMG(bg_palette_dmg, false);
     } else {
         GetPixelColoursFromPaletteCGB(bg_tile.palette_num, false);
@@ -468,7 +468,7 @@ void LCD::RenderSprites() {
 
         DecodePaletteIndices(sa.sprite_tiles, tile_row);
 
-        if (gameboy.mem->game_mode == GameMode::DMG) {
+        if (gameboy.GameModeDmg()) {
             GetPixelColoursFromPaletteDMG((sa.palette_num) ? obj_palette_dmg1 : obj_palette_dmg0, true);
         } else {
             GetPixelColoursFromPaletteCGB(sa.palette_num, true);
@@ -493,7 +493,7 @@ void LCD::RenderSprites() {
         // If the sprite is drawn below the background, then it is only drawn on pixels of colour 0 for the palette
         // of that tile.
         u16 bg_colour_mask = 0x0000, bg_priority_mask = 0x0000;
-        if (gameboy.mem->game_mode == GameMode::CGB) {
+        if (gameboy.GameModeCgb()) {
             // If the BG is "disabled" on CGB, both BG and OAM priority flags are ignored and the sprite is drawn
             // above the background.
             if (BGEnabled()) {
@@ -534,7 +534,7 @@ void LCD::SearchOAM() {
         if (oam[i] > sprite_gap && oam[i] < 160) {
             // Check that the sprite is on the current scanline.
             if (ly < oam[i] - sprite_gap && static_cast<int>(ly) >= static_cast<int>(oam[i]) - 16) {
-                oam_sprites.emplace_front(oam[i], oam[i+1], oam[i+2] & index_mask, oam[i+3], gameboy.mem->game_mode);
+                oam_sprites.emplace_front(oam[i], oam[i+1], oam[i+2] & index_mask, oam[i+3], gameboy.game_mode);
             }
         }
 
@@ -549,7 +549,7 @@ void LCD::SearchOAM() {
                       }),
                       oam_sprites.end());
 
-    if (gameboy.mem->game_mode == GameMode::DMG) {
+    if (gameboy.GameModeDmg()) {
         // Sprite are drawn in descending X order. If two sprites overlap, the one that has a lower position in OAM
         // is drawn on top. oam_sprites already contains the sprites for this line in decreasing OAM position, so
         // we sort them by decreasing X position. In CGB mode, sprites are always drawn according to OAM position.
@@ -569,7 +569,7 @@ void LCD::InitTileMap(u16 tile_map_addr) {
 
     tile_data.clear();
 
-    if (gameboy.mem->game_mode == GameMode::DMG) {
+    if (gameboy.GameModeDmg()) {
         for (std::size_t i = 0; i < row_tile_map.size(); ++i) {
             tile_data.emplace_back(row_tile_map[i]);
         }

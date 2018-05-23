@@ -32,7 +32,7 @@ void LCD::DumpBGWin(u16 start_addr, const std::string& filename) {
     std::vector<u8> tile_map(tile_map_len);
     gameboy.mem->CopyFromVRAM(start_addr, tile_map_len, 0, tile_map.begin());
 
-    if (gameboy.mem->game_mode == GameMode::DMG) {
+    if (gameboy.GameModeDmg()) {
         for (std::size_t i = 0; i < tile_map.size(); ++i) {
             tile_data.emplace_back(tile_map[i]);
         }
@@ -65,7 +65,7 @@ void LCD::DumpBGWin(u16 start_addr, const std::string& filename) {
                     std::reverse(pixel_colours.begin(), pixel_colours.end());
                 }
 
-                if (gameboy.mem->game_mode == GameMode::DMG) {
+                if (gameboy.GameModeDmg()) {
                     GetPixelColoursFromPaletteDMG(bg_palette_dmg, false);
                 } else {
                     GetPixelColoursFromPaletteCGB(tile_iter->palette_num, false);
@@ -127,7 +127,7 @@ void LCD::DumpEverything() {
     DumpBGWin(BGTileMapStartAddr(), "bg_dump.ppm");
     DumpBGWin(WindowTileMapStartAddr(), "win_dump.ppm");
     DumpTileSet(0);
-    if (gameboy.mem->game_mode == GameMode::CGB) {
+    if (gameboy.GameModeCgb()) {
         DumpTileSet(1);
     }
 }
