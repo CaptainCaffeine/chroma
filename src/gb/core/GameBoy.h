@@ -21,6 +21,7 @@
 #include <string>
 
 #include "common/CommonTypes.h"
+#include "common/CommonEnums.h"
 #include "gb/core/Enums.h"
 
 namespace Emu { class SDLContext; }
@@ -39,14 +40,12 @@ class Logging;
 
 class GameBoy {
 public:
-    GameBoy(const Console _console, const CartridgeHeader& header, Logging& logger, Emu::SDLContext& context,
-            const std::string& save_path, const std::vector<u8>& rom, bool enable_iir);
+    GameBoy(const Console _console, const CartridgeHeader& header, Emu::SDLContext& context,
+            const std::string& save_path, const std::vector<u8>& rom, bool enable_iir, LogLevel log_level);
     ~GameBoy();
 
     const Console console;
     const GameMode game_mode;
-
-    Logging& logging;
 
     std::unique_ptr<Timer> timer;
     std::unique_ptr<Serial> serial;
@@ -55,6 +54,7 @@ public:
     std::unique_ptr<Audio> audio;
     std::unique_ptr<Memory> mem;
     std::unique_ptr<CPU> cpu;
+    std::unique_ptr<Logging> logging;
 
     void EmulatorLoop();
     void SwapBuffers(std::vector<u16>& back_buffer);

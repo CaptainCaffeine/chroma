@@ -20,9 +20,9 @@
 #include <fmt/format.h>
 
 #include "common/CommonTypes.h"
+#include "common/CommonEnums.h"
 #include "gb/core/Enums.h"
 #include "gb/core/GameBoy.h"
-#include "gb/logging/Logging.h"
 #include "gb/memory/CartridgeHeader.h"
 #include "gba/core/Core.h"
 #include "gba/memory/Memory.h"
@@ -76,9 +76,8 @@ int main(int argc, char** argv) {
 
             const std::string save_path{Emu::SaveGamePath(rom_path)};
 
-            Gb::Logging logger{log_level};
             Emu::SDLContext sdl_context{160, 144, pixel_scale, fullscreen};
-            Gb::GameBoy gameboy_core{gameboy_type, cart_header, logger, sdl_context, save_path, rom, enable_iir};
+            Gb::GameBoy gameboy_core{gameboy_type, cart_header, sdl_context, save_path, rom, enable_iir, log_level};
 
             gameboy_core.EmulatorLoop();
         }

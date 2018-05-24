@@ -26,7 +26,6 @@
 namespace Gb {
 
 class GameBoy;
-class Logging;
 
 struct BGAttrs {
     BGAttrs(u8 tile_index);
@@ -50,7 +49,6 @@ struct SpriteAttrs {
 };
 
 class LCD {
-    friend class Logging;
 public:
     LCD(GameBoy& _gameboy);
 

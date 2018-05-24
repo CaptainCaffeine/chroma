@@ -45,10 +45,15 @@ public:
     void DisassembleArm(Arm opcode, const std::array<u32, 16>& regs, u32 cpsr);
 
     template<typename... Args>
-    void Log(const std::string& log_msg, bool always, Args&&... args) {
-        if (always || log_level != LogLevel::None) {
+    void Log(const std::string& log_msg, Args&&... args) {
+        if (log_level != LogLevel::None) {
             fmt::print(log_stream, log_msg, std::forward<Args>(args)...);
         }
+    }
+
+    template<typename... Args>
+    void LogAlways(const std::string& log_msg, Args&&... args) {
+        fmt::print(log_stream, log_msg, std::forward<Args>(args)...);
     }
 
     void IncHaltCycles(int cycles) { halt_cycles += cycles; }

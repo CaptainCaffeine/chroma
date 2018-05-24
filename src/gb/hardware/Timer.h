@@ -23,10 +23,8 @@
 namespace Gb {
 
 class GameBoy;
-class Logging;
 
 class Timer {
-    friend class Logging;
 public:
     Timer(GameBoy& _gameboy)
             : gameboy(_gameboy) {}

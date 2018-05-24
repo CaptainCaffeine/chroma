@@ -36,11 +36,6 @@ Disassembler::Disassembler(LogLevel level, Core& _core)
             throw std::runtime_error("Error when attempting to open ./log.txt for writing.");
         }
     }
-
-    if (level == LogLevel::LCD || level == LogLevel::Timer) {
-        // Not implemented in GBA mode.
-        alt_level = LogLevel::Trace;
-    }
 }
 
 // Needed to declare std::vector with forward-declared type in the header file.
@@ -121,10 +116,6 @@ void Disassembler::SwitchLogLevel() {
             return "Trace";
         case LogLevel::Registers:
             return "Registers";
-        case LogLevel::LCD:
-            return "LCD";
-        case LogLevel::Timer:
-            return "Timer";
         default:
             return "";
         }

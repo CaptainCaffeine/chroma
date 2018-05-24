@@ -34,10 +34,8 @@ class LCD;
 class Joypad;
 class Audio;
 class RTC;
-class Logging;
 
 class Memory {
-    friend class Logging;
 public:
     Memory(const CartridgeHeader& header, const std::vector<u8>& _rom, const std::string& _save_path,
            GameBoy& _gameboy);

@@ -99,17 +99,16 @@ int CPU::RunFor(int cycles) {
 
         cycles -= HandleInterrupts();
 
-        if (gameboy.logging.log_level != LogLevel::None) {
-            gameboy.logging.LogCPURegisterState(mem, *this);
-        }
-
         if (cpu_mode == CPUMode::Running) {
+            gameboy.logging->LogInstruction(regs, pc);
             cycles -= ExecuteNext(mem.ReadMem(pc++));
         } else if (cpu_mode == CPUMode::HaltBug) {
+            gameboy.logging->LogInstruction(regs, pc);
             cycles -= ExecuteNext(mem.ReadMem(pc));
             cpu_mode = CPUMode::Running;
         } else if (cpu_mode == CPUMode::Halted) {
             gameboy.HaltedTick(4);
+            gameboy.logging->IncHaltCycles(4);
             cycles -= 4;
         }
     }
@@ -121,9 +120,7 @@ int CPU::RunFor(int cycles) {
 int CPU::HandleInterrupts() {
     if (interrupt_master_enable) {
         if (mem.RequestedEnabledInterrupts()) {
-            if (gameboy.logging.log_level != LogLevel::None) {
-                gameboy.logging.LogInterrupt(mem);
-            }
+            gameboy.logging->LogInterrupt();
 
             // Disable interrupts.
             interrupt_master_enable = false;
@@ -160,6 +157,7 @@ int CPU::HandleInterrupts() {
             if (cpu_mode == CPUMode::Halted) {
                 // Exit halt mode.
                 cpu_mode = CPUMode::Running;
+                gameboy.logging->LogHalt();
             }
 
             return 20;
@@ -169,6 +167,7 @@ int CPU::HandleInterrupts() {
             // If halt mode is entered when IME is zero, then the next time an interrupt is triggered the CPU does 
             // not jump to the interrupt routine or clear the IF flag. It just exits halt mode and continues execution.
             cpu_mode = CPUMode::Running;
+            gameboy.logging->LogHalt();
         }
     }
 

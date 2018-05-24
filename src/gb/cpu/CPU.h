@@ -23,28 +23,25 @@ namespace Gb {
 
 class Memory;
 class GameBoy;
-class Logging;
+
+// Declared outside of class for Logging.
+union Registers {
+    u8 reg8[10];
+    u16 reg16[5];
+};
 
 class CPU {
-    friend class Logging;
 public:
     CPU(Memory& _mem, GameBoy& _gameboy);
 
     int RunFor(int cycles);
-
     void EnableInterruptsDelayed();
 
-    bool IsHalted() const { return cpu_mode == CPUMode::Halted; }
 private:
     Memory& mem;
     GameBoy& gameboy;
 
     // Registers
-    union Registers {
-        u8 reg8[10];
-        u16 reg16[5];
-    };
-
     u16 pc = 0x0100;
     Registers regs;
     using Reg8Addr = std::size_t;

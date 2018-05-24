@@ -17,16 +17,17 @@
 #include <fmt/format.h>
 
 #include "gb/logging/Logging.h"
+#include "gb/core/GameBoy.h"
 #include "gb/memory/Memory.h"
 
 namespace Gb {
 
-std::string NextByteAsStr(const Memory& mem, const u16 pc) {
-    return fmt::format("0x{0:0>2X}", mem.ReadMem(pc + 1));
+std::string Logging::NextByteAsStr(const u16 pc) const {
+    return fmt::format("0x{0:0>2X}", gameboy.mem->ReadMem(pc + 1));
 }
 
-std::string NextSignedByteAsStr(const Memory& mem, const u16 pc) {
-    const s8 sbyte = mem.ReadMem(pc + 1);
+std::string Logging::NextSignedByteAsStr(const u16 pc) const {
+    const s8 sbyte = gameboy.mem->ReadMem(pc + 1);
     if (sbyte < 0) {
         return fmt::format("-0x{0:0>2X}", (~sbyte) + 1);
     } else {
@@ -34,8 +35,8 @@ std::string NextSignedByteAsStr(const Memory& mem, const u16 pc) {
     }
 }
 
-std::string NextWordAsStr(const Memory& mem, const u16 pc) {
-    return fmt::format("0x{0:0>4X}", (mem.ReadMem(pc + 2) << 8) | mem.ReadMem(pc + 1));
+std::string Logging::NextWordAsStr(const u16 pc) const {
+    return fmt::format("0x{0:0>4X}", (gameboy.mem->ReadMem(pc + 2) << 8) | gameboy.mem->ReadMem(pc + 1));
 }
 
 void LoadString(fmt::MemoryWriter& instr, const std::string& into, const std::string& from) {
@@ -174,36 +175,35 @@ void SetBitString(fmt::MemoryWriter& instr, const std::string& bit, const std::s
     instr << "SET " << bit << ", " << reg;
 }
 
-void UnknownOpcodeString(fmt::MemoryWriter& instr, const Memory& mem, const u16 pc) {
-    instr.write("Unknown Opcode: 0x{0:0>2X}", mem.ReadMem(pc));
+void UnknownOpcodeString(fmt::MemoryWriter& instr, const u8 opcode) {
+    instr.write("Unknown Opcode: 0x{0:0>2X}", opcode);
 }
 
-void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, const u16 pc) const {
-    instr_stream.write("\n");
-
-    switch (mem.ReadMem(pc)) {
+void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
+    instr_stream.write("0x{0:0>4X}: ", pc);
+    switch (gameboy.mem->ReadMem(pc)) {
     // ******** 8-bit loads ********
     // LD R, n -- Load immediate value n into register R
     case 0x06:
-        LoadString(instr_stream, "B", NextByteAsStr(mem, pc));
+        LoadString(instr_stream, "B", NextByteAsStr(pc));
         break;
     case 0x0E:
-        LoadString(instr_stream, "C", NextByteAsStr(mem, pc));
+        LoadString(instr_stream, "C", NextByteAsStr(pc));
         break;
     case 0x16:
-        LoadString(instr_stream, "D", NextByteAsStr(mem, pc));
+        LoadString(instr_stream, "D", NextByteAsStr(pc));
         break;
     case 0x1E:
-        LoadString(instr_stream, "E", NextByteAsStr(mem, pc));
+        LoadString(instr_stream, "E", NextByteAsStr(pc));
         break;
     case 0x26:
-        LoadString(instr_stream, "H", NextByteAsStr(mem, pc));
+        LoadString(instr_stream, "H", NextByteAsStr(pc));
         break;
     case 0x2E:
-        LoadString(instr_stream, "L", NextByteAsStr(mem, pc));
+        LoadString(instr_stream, "L", NextByteAsStr(pc));
         break;
     case 0x3E:
-        LoadString(instr_stream, "A", NextByteAsStr(mem, pc));
+        LoadString(instr_stream, "A", NextByteAsStr(pc));
         break;
     // LD A, R2 -- Load value from R2 into A
     case 0x78:
@@ -403,7 +403,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
         LoadString(instr_stream, "(HL)", "A");
         break;
     case 0x36:
-        LoadString(instr_stream, "(HL)", NextByteAsStr(mem, pc));
+        LoadString(instr_stream, "(HL)", NextByteAsStr(pc));
         break;
     // LD A, (nn) -- Load value from memory at (nn) into A
     case 0x0A:
@@ -413,7 +413,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
         LoadString(instr_stream, "A", "(DE)");
         break;
     case 0xFA:
-        LoadString(instr_stream, "A", "(" + NextWordAsStr(mem, pc) + ")");
+        LoadString(instr_stream, "A", "(" + NextWordAsStr(pc) + ")");
         break;
     // LD (nn), A -- Load value from A into memory at (nn)
     case 0x02:
@@ -423,7 +423,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
         LoadString(instr_stream, "(DE)", "A");
         break;
     case 0xEA:
-        LoadString(instr_stream, "(" + NextWordAsStr(mem, pc) + ")", "A");
+        LoadString(instr_stream, "(" + NextWordAsStr(pc) + ")", "A");
         break;
     // LD (C), A -- Load value from A into memory at (0xFF00 + C)
     case 0xE2:
@@ -452,27 +452,27 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
     // LDH (n), A -- Load value from A into memory at (0xFF00+n), with n as immediate byte value
     case 0xE0:
         // Take substring to remove the 0x prefix.
-        LoadHighString(instr_stream, "(0xFF" + NextByteAsStr(mem, pc).substr(2, 2) + ")", "A");
+        LoadHighString(instr_stream, "(0xFF" + NextByteAsStr(pc).substr(2, 2) + ")", "A");
         break;
     // LDH A, (n) -- Load value from memory at (0xFF00+n) into A, with n as immediate byte value 
     case 0xF0:
         // Take substring to remove the 0x prefix.
-        LoadHighString(instr_stream, "A", "(0xFF" + NextByteAsStr(mem, pc).substr(2, 2) + ")");
+        LoadHighString(instr_stream, "A", "(0xFF" + NextByteAsStr(pc).substr(2, 2) + ")");
         break;
 
     // ******** 16-bit loads ********
     // LD R, nn -- Load 16-bit immediate value into 16-bit register R
     case 0x01:
-        LoadString(instr_stream, "BC", NextWordAsStr(mem, pc));
+        LoadString(instr_stream, "BC", NextWordAsStr(pc));
         break;
     case 0x11:
-        LoadString(instr_stream, "DE", NextWordAsStr(mem, pc));
+        LoadString(instr_stream, "DE", NextWordAsStr(pc));
         break;
     case 0x21:
-        LoadString(instr_stream, "HL", NextWordAsStr(mem, pc));
+        LoadString(instr_stream, "HL", NextWordAsStr(pc));
         break;
     case 0x31:
-        LoadString(instr_stream, "SP", NextWordAsStr(mem, pc));
+        LoadString(instr_stream, "SP", NextWordAsStr(pc));
         break;
     // LD SP, HL -- Load value from HL into SP
     case 0xF9:
@@ -485,11 +485,11 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
     //     H: Set appropriately, with immediate as unsigned byte.
     //     C: Set appropriately, with immediate as unsigned byte.
     case 0xF8:
-        LoadString(instr_stream, "HL", "SP" + NextSignedByteAsStr(mem, pc));
+        LoadString(instr_stream, "HL", "SP" + NextSignedByteAsStr(pc));
         break;
     // LD (nn), SP -- Load value from SP into memory at (nn)
     case 0x08:
-        LoadString(instr_stream, "(" + NextWordAsStr(mem, pc) + ")", "SP");
+        LoadString(instr_stream, "(" + NextWordAsStr(pc) + ")", "SP");
         break;
     // PUSH R -- Push 16-bit register R onto the stack and decrement the stack pointer by 2
     case 0xC5:
@@ -552,7 +552,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
     // ADD A, n -- Add immediate value n to A
     // Flags: same as ADD A, R
     case 0xC6:
-        AddString(instr_stream, NextByteAsStr(mem, pc));
+        AddString(instr_stream, NextByteAsStr(pc));
         break;
     // ADC A, R -- Add value in register R + the carry flag to A
     // Flags:
@@ -587,7 +587,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
     // ADC A, n -- Add immediate value n + the carry flag to A
     // Flags: same as ADC A, R
     case 0xCE:
-        AdcString(instr_stream, NextByteAsStr(mem, pc));
+        AdcString(instr_stream, NextByteAsStr(pc));
         break;
     // SUB R -- Subtract the value in register R from  A
     // Flags:
@@ -622,7 +622,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
     // SUB n -- Subtract immediate value n from  A
     // Flags: same as SUB R
     case 0xD6:
-        SubString(instr_stream, NextByteAsStr(mem, pc));
+        SubString(instr_stream, NextByteAsStr(pc));
         break;
     // SBC A, R -- Subtract the value in register R + carry flag from  A
     // Flags:
@@ -657,7 +657,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
     // SBC A, n -- Subtract immediate value n + carry flag from  A
     // Flags: same as SBC A, R
     case 0xDE:
-        SbcString(instr_stream, NextByteAsStr(mem, pc));
+        SbcString(instr_stream, NextByteAsStr(pc));
         break;
     // AND R -- Bitwise AND the value in register R with A. 
     // Flags:
@@ -692,7 +692,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
     // AND n -- Bitwise AND the immediate value with A. 
     // Flags: same as AND R
     case 0xE6:
-        AndString(instr_stream, NextByteAsStr(mem, pc));
+        AndString(instr_stream, NextByteAsStr(pc));
         break;
     // OR R -- Bitwise OR the value in register R with A. 
     // Flags:
@@ -727,7 +727,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
     // OR n -- Bitwise OR the immediate value with A. 
     // Flags: same as OR R
     case 0xF6:
-        OrString(instr_stream, NextByteAsStr(mem, pc));
+        OrString(instr_stream, NextByteAsStr(pc));
         break;
     // XOR R -- Bitwise XOR the value in register R with A. 
     // Flags:
@@ -762,7 +762,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
     // XOR n -- Bitwise XOR the immediate value with A. 
     // Flags: same as XOR R
     case 0xEE:
-        XorString(instr_stream, NextByteAsStr(mem, pc));
+        XorString(instr_stream, NextByteAsStr(pc));
         break;
     // CP R -- Compare A with the value in register R. This performs a subtraction but does not modify A.
     // Flags:
@@ -797,7 +797,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
     // CP n -- Compare A with the immediate value. This performs a subtraction but does not modify A.
     // Flags: same as CP R
     case 0xFE:
-        CompareString(instr_stream, NextByteAsStr(mem, pc));
+        CompareString(instr_stream, NextByteAsStr(pc));
         break;
     // INC R -- Increment the value in register R.
     // Flags:
@@ -886,7 +886,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
     //     H: Set appropriately, with immediate as unsigned byte.
     //     C: Set appropriately, with immediate as unsigned byte.
     case 0xE8:
-        AddString(instr_stream, "SP", NextSignedByteAsStr(mem, pc));
+        AddString(instr_stream, "SP", NextSignedByteAsStr(pc));
         break;
     // INC R -- Increment the value in the 16-bit register R.
     // Flags unchanged
@@ -996,7 +996,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
     // ******** Jumps ********
     // JP nn -- Jump to the address given by the 16-bit immediate value.
     case 0xC3:
-        JumpString(instr_stream, NextWordAsStr(mem, pc));
+        JumpString(instr_stream, NextWordAsStr(pc));
         break;
     // JP cc, nn -- Jump to the address given by the 16-bit immediate value if the specified condition is true.
     // cc ==
@@ -1005,16 +1005,16 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
     //     NC: Carry flag reset
     //     Z:  Carry flag set
     case 0xC2:
-        JumpString(instr_stream, "NZ", NextWordAsStr(mem, pc));
+        JumpString(instr_stream, "NZ", NextWordAsStr(pc));
         break;
     case 0xCA:
-        JumpString(instr_stream, "Z", NextWordAsStr(mem, pc));
+        JumpString(instr_stream, "Z", NextWordAsStr(pc));
         break;
     case 0xD2:
-        JumpString(instr_stream, "NC", NextWordAsStr(mem, pc));
+        JumpString(instr_stream, "NC", NextWordAsStr(pc));
         break;
     case 0xDA:
-        JumpString(instr_stream, "C", NextWordAsStr(mem, pc));
+        JumpString(instr_stream, "C", NextWordAsStr(pc));
         break;
     // JP (HL) -- Jump to the address contained in HL.
     case 0xE9:
@@ -1022,7 +1022,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
         break;
     // JR n -- Jump to the current address + immediate signed byte.
     case 0x18:
-        RelJumpString(instr_stream, NextSignedByteAsStr(mem, pc));
+        RelJumpString(instr_stream, NextSignedByteAsStr(pc));
         break;
     // JR cc, n -- Jump to the current address + immediate signed byte if the specified condition is true.
     // cc ==
@@ -1031,23 +1031,23 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
     //     NC: Carry flag reset
     //     Z:  Carry flag set
     case 0x20:
-        RelJumpString(instr_stream, "NZ", NextSignedByteAsStr(mem, pc));
+        RelJumpString(instr_stream, "NZ", NextSignedByteAsStr(pc));
         break;
     case 0x28:
-        RelJumpString(instr_stream, "Z", NextSignedByteAsStr(mem, pc));
+        RelJumpString(instr_stream, "Z", NextSignedByteAsStr(pc));
         break;
     case 0x30:
-        RelJumpString(instr_stream, "NC", NextSignedByteAsStr(mem, pc));
+        RelJumpString(instr_stream, "NC", NextSignedByteAsStr(pc));
         break;
     case 0x38:
-        RelJumpString(instr_stream, "C", NextSignedByteAsStr(mem, pc));
+        RelJumpString(instr_stream, "C", NextSignedByteAsStr(pc));
         break;
 
     // ******** Calls ********
     // CALL nn -- Push address of the next instruction onto the stack, and jump to the address given by 
     // the 16-bit immediate value.
     case 0xCD:
-        CallString(instr_stream, NextWordAsStr(mem, pc));
+        CallString(instr_stream, NextWordAsStr(pc));
         break;
     // CALL cc, nn -- Push address of the next instruction onto the stack, and jump to the address given by 
     // the 16-bit immediate value, if the specified condition is true.
@@ -1057,16 +1057,16 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
     //     NC: Carry flag reset
     //     Z:  Carry flag set
     case 0xC4:
-        CallString(instr_stream, "NZ", NextWordAsStr(mem, pc));
+        CallString(instr_stream, "NZ", NextWordAsStr(pc));
         break;
     case 0xCC:
-        CallString(instr_stream, "Z", NextWordAsStr(mem, pc));
+        CallString(instr_stream, "Z", NextWordAsStr(pc));
         break;
     case 0xD4:
-        CallString(instr_stream, "NC", NextWordAsStr(mem, pc));
+        CallString(instr_stream, "NC", NextWordAsStr(pc));
         break;
     case 0xDC:
-        CallString(instr_stream, "C", NextWordAsStr(mem, pc));
+        CallString(instr_stream, "C", NextWordAsStr(pc));
         break;
 
     // ******** Returns ********
@@ -1136,7 +1136,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
         break;
     // STOP -- Halt both the CPU and LCD until a button is pressed.
     case 0x10:
-        instr_stream << "STOP " << NextByteAsStr(mem, pc);
+        instr_stream << "STOP " << NextByteAsStr(pc);
         break;
     // DI -- Disable interrupts.
     case 0xF3:
@@ -1150,7 +1150,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
     // ******** CB prefix opcodes ********
     case 0xCB:
         // Get opcode suffix from next byte.
-        switch (mem.ReadMem(pc+1)) {
+        switch (gameboy.mem->ReadMem(pc + 1)) {
         // ******** Rotates and Shifts ********
         // RLC R -- Left rotate the value in register R.
         // Flags:
@@ -1988,7 +1988,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, co
         break;
 
     default:
-        UnknownOpcodeString(instr_stream, mem, pc);
+        UnknownOpcodeString(instr_stream, gameboy.mem->ReadMem(pc));
         break;
     }
 

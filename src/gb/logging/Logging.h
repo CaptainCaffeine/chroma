@@ -16,45 +16,58 @@
 
 #pragma once
 
+#include <string>
 #include <fstream>
+#include <utility>
+#include <fmt/ostream.h>
 
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
 
-namespace fmt {
-
-template<typename Char, typename Allocator>
-class BasicMemoryWriter;
-
-typedef BasicMemoryWriter<char, std::allocator<char>> MemoryWriter;
-
-}
-
 namespace Gb {
 
-class Memory;
-class CPU;
-class Timer;
-class LCD;
+class GameBoy;
+union Registers;
 
 class Logging {
 public:
-    LogLevel log_level;
+    Logging(LogLevel level, const GameBoy& _gameboy);
 
-    Logging(LogLevel log_lvl);
+    void LogInstruction(const Registers& regs, const u16 pc);
+    void LogInterrupt();
 
-    void LogCPURegisterState(const Memory& mem, const CPU& cpu);
-    void LogInterrupt(const Memory& mem);
-    void LogTimerRegisterState(const Timer& timer);
-    void LogLCDRegisterState(const LCD& lcd);
+    template<typename... Args>
+    void Log(const std::string& log_msg, Args&&... args) {
+        if (log_level != LogLevel::None) {
+            fmt::print(log_stream, log_msg, std::forward<Args>(args)...);
+        }
+    }
 
-    void Disassemble(fmt::MemoryWriter& instr_stream, const Memory& mem, const u16 pc) const;
+    template<typename... Args>
+    void LogAlways(const std::string& log_msg, Args&&... args) {
+        fmt::print(log_stream, log_msg, std::forward<Args>(args)...);
+    }
+
+    void IncHaltCycles(int cycles) { halt_cycles += cycles; }
+    void LogHalt();
+
+    void Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const;
 
     void SwitchLogLevel();
+
 private:
-    LogLevel alt_level = LogLevel::None;
+    const GameBoy& gameboy;
+
+    LogLevel log_level = LogLevel::None;
+    LogLevel alt_level;
+
+    int halt_cycles = 0;
 
     std::ofstream log_stream;
+
+    std::string NextByteAsStr(const u16 pc) const;
+    std::string NextSignedByteAsStr(const u16 pc) const;
+    std::string NextWordAsStr(const u16 pc) const;
 };
 
 } // End namespace Gb

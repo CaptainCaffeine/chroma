@@ -16,4 +16,4 @@
 
 #pragma once
 
-enum class LogLevel {None, Trace, Registers, Timer, LCD};
+enum class LogLevel {None, Trace, Registers};

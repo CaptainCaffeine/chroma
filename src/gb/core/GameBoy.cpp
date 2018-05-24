@@ -31,11 +31,10 @@
 
 namespace Gb {
 
-GameBoy::GameBoy(const Console _console, const CartridgeHeader& header, Logging& logger, Emu::SDLContext& context,
-                 const std::string& save_path, const std::vector<u8>& rom, bool enable_iir)
+GameBoy::GameBoy(const Console _console, const CartridgeHeader& header, Emu::SDLContext& context,
+                 const std::string& save_path, const std::vector<u8>& rom, bool enable_iir, LogLevel log_level)
         : console(_console)
         , game_mode(header.game_mode)
-        , logging(logger)
         , timer(std::make_unique<Timer>(*this))
         , serial(std::make_unique<Serial>(*this))
         , lcd(std::make_unique<LCD>(*this))
@@ -43,6 +42,7 @@ GameBoy::GameBoy(const Console _console, const CartridgeHeader& header, Logging&
         , audio(std::make_unique<Audio>(enable_iir, *this))
         , mem(std::make_unique<Memory>(header, rom, save_path, *this))
         , cpu(std::make_unique<CPU>(*mem, *this))
+        , logging(std::make_unique<Logging>(log_level, *this))
         , sdl_context(context)
         , front_buffer(160 * 144) {
 
@@ -104,7 +104,7 @@ void GameBoy::RegisterCallbacks() {
 
     sdl_context.RegisterCallback(InputEvent::Quit,         [this](bool) { quit = true; });
     sdl_context.RegisterCallback(InputEvent::Pause,        [this](bool) { pause = !pause; });
-    sdl_context.RegisterCallback(InputEvent::LogLevel,     [this](bool) { logging.SwitchLogLevel(); });
+    sdl_context.RegisterCallback(InputEvent::LogLevel,     [this](bool) { logging->SwitchLogLevel(); });
     sdl_context.RegisterCallback(InputEvent::Fullscreen,   [this](bool) { sdl_context.ToggleFullscreen(); });
     sdl_context.RegisterCallback(InputEvent::Screenshot,   [this](bool) { Screenshot(); });
     sdl_context.RegisterCallback(InputEvent::LcdDebug,     [this](bool) { lcd->DumpEverything(); });
@@ -134,13 +134,6 @@ void GameBoy::Screenshot() const {
 
 void GameBoy::HardwareTick(unsigned int cycles) {
     for (; cycles != 0; cycles -= 4) {
-        // Log I/O registers if logging enabled.
-        if (logging.log_level == LogLevel::Timer) {
-            logging.LogTimerRegisterState(*timer);
-        } else if (logging.log_level == LogLevel::LCD) {
-            logging.LogLCDRegisterState(*lcd);
-        }
-
         // Enable interrupts if EI was previously called.
         cpu->EnableInterruptsDelayed();
 
@@ -163,13 +156,6 @@ void GameBoy::HardwareTick(unsigned int cycles) {
 
 void GameBoy::HaltedTick(unsigned int cycles) {
     for (; cycles != 0; cycles -= 4) {
-        // Log I/O registers if logging enabled.
-        if (logging.log_level == LogLevel::Timer) {
-            logging.LogTimerRegisterState(*timer);
-        } else if (logging.log_level == LogLevel::LCD) {
-            logging.LogLCDRegisterState(*lcd);
-        }
-
         // Update the rest of the system hardware.
         timer->UpdateTimer();
         serial->UpdateSerial();

@@ -53,7 +53,7 @@ void DisplayHelp() {
     fmt::print("Options:\n");
     fmt::print("  -h                           display help\n");
     fmt::print("  -m [dmg, cgb, agb]           specify device to emulate\n");
-    fmt::print("  -l [trace, regs, timer, lcd] specify log level (default: none)\n");
+    fmt::print("  -l [trace, regs]             specify log level (default: none)\n");
     fmt::print("  -s [1-15]                    specify resolution scale (default: 2)\n");
     fmt::print("  -f                           activate fullscreen mode\n");
     fmt::print("  --filter [iir, nearest]      choose audio filtering method (default: iir)\n");
@@ -87,10 +87,6 @@ LogLevel GetLogLevel(const std::vector<std::string>& tokens) {
             return LogLevel::Trace;
         } else if (log_string == "regs" || log_string == "registers") {
             return LogLevel::Registers;
-        } else if (log_string == "timer") {
-            return LogLevel::Timer;
-        } else if (log_string == "lcd") {
-            return LogLevel::LCD;
         } else {
             // Passing the "-l" argument by itself defaults to instruction trace logging.
             return LogLevel::Trace;
