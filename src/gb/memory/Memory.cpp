@@ -713,8 +713,11 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         }
         break;
     // LCDC -- LCD control
-    case 0xFF40:
+    case 0xFF40: {
+        bool window_enabled = gameboy.lcd->WindowEnabled();
         gameboy.lcd->lcdc = data;
+        gameboy.lcd->UpdateWindowPosition(window_enabled);
+        }
         break;
     // STAT -- LCD status
     case 0xFF41:
@@ -759,12 +762,18 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         gameboy.lcd->obj_palette_dmg1 = data;
         break;
     // WY -- Window Y Position
-    case 0xFF4A:
+    case 0xFF4A: {
+        bool window_enabled = gameboy.lcd->WindowEnabled();
         gameboy.lcd->window_y = data;
+        gameboy.lcd->UpdateWindowPosition(window_enabled);
+        }
         break;
     // WX -- Window X Position
-    case 0xFF4B:
+    case 0xFF4B: {
+        bool window_enabled = gameboy.lcd->WindowEnabled();
         gameboy.lcd->window_x = data;
+        gameboy.lcd->UpdateWindowPosition(window_enabled);
+        }
         break;
     // KEY1 -- Speed Switch
     case 0xFF4D:

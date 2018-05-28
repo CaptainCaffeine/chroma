@@ -154,6 +154,7 @@ void LCD::UpdateLY() {
             current_scanline = 0;
 
             window_progress = 0x00;
+            window_was_disabled = false;
         } else {
             current_scanline = ++ly;
         }
@@ -263,6 +264,21 @@ void LCD::CheckSTATInterruptSignal() {
     }
     prev_interrupt_signal = stat_interrupt_signal;
     stat_interrupt_signal = false;
+}
+
+void LCD::UpdateWindowPosition(bool was_enabled) {
+    const bool is_enabled = WindowEnabled();
+    const int wonky_ly = (STATMode() == 2) ? (ly - 1) : ly;
+    if (wonky_ly >= 144 || window_y > wonky_ly) {
+        return;
+    }
+
+    if (!was_enabled && is_enabled && !window_was_disabled) {
+        // This only happens if the window has been disabled since the start of the frame.
+        window_progress = wonky_ly + 1;
+    } else if (was_enabled && !is_enabled) {
+        window_was_disabled = true;
+    }
 }
 
 void LCD::RenderScanline() {

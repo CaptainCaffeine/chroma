@@ -124,8 +124,8 @@ void LCD::DumpTileSet(int bank) {
 
 void LCD::DumpEverything() {
     DumpBackBuffer();
-    DumpBGWin(BGTileMapStartAddr(), "bg_dump.ppm");
-    DumpBGWin(WindowTileMapStartAddr(), "win_dump.ppm");
+    DumpBGWin(0x9800, "first_tilemap.ppm");
+    DumpBGWin(0x9C00, "second_tilemap.ppm");
     DumpTileSet(0);
     if (gameboy.GameModeCgb()) {
         DumpTileSet(1);

@@ -56,6 +56,11 @@ public:
 
     void SetSTATSignal() { stat_interrupt_signal = true; }
 
+    void UpdateWindowPosition(bool was_enabled);
+    bool WindowEnabled() const { return (lcdc & 0x20)
+                                        && (window_x < 167)
+                                        && (ly >= window_y); }
+
     void DumpEverything();
 
     // ******** OAM ********
@@ -177,6 +182,7 @@ private:
     std::vector<u16> back_buffer;
 
     u8 window_progress = 0x00;
+    bool window_was_disabled = false;
 
     void RenderScanline();
     void RenderBackground(std::size_t num_bg_pixels);
@@ -217,11 +223,6 @@ private:
     u16 TileDataStartAddr() const { return (lcdc & 0x10) ? 0x8000 : 0x9000; }
     bool BGEnabled() const { return lcdc & 0x01; }
     u16 BGTileMapStartAddr() const { return (lcdc & 0x08) ? 0x9C00 : 0x9800; }
-    // The window can be disabled by either disabling it in LCDC or by pushing it off the screen.
-    bool WindowEnabled() const { return (lcdc & 0x20)
-                                        && (window_x < 167)
-                                        && (window_y < 144)
-                                        && (ly >= window_y); }
     u16 WindowTileMapStartAddr() const { return (lcdc & 0x40) ? 0x9C00 : 0x9800; }
     bool SpritesEnabled() const { return lcdc & 0x02; }
     int SpriteSize() const { return (lcdc & 0x04) ? 16 : 8; }
