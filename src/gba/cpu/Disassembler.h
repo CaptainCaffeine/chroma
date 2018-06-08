@@ -382,7 +382,61 @@ public:
     std::string Arm_Undefined(u32 opcode);
 };
 
-void format_arg(fmt::BasicFormatter<char, fmt::ArgFormatter<char>> &f, const char *&format_str, const Condition &cond);
-void format_arg(fmt::BasicFormatter<char, fmt::ArgFormatter<char>> &f, const char *&format_str, const ShiftType &type);
-
 } // End namespace Gba
+
+namespace fmt {
+
+template <>
+struct formatter<Gba::Condition> {
+    template <typename ParseContext>
+    constexpr auto parse(ParseContext &ctx) { return ctx.begin(); }
+
+    template <typename FormatContext>
+    auto format(const Gba::Condition &cond, FormatContext &ctx) {
+        std::string cond_str;
+
+        switch (cond) {
+        case Gba::Condition::Equal:         cond_str = "EQ"; break;
+        case Gba::Condition::NotEqual:      cond_str = "NE"; break;
+        case Gba::Condition::CarrySet:      cond_str = "CS"; break;
+        case Gba::Condition::CarryClear:    cond_str = "CC"; break;
+        case Gba::Condition::Minus:         cond_str = "MI"; break;
+        case Gba::Condition::Plus:          cond_str = "PL"; break;
+        case Gba::Condition::OverflowSet:   cond_str = "VS"; break;
+        case Gba::Condition::OverflowClear: cond_str = "VC"; break;
+        case Gba::Condition::Higher:        cond_str = "HI"; break;
+        case Gba::Condition::LowerSame:     cond_str = "LS"; break;
+        case Gba::Condition::GreaterEqual:  cond_str = "GE"; break;
+        case Gba::Condition::LessThan:      cond_str = "LT"; break;
+        case Gba::Condition::GreaterThan:   cond_str = "GT"; break;
+        case Gba::Condition::LessEqual:     cond_str = "LE"; break;
+        default:                            cond_str = ""; break;
+        }
+
+        return format_to(ctx.begin(), "{}", cond_str);
+    }
+};
+
+template <>
+struct formatter<Gba::ShiftType> {
+    template <typename ParseContext>
+    constexpr auto parse(ParseContext &ctx) { return ctx.begin(); }
+
+    template <typename FormatContext>
+    auto format(const Gba::ShiftType &type, FormatContext &ctx) {
+        std::string type_str;
+
+        switch (type) {
+        case Gba::ShiftType::LSL: type_str = "LSL"; break;
+        case Gba::ShiftType::LSR: type_str = "LSR"; break;
+        case Gba::ShiftType::ASR: type_str = "ASR"; break;
+        case Gba::ShiftType::ROR: type_str = "ROR"; break;
+        case Gba::ShiftType::RRX: type_str = "RRX"; break;
+        default:                  type_str = ""; break;
+        }
+
+        return format_to(ctx.begin(), "{}", type_str);
+    }
+};
+
+} // End namespace fmt

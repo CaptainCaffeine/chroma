@@ -194,43 +194,4 @@ std::string Disassembler::StatusReg(bool spsr, u32 mask) {
     return psr;
 }
 
-void format_arg(fmt::BasicFormatter<char> &f, const char *&, const Condition &cond) {
-    std::string cond_str;
-
-    switch (cond) {
-    case Condition::Equal:         cond_str = "EQ"; break;
-    case Condition::NotEqual:      cond_str = "NE"; break;
-    case Condition::CarrySet:      cond_str = "CS"; break;
-    case Condition::CarryClear:    cond_str = "CC"; break;
-    case Condition::Minus:         cond_str = "MI"; break;
-    case Condition::Plus:          cond_str = "PL"; break;
-    case Condition::OverflowSet:   cond_str = "VS"; break;
-    case Condition::OverflowClear: cond_str = "VC"; break;
-    case Condition::Higher:        cond_str = "HI"; break;
-    case Condition::LowerSame:     cond_str = "LS"; break;
-    case Condition::GreaterEqual:  cond_str = "GE"; break;
-    case Condition::LessThan:      cond_str = "LT"; break;
-    case Condition::GreaterThan:   cond_str = "GT"; break;
-    case Condition::LessEqual:     cond_str = "LE"; break;
-    default:                       cond_str = ""; break;
-    }
-
-    f.writer().write(cond_str);
-}
-
-void format_arg(fmt::BasicFormatter<char> &f, const char *&, const ShiftType &type) {
-    std::string type_str;
-
-    switch (type) {
-    case ShiftType::LSL: type_str = "LSL"; break;
-    case ShiftType::LSR: type_str = "LSR"; break;
-    case ShiftType::ASR: type_str = "ASR"; break;
-    case ShiftType::ROR: type_str = "ROR"; break;
-    case ShiftType::RRX: type_str = "RRX"; break;
-    default:             type_str = ""; break;
-    }
-
-    f.writer().write(type_str);
-}
-
 } // End namespace Gba
