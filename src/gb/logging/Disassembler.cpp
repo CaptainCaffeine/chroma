@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <fmt/format.h>
-
 #include "gb/logging/Logging.h"
 #include "gb/core/GameBoy.h"
 #include "gb/memory/Memory.h"
@@ -39,444 +37,444 @@ std::string Logging::NextWordAsStr(const u16 pc) const {
     return fmt::format("0x{0:0>4X}", (gameboy.mem->ReadMem(pc + 2) << 8) | gameboy.mem->ReadMem(pc + 1));
 }
 
-void LoadString(fmt::MemoryWriter& instr, const std::string& into, const std::string& from) {
-    instr << "LD " << into << ", " << from;
+void Logging::LoadString(const std::string& into, const std::string& from) {
+    fmt::print(log_stream, "LD {}, {}", into, from);
 }
 
-void LoadIncString(fmt::MemoryWriter& instr, const std::string& into, const std::string& from) {
-    instr << "LDI " << into << ", " << from;
+void Logging::LoadIncString(const std::string& into, const std::string& from) {
+    fmt::print(log_stream, "LDI {}, {}", into, from);
 }
 
-void LoadDecString(fmt::MemoryWriter& instr, const std::string& into, const std::string& from) {
-    instr << "LDD " << into << ", " << from;
+void Logging::LoadDecString(const std::string& into, const std::string& from) {
+    fmt::print(log_stream, "LDD {}, {}", into, from);
 }
 
-void LoadHighString(fmt::MemoryWriter& instr, const std::string& into, const std::string& from) {
-    instr << "LDH " << into << ", " << from;
+void Logging::LoadHighString(const std::string& into, const std::string& from) {
+    fmt::print(log_stream, "LDH {}, {}", into, from);
 }
 
-void PushString(fmt::MemoryWriter& instr, const std::string& reg) {
-    instr << "PUSH " << reg;
+void Logging::PushString(const std::string& reg) {
+    fmt::print(log_stream, "PUSH {}", reg);
 }
 
-void PopString(fmt::MemoryWriter& instr, const std::string& reg) {
-    instr << "POP " << reg;
+void Logging::PopString(const std::string& reg) {
+    fmt::print(log_stream, "POP {}", reg);
 }
 
-void AddString(fmt::MemoryWriter& instr, const std::string& from) {
-    instr << "ADD A, " << from;
+void Logging::AddString(const std::string& from) {
+    fmt::print(log_stream, "ADD A, {}", from);
 }
 
-void AddString(fmt::MemoryWriter& instr, const std::string& into, const std::string& from) {
-    instr << "ADD " << into << ", " << from;
+void Logging::AddString(const std::string& into, const std::string& from) {
+    fmt::print(log_stream, "ADD {}, {}", into, from);
 }
 
-void AdcString(fmt::MemoryWriter& instr, const std::string& from) {
-    instr << "ADC A, " << from;
+void Logging::AdcString(const std::string& from) {
+    fmt::print(log_stream, "ADC A, {}", from);
 }
 
-void SubString(fmt::MemoryWriter& instr, const std::string& from) {
-    instr << "SUB A, " << from;
+void Logging::SubString(const std::string& from) {
+    fmt::print(log_stream, "SUB A, {}", from);
 }
 
-void SbcString(fmt::MemoryWriter& instr, const std::string& from) {
-    instr << "SBC A, " << from;
+void Logging::SbcString(const std::string& from) {
+    fmt::print(log_stream, "SBC A, {}", from);
 }
 
-void AndString(fmt::MemoryWriter& instr, const std::string& with) {
-    instr << "AND " << with;
+void Logging::AndString(const std::string& with) {
+    fmt::print(log_stream, "AND {}", with);
 }
 
-void OrString(fmt::MemoryWriter& instr, const std::string& with) {
-    instr << "OR " << with;
+void Logging::OrString(const std::string& with) {
+    fmt::print(log_stream, "OR {}", with);
 }
 
-void XorString(fmt::MemoryWriter& instr, const std::string& with) {
-    instr << "XOR " << with;
+void Logging::XorString(const std::string& with) {
+    fmt::print(log_stream, "XOR {}", with);
 }
 
-void CompareString(fmt::MemoryWriter& instr, const std::string& with) {
-    instr << "CP " << with;
+void Logging::CompareString(const std::string& with) {
+    fmt::print(log_stream, "CP {}", with);
 }
 
-void IncString(fmt::MemoryWriter& instr, const std::string& reg) {
-    instr << "INC " << reg;
+void Logging::IncString(const std::string& reg) {
+    fmt::print(log_stream, "INC {}", reg);
 }
 
-void DecString(fmt::MemoryWriter& instr, const std::string& reg) {
-    instr << "DEC " << reg;
+void Logging::DecString(const std::string& reg) {
+    fmt::print(log_stream, "DEC {}", reg);
 }
 
-void JumpString(fmt::MemoryWriter& instr, const std::string& addr) {
-    instr << "JP " << addr;
+void Logging::JumpString(const std::string& addr) {
+    fmt::print(log_stream, "JP {}", addr);
 }
 
-void JumpString(fmt::MemoryWriter& instr, const std::string& cond, const std::string& addr) {
-    instr << "JP " << cond << ", " << addr;
+void Logging::JumpString(const std::string& cond, const std::string& addr) {
+    fmt::print(log_stream, "JP {}, {}", cond, addr);
 }
 
-void RelJumpString(fmt::MemoryWriter& instr, const std::string& addr) {
-    instr << "JR " << addr;
+void Logging::RelJumpString(const std::string& addr) {
+    fmt::print(log_stream, "JR {}", addr);
 }
 
-void RelJumpString(fmt::MemoryWriter& instr, const std::string& cond, const std::string& addr) {
-    instr << "JR " << cond << ", " << addr;
+void Logging::RelJumpString(const std::string& cond, const std::string& addr) {
+    fmt::print(log_stream, "JR {}, {}", cond, addr);
 }
 
-void CallString(fmt::MemoryWriter& instr, const std::string& addr) {
-    instr << "CALL " << addr;
+void Logging::CallString(const std::string& addr) {
+    fmt::print(log_stream, "CALL {}", addr);
 }
 
-void CallString(fmt::MemoryWriter& instr, const std::string& cond, const std::string& addr) {
-    instr << "CALL " << cond << ", " << addr;
+void Logging::CallString(const std::string& cond, const std::string& addr) {
+    fmt::print(log_stream, "CALL {}, {}", cond, addr);
 }
 
-void ReturnInterruptString(fmt::MemoryWriter& instr, const std::string& reti) {
-    instr << "RET" << reti;
+void Logging::ReturnInterruptString(const std::string& reti) {
+    fmt::print(log_stream, "RET{}", reti);
 }
 
-void ReturnCondString(fmt::MemoryWriter& instr, const std::string& cond) {
-    instr << "RET " << cond;
+void Logging::ReturnCondString(const std::string& cond) {
+    fmt::print(log_stream, "RET {}", cond);
 }
 
-void RestartString(fmt::MemoryWriter& instr, const std::string& addr) {
-    instr << "RST " << addr;
+void Logging::RestartString(const std::string& addr) {
+    fmt::print(log_stream, "RST {}", addr);
 }
 
-void RotLeftString(fmt::MemoryWriter& instr, const std::string& carry, const std::string& reg) {
-    instr << "RL" << carry << " " << reg;
+void Logging::RotLeftString(const std::string& carry, const std::string& reg) {
+    fmt::print(log_stream, "RL{} {}", carry, reg);
 }
 
-void RotRightString(fmt::MemoryWriter& instr, const std::string& carry, const std::string& reg) {
-    instr << "RR" << carry << " " << reg;
+void Logging::RotRightString(const std::string& carry, const std::string& reg) {
+    fmt::print(log_stream, "RR{} {}", carry, reg);
 }
 
-void ShiftLeftString(fmt::MemoryWriter& instr, const std::string& reg) {
-    instr << "SLA " << reg;
+void Logging::ShiftLeftString(const std::string& reg) {
+    fmt::print(log_stream, "SLA {}", reg);
 }
 
-void ShiftRightString(fmt::MemoryWriter& instr, const std::string& a_or_l, const std::string& reg) {
-    instr << "SR" << a_or_l << " " << reg;
+void Logging::ShiftRightString(const std::string& a_or_l, const std::string& reg) {
+    fmt::print(log_stream, "SR{} {}", a_or_l, reg);
 }
 
-void SwapString(fmt::MemoryWriter& instr, const std::string& reg) {
-    instr << "SWAP " << reg;
+void Logging::SwapString(const std::string& reg) {
+    fmt::print(log_stream, "SWAP {}", reg);
 }
 
-void TestBitString(fmt::MemoryWriter& instr, const std::string& bit, const std::string& reg) {
-    instr << "BIT " << bit << ", " << reg;
+void Logging::TestBitString(const std::string& bit, const std::string& reg) {
+    fmt::print(log_stream, "BIT {}, {}", bit, reg);
 }
 
-void ResetBitString(fmt::MemoryWriter& instr, const std::string& bit, const std::string& reg) {
-    instr << "RES " << bit << ", " << reg;
+void Logging::ResetBitString(const std::string& bit, const std::string& reg) {
+    fmt::print(log_stream, "RES {}, {}", bit, reg);
 }
 
-void SetBitString(fmt::MemoryWriter& instr, const std::string& bit, const std::string& reg) {
-    instr << "SET " << bit << ", " << reg;
+void Logging::SetBitString(const std::string& bit, const std::string& reg) {
+    fmt::print(log_stream, "SET {}, {}", bit, reg);
 }
 
-void UnknownOpcodeString(fmt::MemoryWriter& instr, const u8 opcode) {
-    instr.write("Unknown Opcode: 0x{0:0>2X}", opcode);
+void Logging::UnknownOpcodeString(const u8 opcode) {
+    fmt::print(log_stream, "Unknown Opcode: 0x{0:0>2X}", opcode);
 }
 
-void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
-    instr_stream.write("0x{0:0>4X}: ", pc);
+void Logging::Disassemble(const u16 pc) {
+    fmt::print(log_stream, "0x{0:0>4X}: ", pc);
     switch (gameboy.mem->ReadMem(pc)) {
     // ******** 8-bit loads ********
     // LD R, n -- Load immediate value n into register R
     case 0x06:
-        LoadString(instr_stream, "B", NextByteAsStr(pc));
+        LoadString("B", NextByteAsStr(pc));
         break;
     case 0x0E:
-        LoadString(instr_stream, "C", NextByteAsStr(pc));
+        LoadString("C", NextByteAsStr(pc));
         break;
     case 0x16:
-        LoadString(instr_stream, "D", NextByteAsStr(pc));
+        LoadString("D", NextByteAsStr(pc));
         break;
     case 0x1E:
-        LoadString(instr_stream, "E", NextByteAsStr(pc));
+        LoadString("E", NextByteAsStr(pc));
         break;
     case 0x26:
-        LoadString(instr_stream, "H", NextByteAsStr(pc));
+        LoadString("H", NextByteAsStr(pc));
         break;
     case 0x2E:
-        LoadString(instr_stream, "L", NextByteAsStr(pc));
+        LoadString("L", NextByteAsStr(pc));
         break;
     case 0x3E:
-        LoadString(instr_stream, "A", NextByteAsStr(pc));
+        LoadString("A", NextByteAsStr(pc));
         break;
     // LD A, R2 -- Load value from R2 into A
     case 0x78:
-        LoadString(instr_stream, "A", "B");
+        LoadString("A", "B");
         break;
     case 0x79:
-        LoadString(instr_stream, "A", "C");
+        LoadString("A", "C");
         break;
     case 0x7A:
-        LoadString(instr_stream, "A", "D");
+        LoadString("A", "D");
         break;
     case 0x7B:
-        LoadString(instr_stream, "A", "E");
+        LoadString("A", "E");
         break;
     case 0x7C:
-        LoadString(instr_stream, "A", "H");
+        LoadString("A", "H");
         break;
     case 0x7D:
-        LoadString(instr_stream, "A", "L");
+        LoadString("A", "L");
         break;
     case 0x7E:
-        LoadString(instr_stream, "A", "(HL)");
+        LoadString("A", "(HL)");
         break;
     case 0x7F:
-        LoadString(instr_stream, "A", "A");
+        LoadString("A", "A");
         break;
     // LD B, R2 -- Load value from R2 into B
     case 0x40:
-        LoadString(instr_stream, "B", "B");
+        LoadString("B", "B");
         break;
     case 0x41:
-        LoadString(instr_stream, "B", "C");
+        LoadString("B", "C");
         break;
     case 0x42:
-        LoadString(instr_stream, "B", "D");
+        LoadString("B", "D");
         break;
     case 0x43:
-        LoadString(instr_stream, "B", "E");
+        LoadString("B", "E");
         break;
     case 0x44:
-        LoadString(instr_stream, "B", "H");
+        LoadString("B", "H");
         break;
     case 0x45:
-        LoadString(instr_stream, "B", "L");
+        LoadString("B", "L");
         break;
     case 0x46:
-        LoadString(instr_stream, "B", "(HL)");
+        LoadString("B", "(HL)");
         break;
     case 0x47:
-        LoadString(instr_stream, "B", "A");
+        LoadString("B", "A");
         break;
     // LD C, R2 -- Load value from R2 into C
     case 0x48:
-        LoadString(instr_stream, "C", "B");
+        LoadString("C", "B");
         break;
     case 0x49:
-        LoadString(instr_stream, "C", "C");
+        LoadString("C", "C");
         break;
     case 0x4A:
-        LoadString(instr_stream, "C", "D");
+        LoadString("C", "D");
         break;
     case 0x4B:
-        LoadString(instr_stream, "C", "E");
+        LoadString("C", "E");
         break;
     case 0x4C:
-        LoadString(instr_stream, "C", "H");
+        LoadString("C", "H");
         break;
     case 0x4D:
-        LoadString(instr_stream, "C", "L");
+        LoadString("C", "L");
         break;
     case 0x4E:
-        LoadString(instr_stream, "C", "(HL)");
+        LoadString("C", "(HL)");
         break;
     case 0x4F:
-        LoadString(instr_stream, "C", "A");
+        LoadString("C", "A");
         break;
     // LD D, R2 -- Load value from R2 into D
     case 0x50:
-        LoadString(instr_stream, "D", "B");
+        LoadString("D", "B");
         break;
     case 0x51:
-        LoadString(instr_stream, "D", "C");
+        LoadString("D", "C");
         break;
     case 0x52:
-        LoadString(instr_stream, "D", "D");
+        LoadString("D", "D");
         break;
     case 0x53:
-        LoadString(instr_stream, "D", "E");
+        LoadString("D", "E");
         break;
     case 0x54:
-        LoadString(instr_stream, "D", "H");
+        LoadString("D", "H");
         break;
     case 0x55:
-        LoadString(instr_stream, "D", "L");
+        LoadString("D", "L");
         break;
     case 0x56:
-        LoadString(instr_stream, "D", "(HL)");
+        LoadString("D", "(HL)");
         break;
     case 0x57:
-        LoadString(instr_stream, "D", "A");
+        LoadString("D", "A");
         break;
     // LD E, R2 -- Load value from R2 into E
     case 0x58:
-        LoadString(instr_stream, "E", "B");
+        LoadString("E", "B");
         break;
     case 0x59:
-        LoadString(instr_stream, "E", "C");
+        LoadString("E", "C");
         break;
     case 0x5A:
-        LoadString(instr_stream, "E", "D");
+        LoadString("E", "D");
         break;
     case 0x5B:
-        LoadString(instr_stream, "E", "E");
+        LoadString("E", "E");
         break;
     case 0x5C:
-        LoadString(instr_stream, "E", "H");
+        LoadString("E", "H");
         break;
     case 0x5D:
-        LoadString(instr_stream, "E", "L");
+        LoadString("E", "L");
         break;
     case 0x5E:
-        LoadString(instr_stream, "E", "(HL)");
+        LoadString("E", "(HL)");
         break;
     case 0x5F:
-        LoadString(instr_stream, "E", "A");
+        LoadString("E", "A");
         break;
     // LD H, R2 -- Load value from R2 into H
     case 0x60:
-        LoadString(instr_stream, "H", "B");
+        LoadString("H", "B");
         break;
     case 0x61:
-        LoadString(instr_stream, "H", "C");
+        LoadString("H", "C");
         break;
     case 0x62:
-        LoadString(instr_stream, "H", "D");
+        LoadString("H", "D");
         break;
     case 0x63:
-        LoadString(instr_stream, "H", "E");
+        LoadString("H", "E");
         break;
     case 0x64:
-        LoadString(instr_stream, "H", "H");
+        LoadString("H", "H");
         break;
     case 0x65:
-        LoadString(instr_stream, "H", "L");
+        LoadString("H", "L");
         break;
     case 0x66:
-        LoadString(instr_stream, "H", "(HL)");
+        LoadString("H", "(HL)");
         break;
     case 0x67:
-        LoadString(instr_stream, "H", "A");
+        LoadString("H", "A");
         break;
     // LD L, R2 -- Load value from R2 into L
     case 0x68:
-        LoadString(instr_stream, "L", "B");
+        LoadString("L", "B");
         break;
     case 0x69:
-        LoadString(instr_stream, "L", "C");
+        LoadString("L", "C");
         break;
     case 0x6A:
-        LoadString(instr_stream, "L", "D");
+        LoadString("L", "D");
         break;
     case 0x6B:
-        LoadString(instr_stream, "L", "E");
+        LoadString("L", "E");
         break;
     case 0x6C:
-        LoadString(instr_stream, "L", "H");
+        LoadString("L", "H");
         break;
     case 0x6D:
-        LoadString(instr_stream, "L", "L");
+        LoadString("L", "L");
         break;
     case 0x6E:
-        LoadString(instr_stream, "L", "(HL)");
+        LoadString("L", "(HL)");
         break;
     case 0x6F:
-        LoadString(instr_stream, "L", "A");
+        LoadString("L", "A");
         break;
     // LD (HL), R2 -- Load value from R2 into memory at (HL)
     case 0x70:
-        LoadString(instr_stream, "(HL)", "B");
+        LoadString("(HL)", "B");
         break;
     case 0x71:
-        LoadString(instr_stream, "(HL)", "C");
+        LoadString("(HL)", "C");
         break;
     case 0x72:
-        LoadString(instr_stream, "(HL)", "D");
+        LoadString("(HL)", "D");
         break;
     case 0x73:
-        LoadString(instr_stream, "(HL)", "E");
+        LoadString("(HL)", "E");
         break;
     case 0x74:
-        LoadString(instr_stream, "(HL)", "H");
+        LoadString("(HL)", "H");
         break;
     case 0x75:
-        LoadString(instr_stream, "(HL)", "L");
+        LoadString("(HL)", "L");
         break;
     case 0x77:
-        LoadString(instr_stream, "(HL)", "A");
+        LoadString("(HL)", "A");
         break;
     case 0x36:
-        LoadString(instr_stream, "(HL)", NextByteAsStr(pc));
+        LoadString("(HL)", NextByteAsStr(pc));
         break;
     // LD A, (nn) -- Load value from memory at (nn) into A
     case 0x0A:
-        LoadString(instr_stream, "A", "(BC)");
+        LoadString("A", "(BC)");
         break;
     case 0x1A:
-        LoadString(instr_stream, "A", "(DE)");
+        LoadString("A", "(DE)");
         break;
     case 0xFA:
-        LoadString(instr_stream, "A", "(" + NextWordAsStr(pc) + ")");
+        LoadString("A", "(" + NextWordAsStr(pc) + ")");
         break;
     // LD (nn), A -- Load value from A into memory at (nn)
     case 0x02:
-        LoadString(instr_stream, "(BC)", "A");
+        LoadString("(BC)", "A");
         break;
     case 0x12:
-        LoadString(instr_stream, "(DE)", "A");
+        LoadString("(DE)", "A");
         break;
     case 0xEA:
-        LoadString(instr_stream, "(" + NextWordAsStr(pc) + ")", "A");
+        LoadString("(" + NextWordAsStr(pc) + ")", "A");
         break;
     // LD (C), A -- Load value from A into memory at (0xFF00 + C)
     case 0xE2:
-        LoadString(instr_stream, "(0xFF00 + C)", "A");
+        LoadString("(0xFF00 + C)", "A");
         break;
     // LD A, (C) -- Load value from memory at (0xFF00 + C) into A
     case 0xF2:
-        LoadString(instr_stream, "A", "(0xFF00 + C)");
+        LoadString("A", "(0xFF00 + C)");
         break;
     // LDI (HL), A -- Load value from A into memory at (HL), then increment HL
     case 0x22:
-        LoadIncString(instr_stream, "(HL)", "A");
+        LoadIncString("(HL)", "A");
         break;
     // LDI A, (HL) -- Load value from memory at (HL) into A, then increment HL
     case 0x2A:
-        LoadIncString(instr_stream, "A", "(HL)");
+        LoadIncString("A", "(HL)");
         break;
     // LDD (HL), A -- Load value from A into memory at (HL), then decrement HL
     case 0x32:
-        LoadDecString(instr_stream, "(HL)", "A");
+        LoadDecString("(HL)", "A");
         break;
     // LDD A, (HL) -- Load value from memory at (HL) into A, then decrement HL
     case 0x3A:
-        LoadDecString(instr_stream, "A", "(HL)");
+        LoadDecString("A", "(HL)");
         break;
     // LDH (n), A -- Load value from A into memory at (0xFF00+n), with n as immediate byte value
     case 0xE0:
         // Take substring to remove the 0x prefix.
-        LoadHighString(instr_stream, "(0xFF" + NextByteAsStr(pc).substr(2, 2) + ")", "A");
+        LoadHighString("(0xFF" + NextByteAsStr(pc).substr(2, 2) + ")", "A");
         break;
     // LDH A, (n) -- Load value from memory at (0xFF00+n) into A, with n as immediate byte value 
     case 0xF0:
         // Take substring to remove the 0x prefix.
-        LoadHighString(instr_stream, "A", "(0xFF" + NextByteAsStr(pc).substr(2, 2) + ")");
+        LoadHighString("A", "(0xFF" + NextByteAsStr(pc).substr(2, 2) + ")");
         break;
 
     // ******** 16-bit loads ********
     // LD R, nn -- Load 16-bit immediate value into 16-bit register R
     case 0x01:
-        LoadString(instr_stream, "BC", NextWordAsStr(pc));
+        LoadString("BC", NextWordAsStr(pc));
         break;
     case 0x11:
-        LoadString(instr_stream, "DE", NextWordAsStr(pc));
+        LoadString("DE", NextWordAsStr(pc));
         break;
     case 0x21:
-        LoadString(instr_stream, "HL", NextWordAsStr(pc));
+        LoadString("HL", NextWordAsStr(pc));
         break;
     case 0x31:
-        LoadString(instr_stream, "SP", NextWordAsStr(pc));
+        LoadString("SP", NextWordAsStr(pc));
         break;
     // LD SP, HL -- Load value from HL into SP
     case 0xF9:
-        LoadString(instr_stream, "SP", "HL");
+        LoadString("SP", "HL");
         break;
     // LD HL, SP+n -- Load value from SP + n into HL, with n as signed immediate byte value
     // Flags:
@@ -485,37 +483,37 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Set appropriately, with immediate as unsigned byte.
     //     C: Set appropriately, with immediate as unsigned byte.
     case 0xF8:
-        LoadString(instr_stream, "HL", "SP" + NextSignedByteAsStr(pc));
+        LoadString("HL", "SP" + NextSignedByteAsStr(pc));
         break;
     // LD (nn), SP -- Load value from SP into memory at (nn)
     case 0x08:
-        LoadString(instr_stream, "(" + NextWordAsStr(pc) + ")", "SP");
+        LoadString("(" + NextWordAsStr(pc) + ")", "SP");
         break;
     // PUSH R -- Push 16-bit register R onto the stack and decrement the stack pointer by 2
     case 0xC5:
-        PushString(instr_stream, "BC");
+        PushString("BC");
         break;
     case 0xD5:
-        PushString(instr_stream, "DE");
+        PushString("DE");
         break;
     case 0xE5:
-        PushString(instr_stream, "HL");
+        PushString("HL");
         break;
     case 0xF5:
-        PushString(instr_stream, "AF");
+        PushString("AF");
         break;
     // POP R -- Pop 2 bytes off the stack into 16-bit register R and increment the stack pointer by 2
     case 0xC1:
-        PopString(instr_stream, "BC");
+        PopString("BC");
         break;
     case 0xD1:
-        PopString(instr_stream, "DE");
+        PopString("DE");
         break;
     case 0xE1:
-        PopString(instr_stream, "HL");
+        PopString("HL");
         break;
     case 0xF1:
-        PopString(instr_stream, "AF");
+        PopString("AF");
         break;
 
     // ******** 8-bit arithmetic and logic ********
@@ -526,33 +524,33 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Set if carry from bit 3
     //     C: Set if carry from bit 7
     case 0x80:
-        AddString(instr_stream, "B");
+        AddString("B");
         break;
     case 0x81:
-        AddString(instr_stream, "C");
+        AddString("C");
         break;
     case 0x82:
-        AddString(instr_stream, "D");
+        AddString("D");
         break;
     case 0x83:
-        AddString(instr_stream, "E");
+        AddString("E");
         break;
     case 0x84:
-        AddString(instr_stream, "H");
+        AddString("H");
         break;
     case 0x85:
-        AddString(instr_stream, "L");
+        AddString("L");
         break;
     case 0x86:
-        AddString(instr_stream, "(HL)");
+        AddString("(HL)");
         break;
     case 0x87:
-        AddString(instr_stream, "A");
+        AddString("A");
         break;
     // ADD A, n -- Add immediate value n to A
     // Flags: same as ADD A, R
     case 0xC6:
-        AddString(instr_stream, NextByteAsStr(pc));
+        AddString(NextByteAsStr(pc));
         break;
     // ADC A, R -- Add value in register R + the carry flag to A
     // Flags:
@@ -561,33 +559,33 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Set if carry from bit 3
     //     C: Set if carry from bit 7
     case 0x88:
-        AdcString(instr_stream, "B");
+        AdcString("B");
         break;
     case 0x89:
-        AdcString(instr_stream, "C");
+        AdcString("C");
         break;
     case 0x8A:
-        AdcString(instr_stream, "D");
+        AdcString("D");
         break;
     case 0x8B:
-        AdcString(instr_stream, "E");
+        AdcString("E");
         break;
     case 0x8C:
-        AdcString(instr_stream, "H");
+        AdcString("H");
         break;
     case 0x8D:
-        AdcString(instr_stream, "L");
+        AdcString("L");
         break;
     case 0x8E:
-        AdcString(instr_stream, "(HL)");
+        AdcString("(HL)");
         break;
     case 0x8F:
-        AdcString(instr_stream, "A");
+        AdcString("A");
         break;
     // ADC A, n -- Add immediate value n + the carry flag to A
     // Flags: same as ADC A, R
     case 0xCE:
-        AdcString(instr_stream, NextByteAsStr(pc));
+        AdcString(NextByteAsStr(pc));
         break;
     // SUB R -- Subtract the value in register R from  A
     // Flags:
@@ -596,33 +594,33 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Set if borrow from bit 4
     //     C: Set if borrow
     case 0x90:
-        SubString(instr_stream, "B");
+        SubString("B");
         break;
     case 0x91:
-        SubString(instr_stream, "C");
+        SubString("C");
         break;
     case 0x92:
-        SubString(instr_stream, "D");
+        SubString("D");
         break;
     case 0x93:
-        SubString(instr_stream, "E");
+        SubString("E");
         break;
     case 0x94:
-        SubString(instr_stream, "H");
+        SubString("H");
         break;
     case 0x95:
-        SubString(instr_stream, "L");
+        SubString("L");
         break;
     case 0x96:
-        SubString(instr_stream, "(HL)");
+        SubString("(HL)");
         break;
     case 0x97:
-        SubString(instr_stream, "A");
+        SubString("A");
         break;
     // SUB n -- Subtract immediate value n from  A
     // Flags: same as SUB R
     case 0xD6:
-        SubString(instr_stream, NextByteAsStr(pc));
+        SubString(NextByteAsStr(pc));
         break;
     // SBC A, R -- Subtract the value in register R + carry flag from  A
     // Flags:
@@ -631,33 +629,33 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Set if borrow from bit 4
     //     C: Set if borrow
     case 0x98:
-        SbcString(instr_stream, "B");
+        SbcString("B");
         break;
     case 0x99:
-        SbcString(instr_stream, "C");
+        SbcString("C");
         break;
     case 0x9A:
-        SbcString(instr_stream, "D");
+        SbcString("D");
         break;
     case 0x9B:
-        SbcString(instr_stream, "E");
+        SbcString("E");
         break;
     case 0x9C:
-        SbcString(instr_stream, "H");
+        SbcString("H");
         break;
     case 0x9D:
-        SbcString(instr_stream, "L");
+        SbcString("L");
         break;
     case 0x9E:
-        SbcString(instr_stream, "(HL)");
+        SbcString("(HL)");
         break;
     case 0x9F:
-        SbcString(instr_stream, "A");
+        SbcString("A");
         break;
     // SBC A, n -- Subtract immediate value n + carry flag from  A
     // Flags: same as SBC A, R
     case 0xDE:
-        SbcString(instr_stream, NextByteAsStr(pc));
+        SbcString(NextByteAsStr(pc));
         break;
     // AND R -- Bitwise AND the value in register R with A. 
     // Flags:
@@ -666,33 +664,33 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Set
     //     C: Reset
     case 0xA0:
-        AndString(instr_stream, "B");
+        AndString("B");
         break;
     case 0xA1:
-        AndString(instr_stream, "C");
+        AndString("C");
         break;
     case 0xA2:
-        AndString(instr_stream, "D");
+        AndString("D");
         break;
     case 0xA3:
-        AndString(instr_stream, "E");
+        AndString("E");
         break;
     case 0xA4:
-        AndString(instr_stream, "H");
+        AndString("H");
         break;
     case 0xA5:
-        AndString(instr_stream, "L");
+        AndString("L");
         break;
     case 0xA6:
-        AndString(instr_stream, "(HL)");
+        AndString("(HL)");
         break;
     case 0xA7:
-        AndString(instr_stream, "A");
+        AndString("A");
         break;
     // AND n -- Bitwise AND the immediate value with A. 
     // Flags: same as AND R
     case 0xE6:
-        AndString(instr_stream, NextByteAsStr(pc));
+        AndString(NextByteAsStr(pc));
         break;
     // OR R -- Bitwise OR the value in register R with A. 
     // Flags:
@@ -701,33 +699,33 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Reset
     //     C: Reset
     case 0xB0:
-        OrString(instr_stream, "B");
+        OrString("B");
         break;
     case 0xB1:
-        OrString(instr_stream, "C");
+        OrString("C");
         break;
     case 0xB2:
-        OrString(instr_stream, "D");
+        OrString("D");
         break;
     case 0xB3:
-        OrString(instr_stream, "E");
+        OrString("E");
         break;
     case 0xB4:
-        OrString(instr_stream, "H");
+        OrString("H");
         break;
     case 0xB5:
-        OrString(instr_stream, "L");
+        OrString("L");
         break;
     case 0xB6:
-        OrString(instr_stream, "(HL)");
+        OrString("(HL)");
         break;
     case 0xB7:
-        OrString(instr_stream, "A");
+        OrString("A");
         break;
     // OR n -- Bitwise OR the immediate value with A. 
     // Flags: same as OR R
     case 0xF6:
-        OrString(instr_stream, NextByteAsStr(pc));
+        OrString(NextByteAsStr(pc));
         break;
     // XOR R -- Bitwise XOR the value in register R with A. 
     // Flags:
@@ -736,33 +734,33 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Reset
     //     C: Reset
     case 0xA8:
-        XorString(instr_stream, "B");
+        XorString("B");
         break;
     case 0xA9:
-        XorString(instr_stream, "C");
+        XorString("C");
         break;
     case 0xAA:
-        XorString(instr_stream, "D");
+        XorString("D");
         break;
     case 0xAB:
-        XorString(instr_stream, "E");
+        XorString("E");
         break;
     case 0xAC:
-        XorString(instr_stream, "H");
+        XorString("H");
         break;
     case 0xAD:
-        XorString(instr_stream, "L");
+        XorString("L");
         break;
     case 0xAE:
-        XorString(instr_stream, "(HL)");
+        XorString("(HL)");
         break;
     case 0xAF:
-        XorString(instr_stream, "A");
+        XorString("A");
         break;
     // XOR n -- Bitwise XOR the immediate value with A. 
     // Flags: same as XOR R
     case 0xEE:
-        XorString(instr_stream, NextByteAsStr(pc));
+        XorString(NextByteAsStr(pc));
         break;
     // CP R -- Compare A with the value in register R. This performs a subtraction but does not modify A.
     // Flags:
@@ -771,33 +769,33 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Set if borrow from bit 4
     //     C: Set if borrow
     case 0xB8:
-        CompareString(instr_stream, "B");
+        CompareString("B");
         break;
     case 0xB9:
-        CompareString(instr_stream, "C");
+        CompareString("C");
         break;
     case 0xBA:
-        CompareString(instr_stream, "D");
+        CompareString("D");
         break;
     case 0xBB:
-        CompareString(instr_stream, "E");
+        CompareString("E");
         break;
     case 0xBC:
-        CompareString(instr_stream, "H");
+        CompareString("H");
         break;
     case 0xBD:
-        CompareString(instr_stream, "L");
+        CompareString("L");
         break;
     case 0xBE:
-        CompareString(instr_stream, "(HL)");
+        CompareString("(HL)");
         break;
     case 0xBF:
-        CompareString(instr_stream, "A");
+        CompareString("A");
         break;
     // CP n -- Compare A with the immediate value. This performs a subtraction but does not modify A.
     // Flags: same as CP R
     case 0xFE:
-        CompareString(instr_stream, NextByteAsStr(pc));
+        CompareString(NextByteAsStr(pc));
         break;
     // INC R -- Increment the value in register R.
     // Flags:
@@ -806,28 +804,28 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Set if carry from bit 3
     //     C: Unchanged
     case 0x04:
-        IncString(instr_stream, "B");
+        IncString("B");
         break;
     case 0x0C:
-        IncString(instr_stream, "C");
+        IncString("C");
         break;
     case 0x14:
-        IncString(instr_stream, "D");
+        IncString("D");
         break;
     case 0x1C:
-        IncString(instr_stream, "E");
+        IncString("E");
         break;
     case 0x24:
-        IncString(instr_stream, "H");
+        IncString("H");
         break;
     case 0x2C:
-        IncString(instr_stream, "L");
+        IncString("L");
         break;
     case 0x34:
-        IncString(instr_stream, "(HL)");
+        IncString("(HL)");
         break;
     case 0x3C:
-        IncString(instr_stream, "A");
+        IncString("A");
         break;
     // DEC R -- Decrement the value in register R.
     // Flags:
@@ -836,28 +834,28 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Set if borrow from bit 4
     //     C: Unchanged
     case 0x05:
-        DecString(instr_stream, "B");
+        DecString("B");
         break;
     case 0x0D:
-        DecString(instr_stream, "C");
+        DecString("C");
         break;
     case 0x15:
-        DecString(instr_stream, "D");
+        DecString("D");
         break;
     case 0x1D:
-        DecString(instr_stream, "E");
+        DecString("E");
         break;
     case 0x25:
-        DecString(instr_stream, "H");
+        DecString("H");
         break;
     case 0x2D:
-        DecString(instr_stream, "L");
+        DecString("L");
         break;
     case 0x35:
-        DecString(instr_stream, "(HL)");
+        DecString("(HL)");
         break;
     case 0x3D:
-        DecString(instr_stream, "A");
+        DecString("A");
         break;
 
     // ******** 16-bit arithmetic ********
@@ -868,16 +866,16 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Set if carry from bit 11
     //     C: Set if carry from bit 15
     case 0x09:
-        AddString(instr_stream, "HL", "BC");
+        AddString("HL", "BC");
         break;
     case 0x19:
-        AddString(instr_stream, "HL", "DE");
+        AddString("HL", "DE");
         break;
     case 0x29:
-        AddString(instr_stream, "HL", "HL");
+        AddString("HL", "HL");
         break;
     case 0x39:
-        AddString(instr_stream, "HL", "SP");
+        AddString("HL", "SP");
         break;
     // ADD SP, n -- Add signed immediate byte to SP.
     // Flags:
@@ -886,35 +884,35 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Set appropriately, with immediate as unsigned byte.
     //     C: Set appropriately, with immediate as unsigned byte.
     case 0xE8:
-        AddString(instr_stream, "SP", NextSignedByteAsStr(pc));
+        AddString("SP", NextSignedByteAsStr(pc));
         break;
     // INC R -- Increment the value in the 16-bit register R.
     // Flags unchanged
     case 0x03:
-        IncString(instr_stream, "BC");
+        IncString("BC");
         break;
     case 0x13:
-        IncString(instr_stream, "DE");
+        IncString("DE");
         break;
     case 0x23:
-        IncString(instr_stream, "HL");
+        IncString("HL");
         break;
     case 0x33:
-        IncString(instr_stream, "SP");
+        IncString("SP");
         break;
     // DEC R -- Decrement the value in the 16-bit register R.
     // Flags unchanged
     case 0x0B:
-        DecString(instr_stream, "BC");
+        DecString("BC");
         break;
     case 0x1B:
-        DecString(instr_stream, "DE");
+        DecString("DE");
         break;
     case 0x2B:
-        DecString(instr_stream, "HL");
+        DecString("HL");
         break;
     case 0x3B:
-        DecString(instr_stream, "SP");
+        DecString("SP");
         break;
 
     // ******** Miscellaneous Arithmetic ********
@@ -925,7 +923,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Reset
     //     C: Set appropriately
     case 0x27:
-        instr_stream << "DAA";
+        fmt::print(log_stream, "DAA");
         break;
     // CPL -- Complement the value in register A.
     // Flags:
@@ -934,7 +932,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Set
     //     C: Unchanged
     case 0x2F:
-        instr_stream << "CPL";
+        fmt::print(log_stream, "CPL");
         break;
     // SCF -- Set the carry flag.
     // Flags:
@@ -943,7 +941,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Reset
     //     C: Set
     case 0x37:
-        instr_stream << "SCF";
+        fmt::print(log_stream, "SCF");
         break;
     // CCF -- Complement the carry flag.
     // Flags:
@@ -952,7 +950,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Reset
     //     C: Complemented
     case 0x3F:
-        instr_stream << "CCF";
+        fmt::print(log_stream, "CCF");
         break;
 
     // ******** Rotates and Shifts ********
@@ -963,7 +961,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Reset
     //     C: Set to value in bit 7 before the rotate
     case 0x07:
-        instr_stream << "RLCA";
+        fmt::print(log_stream, "RLCA");
         break;
     // RLA -- Left rotate A through the carry flag.
     // Flags:
@@ -972,7 +970,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Reset
     //     C: Set to value in bit 7 before the rotate
     case 0x17:
-        instr_stream << "RLA";
+        fmt::print(log_stream, "RLA");
         break;
     // RRCA -- Right rotate A.
     // Flags:
@@ -981,7 +979,7 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Reset
     //     C: Set to value in bit 0 before the rotate
     case 0x0F:
-        instr_stream << "RRCA";
+        fmt::print(log_stream, "RRCA");
         break;
     // RRA -- Right rotate A through the carry flag.
     // Flags:
@@ -990,13 +988,13 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     H: Reset
     //     C: Set to value in bit 0 before the rotate
     case 0x1F:
-        instr_stream << "RRA";
+        fmt::print(log_stream, "RRA");
         break;
 
     // ******** Jumps ********
     // JP nn -- Jump to the address given by the 16-bit immediate value.
     case 0xC3:
-        JumpString(instr_stream, NextWordAsStr(pc));
+        JumpString(NextWordAsStr(pc));
         break;
     // JP cc, nn -- Jump to the address given by the 16-bit immediate value if the specified condition is true.
     // cc ==
@@ -1005,24 +1003,24 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     NC: Carry flag reset
     //     Z:  Carry flag set
     case 0xC2:
-        JumpString(instr_stream, "NZ", NextWordAsStr(pc));
+        JumpString("NZ", NextWordAsStr(pc));
         break;
     case 0xCA:
-        JumpString(instr_stream, "Z", NextWordAsStr(pc));
+        JumpString("Z", NextWordAsStr(pc));
         break;
     case 0xD2:
-        JumpString(instr_stream, "NC", NextWordAsStr(pc));
+        JumpString("NC", NextWordAsStr(pc));
         break;
     case 0xDA:
-        JumpString(instr_stream, "C", NextWordAsStr(pc));
+        JumpString("C", NextWordAsStr(pc));
         break;
     // JP (HL) -- Jump to the address contained in HL.
     case 0xE9:
-        JumpString(instr_stream, "HL");
+        JumpString("HL");
         break;
     // JR n -- Jump to the current address + immediate signed byte.
     case 0x18:
-        RelJumpString(instr_stream, NextSignedByteAsStr(pc));
+        RelJumpString(NextSignedByteAsStr(pc));
         break;
     // JR cc, n -- Jump to the current address + immediate signed byte if the specified condition is true.
     // cc ==
@@ -1031,23 +1029,23 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     NC: Carry flag reset
     //     Z:  Carry flag set
     case 0x20:
-        RelJumpString(instr_stream, "NZ", NextSignedByteAsStr(pc));
+        RelJumpString("NZ", NextSignedByteAsStr(pc));
         break;
     case 0x28:
-        RelJumpString(instr_stream, "Z", NextSignedByteAsStr(pc));
+        RelJumpString("Z", NextSignedByteAsStr(pc));
         break;
     case 0x30:
-        RelJumpString(instr_stream, "NC", NextSignedByteAsStr(pc));
+        RelJumpString("NC", NextSignedByteAsStr(pc));
         break;
     case 0x38:
-        RelJumpString(instr_stream, "C", NextSignedByteAsStr(pc));
+        RelJumpString("C", NextSignedByteAsStr(pc));
         break;
 
     // ******** Calls ********
     // CALL nn -- Push address of the next instruction onto the stack, and jump to the address given by 
     // the 16-bit immediate value.
     case 0xCD:
-        CallString(instr_stream, NextWordAsStr(pc));
+        CallString(NextWordAsStr(pc));
         break;
     // CALL cc, nn -- Push address of the next instruction onto the stack, and jump to the address given by 
     // the 16-bit immediate value, if the specified condition is true.
@@ -1057,22 +1055,22 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     NC: Carry flag reset
     //     Z:  Carry flag set
     case 0xC4:
-        CallString(instr_stream, "NZ", NextWordAsStr(pc));
+        CallString("NZ", NextWordAsStr(pc));
         break;
     case 0xCC:
-        CallString(instr_stream, "Z", NextWordAsStr(pc));
+        CallString("Z", NextWordAsStr(pc));
         break;
     case 0xD4:
-        CallString(instr_stream, "NC", NextWordAsStr(pc));
+        CallString("NC", NextWordAsStr(pc));
         break;
     case 0xDC:
-        CallString(instr_stream, "C", NextWordAsStr(pc));
+        CallString("C", NextWordAsStr(pc));
         break;
 
     // ******** Returns ********
     // RET -- Pop two bytes off the stack and jump to their effective address.
     case 0xC9:
-        ReturnInterruptString(instr_stream, "");
+        ReturnInterruptString("");
         break;
     // RET cc -- Pop two bytes off the stack and jump to their effective address, if the specified condition is true.
     // cc ==
@@ -1081,70 +1079,70 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
     //     NC: Carry flag reset
     //     Z:  Carry flag set
     case 0xC0:
-        ReturnCondString(instr_stream, "NZ");
+        ReturnCondString("NZ");
         break;
     case 0xC8:
-        ReturnCondString(instr_stream, "Z");
+        ReturnCondString("Z");
         break;
     case 0xD0:
-        ReturnCondString(instr_stream, "NC");
+        ReturnCondString("NC");
         break;
     case 0xD8:
-        ReturnCondString(instr_stream, "C");
+        ReturnCondString("C");
         break;
     // RETI -- Pop two bytes off the stack and jump to their effective address, and enable interrupts.
     case 0xD9:
-        ReturnInterruptString(instr_stream, "I");
+        ReturnInterruptString("I");
         break;
 
     // ******** Restarts ********
     // RST n -- Push address of next instruction onto the stack, and jump to the
     // address given by n.
     case 0xC7:
-        RestartString(instr_stream, "0x0000");
+        RestartString("0x0000");
         break;
     case 0xCF:
-        RestartString(instr_stream, "0x0008");
+        RestartString("0x0008");
         break;
     case 0xD7:
-        RestartString(instr_stream, "0x0010");
+        RestartString("0x0010");
         break;
     case 0xDF:
-        RestartString(instr_stream, "0x0018");
+        RestartString("0x0018");
         break;
     case 0xE7:
-        RestartString(instr_stream, "0x0020");
+        RestartString("0x0020");
         break;
     case 0xEF:
-        RestartString(instr_stream, "0x0028");
+        RestartString("0x0028");
         break;
     case 0xF7:
-        RestartString(instr_stream, "0x0030");
+        RestartString("0x0030");
         break;
     case 0xFF:
-        RestartString(instr_stream, "0x0038");
+        RestartString("0x0038");
         break;
 
     // ******** System Control ********
     // NOP -- No operation.
     case 0x00:
-        instr_stream << "NOP";
+        fmt::print(log_stream, "NOP");
         break;
     // HALT -- Put CPU into lower power mode until an interrupt occurs.
     case 0x76:
-        instr_stream << "HALT";
+        fmt::print(log_stream, "HALT");
         break;
     // STOP -- Halt both the CPU and LCD until a button is pressed.
     case 0x10:
-        instr_stream << "STOP " << NextByteAsStr(pc);
+        fmt::print(log_stream, "STOP {}", NextByteAsStr(pc));
         break;
     // DI -- Disable interrupts.
     case 0xF3:
-        instr_stream << "DI";
+        fmt::print(log_stream, "DI");
         break;
     // EI -- Enable interrupts after the next instruction is executed.
     case 0xFB:
-        instr_stream << "EI";
+        fmt::print(log_stream, "EI");
         break;
 
     // ******** CB prefix opcodes ********
@@ -1159,28 +1157,28 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
         //     H: Reset
         //     C: Set to value in bit 7 before the rotate
         case 0x00:
-            RotLeftString(instr_stream, "C", "B");
+            RotLeftString("C", "B");
             break;
         case 0x01:
-            RotLeftString(instr_stream, "C", "C");
+            RotLeftString("C", "C");
             break;
         case 0x02:
-            RotLeftString(instr_stream, "C", "D");
+            RotLeftString("C", "D");
             break;
         case 0x03:
-            RotLeftString(instr_stream, "C", "E");
+            RotLeftString("C", "E");
             break;
         case 0x04:
-            RotLeftString(instr_stream, "C", "H");
+            RotLeftString("C", "H");
             break;
         case 0x05:
-            RotLeftString(instr_stream, "C", "L");
+            RotLeftString("C", "L");
             break;
         case 0x06:
-            RotLeftString(instr_stream, "C", "(HL)");
+            RotLeftString("C", "(HL)");
             break;
         case 0x07:
-            RotLeftString(instr_stream, "C", "A");
+            RotLeftString("C", "A");
             break;
         // RL R -- Left rotate the value in register R through the carry flag.
         // Flags:
@@ -1189,28 +1187,28 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
         //     H: Reset
         //     C: Set to value in bit 7 before the rotate
         case 0x10:
-            RotLeftString(instr_stream, "", "B");
+            RotLeftString("", "B");
             break;
         case 0x11:
-            RotLeftString(instr_stream, "", "C");
+            RotLeftString("", "C");
             break;
         case 0x12:
-            RotLeftString(instr_stream, "", "D");
+            RotLeftString("", "D");
             break;
         case 0x13:
-            RotLeftString(instr_stream, "", "E");
+            RotLeftString("", "E");
             break;
         case 0x14:
-            RotLeftString(instr_stream, "", "H");
+            RotLeftString("", "H");
             break;
         case 0x15:
-            RotLeftString(instr_stream, "", "L");
+            RotLeftString("", "L");
             break;
         case 0x16:
-            RotLeftString(instr_stream, "", "(HL)");
+            RotLeftString("", "(HL)");
             break;
         case 0x17:
-            RotLeftString(instr_stream, "", "A");
+            RotLeftString("", "A");
             break;
         // RRC R -- Right rotate the value in register R.
         // Flags:
@@ -1219,28 +1217,28 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
         //     H: Reset
         //     C: Set to value in bit 0 before the rotate
         case 0x08:
-            RotRightString(instr_stream, "C", "B");
+            RotRightString("C", "B");
             break;
         case 0x09:
-            RotRightString(instr_stream, "C", "C");
+            RotRightString("C", "C");
             break;
         case 0x0A:
-            RotRightString(instr_stream, "C", "D");
+            RotRightString("C", "D");
             break;
         case 0x0B:
-            RotRightString(instr_stream, "C", "E");
+            RotRightString("C", "E");
             break;
         case 0x0C:
-            RotRightString(instr_stream, "C", "H");
+            RotRightString("C", "H");
             break;
         case 0x0D:
-            RotRightString(instr_stream, "C", "L");
+            RotRightString("C", "L");
             break;
         case 0x0E:
-            RotRightString(instr_stream, "C", "(HL)");
+            RotRightString("C", "(HL)");
             break;
         case 0x0F:
-            RotRightString(instr_stream, "C", "A");
+            RotRightString("C", "A");
             break;
         // RR R -- Right rotate the value in register R through the carry flag.
         // Flags:
@@ -1249,28 +1247,28 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
         //     H: Reset
         //     C: Set to value in bit 0 before the rotate
         case 0x18:
-            RotRightString(instr_stream, "", "B");
+            RotRightString("", "B");
             break;
         case 0x19:
-            RotRightString(instr_stream, "", "C");
+            RotRightString("", "C");
             break;
         case 0x1A:
-            RotRightString(instr_stream, "", "D");
+            RotRightString("", "D");
             break;
         case 0x1B:
-            RotRightString(instr_stream, "", "E");
+            RotRightString("", "E");
             break;
         case 0x1C:
-            RotRightString(instr_stream, "", "H");
+            RotRightString("", "H");
             break;
         case 0x1D:
-            RotRightString(instr_stream, "", "L");
+            RotRightString("", "L");
             break;
         case 0x1E:
-            RotRightString(instr_stream, "", "(HL)");
+            RotRightString("", "(HL)");
             break;
         case 0x1F:
-            RotRightString(instr_stream, "", "A");
+            RotRightString("", "A");
             break;
         // SLA R -- Left shift the value in register R into the carry flag.
         // Flags:
@@ -1279,28 +1277,28 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
         //     H: Reset
         //     C: Set to value in bit 0 before the rotate
         case 0x20:
-            ShiftLeftString(instr_stream, "B");
+            ShiftLeftString("B");
             break;
         case 0x21:
-            ShiftLeftString(instr_stream, "C");
+            ShiftLeftString("C");
             break;
         case 0x22:
-            ShiftLeftString(instr_stream, "D");
+            ShiftLeftString("D");
             break;
         case 0x23:
-            ShiftLeftString(instr_stream, "E");
+            ShiftLeftString("E");
             break;
         case 0x24:
-            ShiftLeftString(instr_stream, "H");
+            ShiftLeftString("H");
             break;
         case 0x25:
-            ShiftLeftString(instr_stream, "L");
+            ShiftLeftString("L");
             break;
         case 0x26:
-            ShiftLeftString(instr_stream, "(HL)");
+            ShiftLeftString("(HL)");
             break;
         case 0x27:
-            ShiftLeftString(instr_stream, "A");
+            ShiftLeftString("A");
             break;
         // SRA R -- Arithmetic right shift the value in register R into the carry flag.
         // Flags:
@@ -1309,28 +1307,28 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
         //     H: Reset
         //     C: Set to value in bit 0 before the rotate
         case 0x28:
-            ShiftRightString(instr_stream, "A", "B");
+            ShiftRightString("A", "B");
             break;
         case 0x29:
-            ShiftRightString(instr_stream, "A", "C");
+            ShiftRightString("A", "C");
             break;
         case 0x2A:
-            ShiftRightString(instr_stream, "A", "D");
+            ShiftRightString("A", "D");
             break;
         case 0x2B:
-            ShiftRightString(instr_stream, "A", "E");
+            ShiftRightString("A", "E");
             break;
         case 0x2C:
-            ShiftRightString(instr_stream, "A", "H");
+            ShiftRightString("A", "H");
             break;
         case 0x2D:
-            ShiftRightString(instr_stream, "A", "L");
+            ShiftRightString("A", "L");
             break;
         case 0x2E:
-            ShiftRightString(instr_stream, "A", "(HL)");
+            ShiftRightString("A", "(HL)");
             break;
         case 0x2F:
-            ShiftRightString(instr_stream, "A", "A");
+            ShiftRightString("A", "A");
             break;
         // SWAP R -- Swap upper and lower nybbles of register R (rotate by 4).
         // Flags:
@@ -1339,28 +1337,28 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
         //     H: Reset
         //     C: Reset
         case 0x30:
-            SwapString(instr_stream, "B");
+            SwapString("B");
             break;
         case 0x31:
-            SwapString(instr_stream, "C");
+            SwapString("C");
             break;
         case 0x32:
-            SwapString(instr_stream, "D");
+            SwapString("D");
             break;
         case 0x33:
-            SwapString(instr_stream, "E");
+            SwapString("E");
             break;
         case 0x34:
-            SwapString(instr_stream, "H");
+            SwapString("H");
             break;
         case 0x35:
-            SwapString(instr_stream, "L");
+            SwapString("L");
             break;
         case 0x36:
-            SwapString(instr_stream, "(HL)");
+            SwapString("(HL)");
             break;
         case 0x37:
-            SwapString(instr_stream, "A");
+            SwapString("A");
             break;
         // SRL R -- Logical right shift the value in register R into the carry flag.
         // Flags:
@@ -1369,28 +1367,28 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
         //     H: Reset
         //     C: Set to value in bit 0 before the rotate
         case 0x38:
-            ShiftRightString(instr_stream, "L", "B");
+            ShiftRightString("L", "B");
             break;
         case 0x39:
-            ShiftRightString(instr_stream, "L", "C");
+            ShiftRightString("L", "C");
             break;
         case 0x3A:
-            ShiftRightString(instr_stream, "L", "D");
+            ShiftRightString("L", "D");
             break;
         case 0x3B:
-            ShiftRightString(instr_stream, "L", "E");
+            ShiftRightString("L", "E");
             break;
         case 0x3C:
-            ShiftRightString(instr_stream, "L", "H");
+            ShiftRightString("L", "H");
             break;
         case 0x3D:
-            ShiftRightString(instr_stream, "L", "L");
+            ShiftRightString("L", "L");
             break;
         case 0x3E:
-            ShiftRightString(instr_stream, "L", "(HL)");
+            ShiftRightString("L", "(HL)");
             break;
         case 0x3F:
-            ShiftRightString(instr_stream, "L", "A");
+            ShiftRightString("L", "A");
             break;
 
         // ******** Bit Manipulation ********
@@ -1401,584 +1399,584 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
         //     H: Set
         //     C: Unchanged
         case 0x40:
-            TestBitString(instr_stream, "0", "B");
+            TestBitString("0", "B");
             break;
         case 0x41:
-            TestBitString(instr_stream, "0", "C");
+            TestBitString("0", "C");
             break;
         case 0x42:
-            TestBitString(instr_stream, "0", "D");
+            TestBitString("0", "D");
             break;
         case 0x43:
-            TestBitString(instr_stream, "0", "E");
+            TestBitString("0", "E");
             break;
         case 0x44:
-            TestBitString(instr_stream, "0", "H");
+            TestBitString("0", "H");
             break;
         case 0x45:
-            TestBitString(instr_stream, "0", "L");
+            TestBitString("0", "L");
             break;
         case 0x46:
-            TestBitString(instr_stream, "0", "(HL)");
+            TestBitString("0", "(HL)");
             break;
         case 0x47:
-            TestBitString(instr_stream, "0", "A");
+            TestBitString("0", "A");
             break;
         case 0x48:
-            TestBitString(instr_stream, "1", "B");
+            TestBitString("1", "B");
             break;
         case 0x49:
-            TestBitString(instr_stream, "1", "C");
+            TestBitString("1", "C");
             break;
         case 0x4A:
-            TestBitString(instr_stream, "1", "D");
+            TestBitString("1", "D");
             break;
         case 0x4B:
-            TestBitString(instr_stream, "1", "E");
+            TestBitString("1", "E");
             break;
         case 0x4C:
-            TestBitString(instr_stream, "1", "H");
+            TestBitString("1", "H");
             break;
         case 0x4D:
-            TestBitString(instr_stream, "1", "L");
+            TestBitString("1", "L");
             break;
         case 0x4E:
-            TestBitString(instr_stream, "1", "(HL)");
+            TestBitString("1", "(HL)");
             break;
         case 0x4F:
-            TestBitString(instr_stream, "1", "A");
+            TestBitString("1", "A");
             break;
         case 0x50:
-            TestBitString(instr_stream, "2", "B");
+            TestBitString("2", "B");
             break;
         case 0x51:
-            TestBitString(instr_stream, "2", "C");
+            TestBitString("2", "C");
             break;
         case 0x52:
-            TestBitString(instr_stream, "2", "D");
+            TestBitString("2", "D");
             break;
         case 0x53:
-            TestBitString(instr_stream, "2", "E");
+            TestBitString("2", "E");
             break;
         case 0x54:
-            TestBitString(instr_stream, "2", "H");
+            TestBitString("2", "H");
             break;
         case 0x55:
-            TestBitString(instr_stream, "2", "L");
+            TestBitString("2", "L");
             break;
         case 0x56:
-            TestBitString(instr_stream, "2", "(HL)");
+            TestBitString("2", "(HL)");
             break;
         case 0x57:
-            TestBitString(instr_stream, "2", "A");
+            TestBitString("2", "A");
             break;
         case 0x58:
-            TestBitString(instr_stream, "3", "B");
+            TestBitString("3", "B");
             break;
         case 0x59:
-            TestBitString(instr_stream, "3", "C");
+            TestBitString("3", "C");
             break;
         case 0x5A:
-            TestBitString(instr_stream, "3", "D");
+            TestBitString("3", "D");
             break;
         case 0x5B:
-            TestBitString(instr_stream, "3", "E");
+            TestBitString("3", "E");
             break;
         case 0x5C:
-            TestBitString(instr_stream, "3", "H");
+            TestBitString("3", "H");
             break;
         case 0x5D:
-            TestBitString(instr_stream, "3", "L");
+            TestBitString("3", "L");
             break;
         case 0x5E:
-            TestBitString(instr_stream, "3", "(HL)");
+            TestBitString("3", "(HL)");
             break;
         case 0x5F:
-            TestBitString(instr_stream, "3", "A");
+            TestBitString("3", "A");
             break;
         case 0x60:
-            TestBitString(instr_stream, "4", "B");
+            TestBitString("4", "B");
             break;
         case 0x61:
-            TestBitString(instr_stream, "4", "C");
+            TestBitString("4", "C");
             break;
         case 0x62:
-            TestBitString(instr_stream, "4", "D");
+            TestBitString("4", "D");
             break;
         case 0x63:
-            TestBitString(instr_stream, "4", "E");
+            TestBitString("4", "E");
             break;
         case 0x64:
-            TestBitString(instr_stream, "4", "H");
+            TestBitString("4", "H");
             break;
         case 0x65:
-            TestBitString(instr_stream, "4", "L");
+            TestBitString("4", "L");
             break;
         case 0x66:
-            TestBitString(instr_stream, "4", "(HL)");
+            TestBitString("4", "(HL)");
             break;
         case 0x67:
-            TestBitString(instr_stream, "4", "A");
+            TestBitString("4", "A");
             break;
         case 0x68:
-            TestBitString(instr_stream, "5", "B");
+            TestBitString("5", "B");
             break;
         case 0x69:
-            TestBitString(instr_stream, "5", "C");
+            TestBitString("5", "C");
             break;
         case 0x6A:
-            TestBitString(instr_stream, "5", "D");
+            TestBitString("5", "D");
             break;
         case 0x6B:
-            TestBitString(instr_stream, "5", "E");
+            TestBitString("5", "E");
             break;
         case 0x6C:
-            TestBitString(instr_stream, "5", "H");
+            TestBitString("5", "H");
             break;
         case 0x6D:
-            TestBitString(instr_stream, "5", "L");
+            TestBitString("5", "L");
             break;
         case 0x6E:
-            TestBitString(instr_stream, "5", "(HL)");
+            TestBitString("5", "(HL)");
             break;
         case 0x6F:
-            TestBitString(instr_stream, "5", "A");
+            TestBitString("5", "A");
             break;
         case 0x70:
-            TestBitString(instr_stream, "6", "B");
+            TestBitString("6", "B");
             break;
         case 0x71:
-            TestBitString(instr_stream, "6", "C");
+            TestBitString("6", "C");
             break;
         case 0x72:
-            TestBitString(instr_stream, "6", "D");
+            TestBitString("6", "D");
             break;
         case 0x73:
-            TestBitString(instr_stream, "6", "E");
+            TestBitString("6", "E");
             break;
         case 0x74:
-            TestBitString(instr_stream, "6", "H");
+            TestBitString("6", "H");
             break;
         case 0x75:
-            TestBitString(instr_stream, "6", "L");
+            TestBitString("6", "L");
             break;
         case 0x76:
-            TestBitString(instr_stream, "6", "(HL)");
+            TestBitString("6", "(HL)");
             break;
         case 0x77:
-            TestBitString(instr_stream, "6", "A");
+            TestBitString("6", "A");
             break;
         case 0x78:
-            TestBitString(instr_stream, "7", "B");
+            TestBitString("7", "B");
             break;
         case 0x79:
-            TestBitString(instr_stream, "7", "C");
+            TestBitString("7", "C");
             break;
         case 0x7A:
-            TestBitString(instr_stream, "7", "D");
+            TestBitString("7", "D");
             break;
         case 0x7B:
-            TestBitString(instr_stream, "7", "E");
+            TestBitString("7", "E");
             break;
         case 0x7C:
-            TestBitString(instr_stream, "7", "H");
+            TestBitString("7", "H");
             break;
         case 0x7D:
-            TestBitString(instr_stream, "7", "L");
+            TestBitString("7", "L");
             break;
         case 0x7E:
-            TestBitString(instr_stream, "7", "(HL)");
+            TestBitString("7", "(HL)");
             break;
         case 0x7F:
-            TestBitString(instr_stream, "7", "A");
+            TestBitString("7", "A");
             break;
         // RES b, R -- reset bit b of the value in register R.
         // Flags unchanged
         case 0x80:
-            ResetBitString(instr_stream, "0", "B");
+            ResetBitString("0", "B");
             break;
         case 0x81:
-            ResetBitString(instr_stream, "0", "C");
+            ResetBitString("0", "C");
             break;
         case 0x82:
-            ResetBitString(instr_stream, "0", "D");
+            ResetBitString("0", "D");
             break;
         case 0x83:
-            ResetBitString(instr_stream, "0", "E");
+            ResetBitString("0", "E");
             break;
         case 0x84:
-            ResetBitString(instr_stream, "0", "H");
+            ResetBitString("0", "H");
             break;
         case 0x85:
-            ResetBitString(instr_stream, "0", "L");
+            ResetBitString("0", "L");
             break;
         case 0x86:
-            ResetBitString(instr_stream, "0", "(HL)");
+            ResetBitString("0", "(HL)");
             break;
         case 0x87:
-            ResetBitString(instr_stream, "0", "A");
+            ResetBitString("0", "A");
             break;
         case 0x88:
-            ResetBitString(instr_stream, "1", "B");
+            ResetBitString("1", "B");
             break;
         case 0x89:
-            ResetBitString(instr_stream, "1", "C");
+            ResetBitString("1", "C");
             break;
         case 0x8A:
-            ResetBitString(instr_stream, "1", "D");
+            ResetBitString("1", "D");
             break;
         case 0x8B:
-            ResetBitString(instr_stream, "1", "E");
+            ResetBitString("1", "E");
             break;
         case 0x8C:
-            ResetBitString(instr_stream, "1", "H");
+            ResetBitString("1", "H");
             break;
         case 0x8D:
-            ResetBitString(instr_stream, "1", "L");
+            ResetBitString("1", "L");
             break;
         case 0x8E:
-            ResetBitString(instr_stream, "1", "(HL)");
+            ResetBitString("1", "(HL)");
             break;
         case 0x8F:
-            ResetBitString(instr_stream, "1", "A");
+            ResetBitString("1", "A");
             break;
         case 0x90:
-            ResetBitString(instr_stream, "2", "B");
+            ResetBitString("2", "B");
             break;
         case 0x91:
-            ResetBitString(instr_stream, "2", "C");
+            ResetBitString("2", "C");
             break;
         case 0x92:
-            ResetBitString(instr_stream, "2", "D");
+            ResetBitString("2", "D");
             break;
         case 0x93:
-            ResetBitString(instr_stream, "2", "E");
+            ResetBitString("2", "E");
             break;
         case 0x94:
-            ResetBitString(instr_stream, "2", "H");
+            ResetBitString("2", "H");
             break;
         case 0x95:
-            ResetBitString(instr_stream, "2", "L");
+            ResetBitString("2", "L");
             break;
         case 0x96:
-            ResetBitString(instr_stream, "2", "(HL)");
+            ResetBitString("2", "(HL)");
             break;
         case 0x97:
-            ResetBitString(instr_stream, "2", "A");
+            ResetBitString("2", "A");
             break;
         case 0x98:
-            ResetBitString(instr_stream, "3", "B");
+            ResetBitString("3", "B");
             break;
         case 0x99:
-            ResetBitString(instr_stream, "3", "C");
+            ResetBitString("3", "C");
             break;
         case 0x9A:
-            ResetBitString(instr_stream, "3", "D");
+            ResetBitString("3", "D");
             break;
         case 0x9B:
-            ResetBitString(instr_stream, "3", "E");
+            ResetBitString("3", "E");
             break;
         case 0x9C:
-            ResetBitString(instr_stream, "3", "H");
+            ResetBitString("3", "H");
             break;
         case 0x9D:
-            ResetBitString(instr_stream, "3", "L");
+            ResetBitString("3", "L");
             break;
         case 0x9E:
-            ResetBitString(instr_stream, "3", "(HL)");
+            ResetBitString("3", "(HL)");
             break;
         case 0x9F:
-            ResetBitString(instr_stream, "3", "A");
+            ResetBitString("3", "A");
             break;
         case 0xA0:
-            ResetBitString(instr_stream, "4", "B");
+            ResetBitString("4", "B");
             break;
         case 0xA1:
-            ResetBitString(instr_stream, "4", "C");
+            ResetBitString("4", "C");
             break;
         case 0xA2:
-            ResetBitString(instr_stream, "4", "D");
+            ResetBitString("4", "D");
             break;
         case 0xA3:
-            ResetBitString(instr_stream, "4", "E");
+            ResetBitString("4", "E");
             break;
         case 0xA4:
-            ResetBitString(instr_stream, "4", "H");
+            ResetBitString("4", "H");
             break;
         case 0xA5:
-            ResetBitString(instr_stream, "4", "L");
+            ResetBitString("4", "L");
             break;
         case 0xA6:
-            ResetBitString(instr_stream, "4", "(HL)");
+            ResetBitString("4", "(HL)");
             break;
         case 0xA7:
-            ResetBitString(instr_stream, "4", "A");
+            ResetBitString("4", "A");
             break;
         case 0xA8:
-            ResetBitString(instr_stream, "5", "B");
+            ResetBitString("5", "B");
             break;
         case 0xA9:
-            ResetBitString(instr_stream, "5", "C");
+            ResetBitString("5", "C");
             break;
         case 0xAA:
-            ResetBitString(instr_stream, "5", "D");
+            ResetBitString("5", "D");
             break;
         case 0xAB:
-            ResetBitString(instr_stream, "5", "E");
+            ResetBitString("5", "E");
             break;
         case 0xAC:
-            ResetBitString(instr_stream, "5", "H");
+            ResetBitString("5", "H");
             break;
         case 0xAD:
-            ResetBitString(instr_stream, "5", "L");
+            ResetBitString("5", "L");
             break;
         case 0xAE:
-            ResetBitString(instr_stream, "5", "(HL)");
+            ResetBitString("5", "(HL)");
             break;
         case 0xAF:
-            ResetBitString(instr_stream, "5", "A");
+            ResetBitString("5", "A");
             break;
         case 0xB0:
-            ResetBitString(instr_stream, "6", "B");
+            ResetBitString("6", "B");
             break;
         case 0xB1:
-            ResetBitString(instr_stream, "6", "C");
+            ResetBitString("6", "C");
             break;
         case 0xB2:
-            ResetBitString(instr_stream, "6", "D");
+            ResetBitString("6", "D");
             break;
         case 0xB3:
-            ResetBitString(instr_stream, "6", "E");
+            ResetBitString("6", "E");
             break;
         case 0xB4:
-            ResetBitString(instr_stream, "6", "H");
+            ResetBitString("6", "H");
             break;
         case 0xB5:
-            ResetBitString(instr_stream, "6", "L");
+            ResetBitString("6", "L");
             break;
         case 0xB6:
-            ResetBitString(instr_stream, "6", "(HL)");
+            ResetBitString("6", "(HL)");
             break;
         case 0xB7:
-            ResetBitString(instr_stream, "6", "A");
+            ResetBitString("6", "A");
             break;
         case 0xB8:
-            ResetBitString(instr_stream, "7", "B");
+            ResetBitString("7", "B");
             break;
         case 0xB9:
-            ResetBitString(instr_stream, "7", "C");
+            ResetBitString("7", "C");
             break;
         case 0xBA:
-            ResetBitString(instr_stream, "7", "D");
+            ResetBitString("7", "D");
             break;
         case 0xBB:
-            ResetBitString(instr_stream, "7", "E");
+            ResetBitString("7", "E");
             break;
         case 0xBC:
-            ResetBitString(instr_stream, "7", "H");
+            ResetBitString("7", "H");
             break;
         case 0xBD:
-            ResetBitString(instr_stream, "7", "L");
+            ResetBitString("7", "L");
             break;
         case 0xBE:
-            ResetBitString(instr_stream, "7", "(HL)");
+            ResetBitString("7", "(HL)");
             break;
         case 0xBF:
-            ResetBitString(instr_stream, "7", "A");
+            ResetBitString("7", "A");
             break;
         // SET b, R -- set bit b of the value in register R.
         // Flags unchanged
         case 0xC0:
-            SetBitString(instr_stream, "0", "B");
+            SetBitString("0", "B");
             break;
         case 0xC1:
-            SetBitString(instr_stream, "0", "C");
+            SetBitString("0", "C");
             break;
         case 0xC2:
-            SetBitString(instr_stream, "0", "D");
+            SetBitString("0", "D");
             break;
         case 0xC3:
-            SetBitString(instr_stream, "0", "E");
+            SetBitString("0", "E");
             break;
         case 0xC4:
-            SetBitString(instr_stream, "0", "H");
+            SetBitString("0", "H");
             break;
         case 0xC5:
-            SetBitString(instr_stream, "0", "L");
+            SetBitString("0", "L");
             break;
         case 0xC6:
-            SetBitString(instr_stream, "0", "(HL)");
+            SetBitString("0", "(HL)");
             break;
         case 0xC7:
-            SetBitString(instr_stream, "0", "A");
+            SetBitString("0", "A");
             break;
         case 0xC8:
-            SetBitString(instr_stream, "1", "B");
+            SetBitString("1", "B");
             break;
         case 0xC9:
-            SetBitString(instr_stream, "1", "C");
+            SetBitString("1", "C");
             break;
         case 0xCA:
-            SetBitString(instr_stream, "1", "D");
+            SetBitString("1", "D");
             break;
         case 0xCB:
-            SetBitString(instr_stream, "1", "E");
+            SetBitString("1", "E");
             break;
         case 0xCC:
-            SetBitString(instr_stream, "1", "H");
+            SetBitString("1", "H");
             break;
         case 0xCD:
-            SetBitString(instr_stream, "1", "L");
+            SetBitString("1", "L");
             break;
         case 0xCE:
-            SetBitString(instr_stream, "1", "(HL)");
+            SetBitString("1", "(HL)");
             break;
         case 0xCF:
-            SetBitString(instr_stream, "1", "A");
+            SetBitString("1", "A");
             break;
         case 0xD0:
-            SetBitString(instr_stream, "2", "B");
+            SetBitString("2", "B");
             break;
         case 0xD1:
-            SetBitString(instr_stream, "2", "C");
+            SetBitString("2", "C");
             break;
         case 0xD2:
-            SetBitString(instr_stream, "2", "D");
+            SetBitString("2", "D");
             break;
         case 0xD3:
-            SetBitString(instr_stream, "2", "E");
+            SetBitString("2", "E");
             break;
         case 0xD4:
-            SetBitString(instr_stream, "2", "H");
+            SetBitString("2", "H");
             break;
         case 0xD5:
-            SetBitString(instr_stream, "2", "L");
+            SetBitString("2", "L");
             break;
         case 0xD6:
-            SetBitString(instr_stream, "2", "(HL)");
+            SetBitString("2", "(HL)");
             break;
         case 0xD7:
-            SetBitString(instr_stream, "2", "A");
+            SetBitString("2", "A");
             break;
         case 0xD8:
-            SetBitString(instr_stream, "3", "B");
+            SetBitString("3", "B");
             break;
         case 0xD9:
-            SetBitString(instr_stream, "3", "C");
+            SetBitString("3", "C");
             break;
         case 0xDA:
-            SetBitString(instr_stream, "3", "D");
+            SetBitString("3", "D");
             break;
         case 0xDB:
-            SetBitString(instr_stream, "3", "E");
+            SetBitString("3", "E");
             break;
         case 0xDC:
-            SetBitString(instr_stream, "3", "H");
+            SetBitString("3", "H");
             break;
         case 0xDD:
-            SetBitString(instr_stream, "3", "L");
+            SetBitString("3", "L");
             break;
         case 0xDE:
-            SetBitString(instr_stream, "3", "(HL)");
+            SetBitString("3", "(HL)");
             break;
         case 0xDF:
-            SetBitString(instr_stream, "3", "A");
+            SetBitString("3", "A");
             break;
         case 0xE0:
-            SetBitString(instr_stream, "4", "B");
+            SetBitString("4", "B");
             break;
         case 0xE1:
-            SetBitString(instr_stream, "4", "C");
+            SetBitString("4", "C");
             break;
         case 0xE2:
-            SetBitString(instr_stream, "4", "D");
+            SetBitString("4", "D");
             break;
         case 0xE3:
-            SetBitString(instr_stream, "4", "E");
+            SetBitString("4", "E");
             break;
         case 0xE4:
-            SetBitString(instr_stream, "4", "H");
+            SetBitString("4", "H");
             break;
         case 0xE5:
-            SetBitString(instr_stream, "4", "L");
+            SetBitString("4", "L");
             break;
         case 0xE6:
-            SetBitString(instr_stream, "4", "(HL)");
+            SetBitString("4", "(HL)");
             break;
         case 0xE7:
-            SetBitString(instr_stream, "4", "A");
+            SetBitString("4", "A");
             break;
         case 0xE8:
-            SetBitString(instr_stream, "5", "B");
+            SetBitString("5", "B");
             break;
         case 0xE9:
-            SetBitString(instr_stream, "5", "C");
+            SetBitString("5", "C");
             break;
         case 0xEA:
-            SetBitString(instr_stream, "5", "D");
+            SetBitString("5", "D");
             break;
         case 0xEB:
-            SetBitString(instr_stream, "5", "E");
+            SetBitString("5", "E");
             break;
         case 0xEC:
-            SetBitString(instr_stream, "5", "H");
+            SetBitString("5", "H");
             break;
         case 0xED:
-            SetBitString(instr_stream, "5", "L");
+            SetBitString("5", "L");
             break;
         case 0xEE:
-            SetBitString(instr_stream, "5", "(HL)");
+            SetBitString("5", "(HL)");
             break;
         case 0xEF:
-            SetBitString(instr_stream, "5", "A");
+            SetBitString("5", "A");
             break;
         case 0xF0:
-            SetBitString(instr_stream, "6", "B");
+            SetBitString("6", "B");
             break;
         case 0xF1:
-            SetBitString(instr_stream, "6", "C");
+            SetBitString("6", "C");
             break;
         case 0xF2:
-            SetBitString(instr_stream, "6", "D");
+            SetBitString("6", "D");
             break;
         case 0xF3:
-            SetBitString(instr_stream, "6", "E");
+            SetBitString("6", "E");
             break;
         case 0xF4:
-            SetBitString(instr_stream, "6", "H");
+            SetBitString("6", "H");
             break;
         case 0xF5:
-            SetBitString(instr_stream, "6", "L");
+            SetBitString("6", "L");
             break;
         case 0xF6:
-            SetBitString(instr_stream, "6", "(HL)");
+            SetBitString("6", "(HL)");
             break;
         case 0xF7:
-            SetBitString(instr_stream, "6", "A");
+            SetBitString("6", "A");
             break;
         case 0xF8:
-            SetBitString(instr_stream, "7", "B");
+            SetBitString("7", "B");
             break;
         case 0xF9:
-            SetBitString(instr_stream, "7", "C");
+            SetBitString("7", "C");
             break;
         case 0xFA:
-            SetBitString(instr_stream, "7", "D");
+            SetBitString("7", "D");
             break;
         case 0xFB:
-            SetBitString(instr_stream, "7", "E");
+            SetBitString("7", "E");
             break;
         case 0xFC:
-            SetBitString(instr_stream, "7", "H");
+            SetBitString("7", "H");
             break;
         case 0xFD:
-            SetBitString(instr_stream, "7", "L");
+            SetBitString("7", "L");
             break;
         case 0xFE:
-            SetBitString(instr_stream, "7", "(HL)");
+            SetBitString("7", "(HL)");
             break;
         case 0xFF:
-            SetBitString(instr_stream, "7", "A");
+            SetBitString("7", "A");
             break;
 
         default:
@@ -1988,11 +1986,11 @@ void Logging::Disassemble(fmt::MemoryWriter& instr_stream, const u16 pc) const {
         break;
 
     default:
-        UnknownOpcodeString(instr_stream, gameboy.mem->ReadMem(pc));
+        UnknownOpcodeString(gameboy.mem->ReadMem(pc));
         break;
     }
 
-    instr_stream.write("\n");
+    fmt::print(log_stream, "\n");
 }
 
 } // End namespace Gb

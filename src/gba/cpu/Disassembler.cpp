@@ -76,28 +76,26 @@ void Disassembler::DisassembleArm(Arm opcode, const std::array<u32, 16>& regs, u
 }
 
 void Disassembler::LogRegisters(const std::array<u32, 16>& regs, u32 cpsr) {
-    fmt::MemoryWriter regs_str;
     for (int i = 0; i < 13; ++i) {
-        regs_str.write("R{:X}=0x{:0>8X}, ", i, regs[i]);
+        fmt::print(log_stream, "R{:X}=0x{:0>8X}, ", i, regs[i]);
         if (i == 4 || i == 9) {
-            regs_str.write("\n");
+            fmt::print(log_stream, "\n");
         }
     }
 
-    regs_str.write("SP=0x{:0>8X}, ", regs[sp]);
-    regs_str.write("LR=0x{:0>8X}, ", regs[lr]);
-    regs_str.write("{}", (cpsr & 0x8000'0000) ? "N" : "");
-    regs_str.write("{}", (cpsr & 0x4000'0000) ? "Z" : "");
-    regs_str.write("{}", (cpsr & 0x2000'0000) ? "C" : "");
-    regs_str.write("{}\n\n", (cpsr & 0x1000'0000) ? "V" : "");
-
-    fmt::print(log_stream, regs_str.str());
+    fmt::print(log_stream, "SP=0x{:0>8X}, ", regs[sp]);
+    fmt::print(log_stream, "LR=0x{:0>8X}, ", regs[lr]);
+    fmt::print(log_stream, "{}", (cpsr & 0x8000'0000) ? "N" : "");
+    fmt::print(log_stream, "{}", (cpsr & 0x4000'0000) ? "Z" : "");
+    fmt::print(log_stream, "{}", (cpsr & 0x2000'0000) ? "C" : "");
+    fmt::print(log_stream, "{}\n\n", (cpsr & 0x1000'0000) ? "V" : "");
 }
 
 void Disassembler::LogHalt() {
     if (log_level != LogLevel::None) {
         fmt::print(log_stream, "Halted for {} cycles\n", halt_cycles);
     }
+
     halt_cycles = 0;
 }
 
@@ -121,10 +119,8 @@ void Disassembler::SwitchLogLevel() {
         }
     };
 
-    const std::string switch_str{fmt::format("Log level changed to {}\n", LogLevelString(log_level))};
-
-    fmt::print(log_stream, switch_str);
-    fmt::print(switch_str);
+    fmt::print(log_stream, "Log level changed to {}\n", LogLevelString(log_level));
+    fmt::print("Log level changed to {}\n", LogLevelString(log_level));
 }
 
 std::string Disassembler::RegStr(Reg r) {
@@ -151,23 +147,19 @@ std::string Disassembler::ShiftStr(ImmediateShift shift) {
 std::string Disassembler::ListStr(u32 reg_list) {
     const std::bitset<16> rlist{reg_list};
     Reg highest_reg = HighestSetBit(reg_list);
-    fmt::MemoryWriter list_str;
+    std::string list_str{"{"};
 
-    list_str << "{";
-
-    for (Reg i = 0; i < 16; ++i) {
+    for (Reg i = 0; i < highest_reg + 1; ++i) {
         if (rlist[i]) {
             if (i == highest_reg) {
-                list_str << RegStr(i);
+                list_str += RegStr(i) + "}";
             } else {
-                list_str << RegStr(i) << ", ";
+                list_str += RegStr(i) + ", ";
             }
         }
     }
 
-    list_str << "}";
-
-    return list_str.str();
+    return list_str;
 }
 
 std::string Disassembler::AddrOffset(bool pre_indexed, bool add, bool wb, u32 imm) {
@@ -183,21 +175,23 @@ std::string Disassembler::AddrOffset(bool pre_indexed, bool add, bool wb, u32 im
 }
 
 std::string Disassembler::StatusReg(bool spsr, u32 mask) {
-    fmt::MemoryWriter psr;
+    std::string psr;
 
     if (spsr) {
-        psr << "SPSR_";
+        psr = "SPSR_";
     } else {
-        psr << "CPSR_";
+        psr = "CPSR_";
     }
 
     if (mask & 0x1) {
-        psr << "c";
-    } else if (mask & 0x8){
-        psr << "f";
+        psr += "c";
     }
 
-    return psr.str();
+    if (mask & 0x8){
+        psr += "f";
+    }
+
+    return psr;
 }
 
 void format_arg(fmt::BasicFormatter<char> &f, const char *&, const Condition &cond) {

@@ -42,29 +42,25 @@ void Logging::LogInstruction(const Registers& regs, const u16 pc) {
         return;
     }
 
-    fmt::MemoryWriter cpu_log;
-
-    Disassemble(cpu_log, pc);
+    Disassemble(pc);
 
     if (log_level == LogLevel::Registers) {
-        cpu_log.write( "A=0x{0:0>2X}", regs.reg8[1]);
-        cpu_log.write(" B=0x{0:0>2X}", regs.reg8[3]);
-        cpu_log.write(" C=0x{0:0>2X}", regs.reg8[2]);
-        cpu_log.write(" D=0x{0:0>2X}", regs.reg8[5]);
-        cpu_log.write(" E=0x{0:0>2X}", regs.reg8[4]);
-        cpu_log.write(" H=0x{0:0>2X}", regs.reg8[7]);
-        cpu_log.write(" L=0x{0:0>2X}", regs.reg8[6]);
-        cpu_log.write(" SP=0x{0:0>4X}", regs.reg16[4]);
-        cpu_log.write(" IF=0x{0:0>2X}", gameboy.mem->ReadMem(0xFF0F));
-        cpu_log.write(" IE=0x{0:0>2X} ", gameboy.mem->ReadMem(0xFFFF));
-        cpu_log.write("{}", (regs.reg8[0] & 0x80) ? "Z" : "");
-        cpu_log.write("{}", (regs.reg8[0] & 0x40) ? "N" : "");
-        cpu_log.write("{}", (regs.reg8[0] & 0x20) ? "H" : "");
-        cpu_log.write("{}", (regs.reg8[0] & 0x10) ? "C" : "");
-        cpu_log.write("\n\n");
+        fmt::print(log_stream,  "A=0x{0:0>2X}", regs.reg8[1]);
+        fmt::print(log_stream, " B=0x{0:0>2X}", regs.reg8[3]);
+        fmt::print(log_stream, " C=0x{0:0>2X}", regs.reg8[2]);
+        fmt::print(log_stream, " D=0x{0:0>2X}", regs.reg8[5]);
+        fmt::print(log_stream, " E=0x{0:0>2X}", regs.reg8[4]);
+        fmt::print(log_stream, " H=0x{0:0>2X}", regs.reg8[7]);
+        fmt::print(log_stream, " L=0x{0:0>2X}", regs.reg8[6]);
+        fmt::print(log_stream, " SP=0x{0:0>4X}", regs.reg16[4]);
+        fmt::print(log_stream, " IF=0x{0:0>2X}", gameboy.mem->ReadMem(0xFF0F));
+        fmt::print(log_stream, " IE=0x{0:0>2X} ", gameboy.mem->ReadMem(0xFFFF));
+        fmt::print(log_stream, "{}", (regs.reg8[0] & 0x80) ? "Z" : "");
+        fmt::print(log_stream, "{}", (regs.reg8[0] & 0x40) ? "N" : "");
+        fmt::print(log_stream, "{}", (regs.reg8[0] & 0x20) ? "H" : "");
+        fmt::print(log_stream, "{}", (regs.reg8[0] & 0x10) ? "C" : "");
+        fmt::print(log_stream, "\n\n");
     }
-
-    log_stream << cpu_log.c_str();
 }
 
 void Logging::LogInterrupt() {
@@ -88,13 +84,14 @@ void Logging::LogInterrupt() {
         return "";
     };
 
-    log_stream << fmt::format("{} Interrupt\n", InterruptString());
+    fmt::print(log_stream, "{} Interrupt\n", InterruptString());
 }
 
 void Logging::LogHalt() {
     if (log_level != LogLevel::None) {
         fmt::print(log_stream, "Halted for {} cycles\n", halt_cycles);
     }
+
     halt_cycles = 0;
 }
 
@@ -119,10 +116,8 @@ void Logging::SwitchLogLevel() {
         }
     };
 
-    const std::string switch_str{fmt::format("\nLog level changed to {}\n", LogLevelString())};
-
-    log_stream << switch_str;
-    fmt::print(switch_str);
+    fmt::print(log_stream, "Log level changed to {}\n", LogLevelString());
+    fmt::print("Log level changed to {}\n", LogLevelString());
 }
 
 } // End namespace Gb
