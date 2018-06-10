@@ -182,7 +182,9 @@ private:
     enum class SaveType {Unknown,
                          SRam,
                          Eeprom,
-                         Flash};
+                         Flash,
+                         Flash128,
+                         None};
 
     static constexpr Region GetRegion(const u32 addr) {
         constexpr u32 region_offset = 24;
@@ -241,10 +243,9 @@ private:
 
     void ReadSaveFile();
     void WriteSaveFile() const;
+    void CheckOverrides();
     void InitSRam();
-
     void InitFlash();
-
     u16 ParseEepromAddr(int stream_size, int non_addr_bits);
     void InitEeprom(int stream_size, int non_addr_bits);
 
