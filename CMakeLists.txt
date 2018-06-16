@@ -5,15 +5,6 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(WARNING_FLAGS "-Wall -Wextra -Wshadow")
-set(CHROMA_FLAGS "-fdiagnostics-color ${WARNING_FLAGS}")
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CHROMA_FLAGS}")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CHROMA_FLAGS}")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${CHROMA_FLAGS}")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CHROMA_FLAGS}")
-set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} ${CHROMA_FLAGS}")
-
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 find_package(SDL2 REQUIRED)
@@ -21,3 +12,5 @@ include_directories(${SDL2_INCLUDE_DIR})
 
 add_subdirectory(externals)
 add_subdirectory(src)
+
+target_compile_options(chroma PRIVATE -Wall -Wextra -Wshadow -fdiagnostics-color)
