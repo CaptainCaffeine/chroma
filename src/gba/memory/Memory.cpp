@@ -339,7 +339,7 @@ int Memory::AccessTime(const u32 addr, AccessType access_type) {
     auto RomTime = [this, sequential, access_type](int i) -> int {
         if (PrefetchEnabled() && access_type == AccessType::Opcode && prefetched_opcodes > 0) {
             prefetched_opcodes -= 1;
-            return 1;
+            return 1 << u32_access;
         }
 
         int access_cycles;
@@ -404,8 +404,8 @@ int Memory::AccessTime(const u32 addr, AccessType access_type) {
         break;
     }
 
-    if (PrefetchEnabled() && access_type == AccessType::Normal
-                          && addr < BaseAddr::Rom
+    if (PrefetchEnabled() && access_type != AccessType::Opcode
+                          && (addr < BaseAddr::Rom || addr >= BaseAddr::Max)
                           && core.cpu->GetPc() >= BaseAddr::Rom) {
         RunPrefetch(access_cycles);
     }
@@ -457,6 +457,8 @@ void Memory::RunPrefetch(int cycles) {
         throw std::runtime_error("Ran prefetch while the PC is not in ROM.");
         break;
     }
+
+    wait_states -= 1;
 
     if (core.cpu->ThumbMode()) {
         if (prefetch_cycles >= wait_states) {

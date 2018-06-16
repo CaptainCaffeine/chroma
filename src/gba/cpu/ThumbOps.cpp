@@ -99,7 +99,7 @@ int Cpu::Thumb_Load(u32 imm, Reg n, Reg t, LoadOp op) {
 
     // Plus one internal cycle to transfer the loaded value to Rt.
     cycles += 1;
-    InternalCycle(1);
+    LoadInternalCycle(1);
 
     return cycles;
 }
@@ -391,7 +391,7 @@ int Cpu::Thumb_Ldm(Reg n, u32 reg_list) {
         regs[n] = addr;
     }
 
-    InternalCycle(1);
+    LoadInternalCycle(1);
 
     return cycles;
 }
@@ -419,7 +419,7 @@ int Cpu::Thumb_LdrPcImm(Reg t, u32 imm) {
     // Plus one internal cycle to transfer the loaded value to Rt.
     int cycles = 1 + mem.AccessTime<u32>(addr);
 
-    InternalCycle(1);
+    LoadInternalCycle(1);
 
     return cycles;
 }
@@ -493,6 +493,8 @@ int Cpu::Thumb_Pop(bool p, u32 reg_list) {
             addr += 4;
         }
     }
+
+    LoadInternalCycle(1);
 
     if (p) {
         cycles += Thumb_BranchWritePC(mem.ReadMem<u32>(addr));

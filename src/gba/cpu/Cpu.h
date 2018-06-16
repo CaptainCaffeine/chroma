@@ -142,6 +142,7 @@ private:
     int TakeException(CpuMode exception_type);
     int ReturnFromException(u32 address);
 
+    void LoadInternalCycle(int cycles);
     void InternalCycle(int cycles);
 
     void SetSign(bool val)     { (val) ? (cpsr |= sign_flag)     : (cpsr &= ~sign_flag); }

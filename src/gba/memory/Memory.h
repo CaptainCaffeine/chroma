@@ -46,6 +46,7 @@ public:
 
     void MakeNextAccessSequential(u32 addr) { last_addr = addr; }
     void MakeNextAccessNonsequential() { last_addr = 0; }
+    bool LastAccessWasInRom() const { return last_addr >= BaseAddr::Rom; }
 
     bool PrefetchEnabled() const { return waitcnt & 0x4000; }
     void RunPrefetch(int cycles);

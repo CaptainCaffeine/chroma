@@ -279,22 +279,36 @@ int Cpu::ReturnFromException(u32 address) {
     }
 }
 
-void Cpu::InternalCycle(int cycles) {
-    if (mem.PrefetchEnabled()) {
-        if (regs[pc] >= 0x0800'0000) {
-            mem.RunPrefetch(cycles);
+void Cpu::LoadInternalCycle(int cycles) {
+    if (regs[pc] >= BaseAddr::Rom) {
+        if (mem.PrefetchEnabled()) {
+            if (core.mem->LastAccessWasInRom()) {
+                // Bug: the next access is non-sequential if the load was from ROM. Possibly related to the
+                // prefetch disable bug.
+                mem.MakeNextAccessNonsequential();
+            } else {
+                mem.RunPrefetch(cycles);
+                mem.MakeNextAccessSequential(regs[pc]);
+            }
+        } else {
+            // Prefetch disable bug: make the next access non-sequential.
+            mem.MakeNextAccessNonsequential();
         }
-
+    } else {
         // Make the next access sequential. This only has an effect for LDR/LDM/SWP opcodes, in which case the next
         // opcode fetch is a sequential access, despite the data load. It could be that the I-cycle gives it the
         // extra time to decode the next expected opcode address.
         mem.MakeNextAccessSequential(regs[pc]);
-    } else {
-        if (regs[pc] >= 0x0800'0000) {
+    }
+}
+
+void Cpu::InternalCycle(int cycles) {
+    if (regs[pc] >= BaseAddr::Rom) {
+        if (mem.PrefetchEnabled()) {
+            mem.RunPrefetch(cycles);
+        } else {
             // Prefetch disable bug: make the next access non-sequential.
             mem.MakeNextAccessNonsequential();
-        } else {
-            mem.MakeNextAccessSequential(regs[pc]);
         }
     }
 }

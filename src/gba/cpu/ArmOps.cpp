@@ -388,7 +388,7 @@ int Cpu::Arm_LoadImm(Condition cond, bool pre_indexed, bool add, bool writeback,
 
     // Plus one internal cycle to transfer the loaded value to Rt.
     cycles += 1;
-    InternalCycle(1);
+    LoadInternalCycle(1);
 
     return cycles;
 }
@@ -426,7 +426,7 @@ int Cpu::Arm_LoadReg(Condition cond, bool pre_indexed, bool add, bool writeback,
 
     // Plus one internal cycle to transfer the loaded value to Rt.
     cycles += 1;
-    InternalCycle(1);
+    LoadInternalCycle(1);
 
     return cycles;
 }
@@ -891,11 +891,11 @@ int Cpu::Arm_Ldm(Condition cond, bool pre_indexed, bool increment, bool exceptio
         regs[n] += offset;
     }
 
+    LoadInternalCycle(1);
+
     if (rlist[pc]) {
         return cycles + AluWritePC(exception_return, mem.ReadMem<u32>(addr));
     }
-
-    InternalCycle(1);
 
     return cycles;
 }
@@ -924,6 +924,7 @@ int Cpu::Arm_LdrImm(Condition cond, bool pre_indexed, bool add, bool writeback, 
     u32 data = RotateRight(mem.ReadMem<u32>(addr), (addr & 0x3) * 8);
     // Plus one internal cycle to transfer the loaded value to Rt.
     int cycles = 1 + mem.AccessTime<u32>(addr);
+    LoadInternalCycle(1);
 
     if (t == pc) {
         assert((addr & 0x3) == 0x0); // Unpredictable
@@ -931,8 +932,6 @@ int Cpu::Arm_LdrImm(Condition cond, bool pre_indexed, bool add, bool writeback, 
     } else {
         regs[t] = data;
     }
-
-    InternalCycle(1);
 
     return cycles;
 }
@@ -967,6 +966,7 @@ int Cpu::Arm_LdrReg(Condition cond, bool pre_indexed, bool add, bool writeback, 
     u32 data = RotateRight(mem.ReadMem<u32>(addr), (addr & 0x3) * 8);
     // Plus one internal cycle to transfer the loaded value to Rt.
     int cycles = 1 + mem.AccessTime<u32>(addr);
+    LoadInternalCycle(1);
 
     if (t == pc) {
         assert((addr & 0x3) == 0x0); // Unpredictable
@@ -974,8 +974,6 @@ int Cpu::Arm_LdrReg(Condition cond, bool pre_indexed, bool add, bool writeback, 
     } else {
         regs[t] = data;
     }
-
-    InternalCycle(1);
 
     return cycles;
 }
@@ -1057,6 +1055,7 @@ int Cpu::Arm_PopA2(Condition cond, Reg t) {
 
     // Plus one internal cycle to transfer the loaded value to Rt.
     int cycles = 1 + mem.AccessTime<u32>(regs[sp]);
+    LoadInternalCycle(1);
 
     // Unaligned reads are allowed.
     u32 data = RotateRight(mem.ReadMem<u32>(regs[sp]), (regs[sp] & 0x3) * 8);
@@ -1070,8 +1069,6 @@ int Cpu::Arm_PopA2(Condition cond, Reg t) {
     if (t != sp) {
         regs[sp] += 4;
     }
-
-    InternalCycle(1);
 
     return cycles;
 }
@@ -1246,7 +1243,7 @@ int Cpu::Arm_SwpReg(Condition cond, bool byte, Reg n, Reg t, Reg t2) {
 
     regs[t] = data;
 
-    InternalCycle(1);
+    LoadInternalCycle(1);
 
     return cycles;
 }
