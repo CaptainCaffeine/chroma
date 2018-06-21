@@ -313,6 +313,14 @@ void Cpu::InternalCycle(int cycles) {
     }
 }
 
+void Cpu::StorePrefetch() {
+    // If STR/STM/PUSH is executed in ROM while prefetch is enabled, the next opcode fetch will be a sequential access
+    // instead of non-sequential.
+    if (regs[pc] >= BaseAddr::Rom && mem.PrefetchEnabled()) {
+        mem.MakeNextAccessSequential(regs[pc]);
+    }
+}
+
 int Cpu::BxWritePC(u32 addr) {
     if ((addr & 0x1) == 0x1) {
         // Switch to Thumb mode.

@@ -459,6 +459,8 @@ int Cpu::Arm_StoreImm(Condition cond, bool pre_indexed, bool add, bool writeback
         regs[n] += imm;
     }
 
+    StorePrefetch();
+
     return cycles;
 }
 
@@ -495,6 +497,8 @@ int Cpu::Arm_StoreReg(Condition cond, bool pre_indexed, bool add, bool writeback
     if (writeback) {
         regs[n] += offset;
     }
+
+    StorePrefetch();
 
     return cycles;
 }
@@ -1097,6 +1101,8 @@ int Cpu::Arm_PushA2(Condition cond, Reg t) {
         regs[sp] -= 4;
     }
 
+    StorePrefetch();
+
     return cycles;
 }
 
@@ -1157,6 +1163,8 @@ int Cpu::Arm_Stm(Condition cond, bool pre_indexed, bool increment, bool store_us
     if (writeback) {
         regs[n] += offset;
     }
+
+    StorePrefetch();
 
     return cycles;
 }

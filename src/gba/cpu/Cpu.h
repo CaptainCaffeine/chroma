@@ -144,6 +144,7 @@ private:
 
     void LoadInternalCycle(int cycles);
     void InternalCycle(int cycles);
+    void StorePrefetch();
 
     void SetSign(bool val)     { (val) ? (cpsr |= sign_flag)     : (cpsr &= ~sign_flag); }
     void SetZero(bool val)     { (val) ? (cpsr |= zero_flag)     : (cpsr &= ~zero_flag); }

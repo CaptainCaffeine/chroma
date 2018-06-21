@@ -106,7 +106,11 @@ int Cpu::Thumb_Load(u32 imm, Reg n, Reg t, LoadOp op) {
 
 int Cpu::Thumb_Store(u32 imm, Reg n, Reg t, StoreOp op) {
     u32 addr = regs[n] + imm;
-    return op(mem, addr, regs[t]);
+    int cycles = op(mem, addr, regs[t]);
+
+    StorePrefetch();
+
+    return cycles;
 }
 
 // Arithmetic Operators
@@ -532,6 +536,8 @@ int Cpu::Thumb_Push(bool m, u32 reg_list) {
         cycles += mem.AccessTime<u32>(addr);
     }
 
+    StorePrefetch();
+
     return cycles;
 }
 
@@ -557,6 +563,8 @@ int Cpu::Thumb_Stm(Reg n, u32 reg_list) {
     }
 
     regs[n] = addr;
+
+    StorePrefetch();
 
     return cycles;
 }
