@@ -331,9 +331,9 @@ template void Memory::WriteMem<u16>(const u32 addr, const u16 data, bool dma);
 template void Memory::WriteMem<u32>(const u32 addr, const u32 data, bool dma);
 
 template <typename T>
-int Memory::AccessTime(const u32 addr, AccessType access_type) {
+int Memory::AccessTime(const u32 addr, AccessType access_type, bool force_sequential) {
     constexpr int u32_access = sizeof(T) / 4;
-    bool sequential = access_type == AccessType::Sequential || (addr - last_addr) <= 4;
+    const bool sequential = force_sequential || (addr - last_addr) <= 4;
     last_addr = addr;
 
     auto RomTime = [this, sequential, access_type](int i) -> int {
@@ -404,7 +404,7 @@ int Memory::AccessTime(const u32 addr, AccessType access_type) {
         break;
     }
 
-    if (PrefetchEnabled() && access_type != AccessType::Opcode
+    if (PrefetchEnabled() && access_type == AccessType::Normal
                           && (addr < BaseAddr::Rom || addr >= BaseAddr::Max)
                           && core.cpu->GetPc() >= BaseAddr::Rom) {
         RunPrefetch(access_cycles);
@@ -413,9 +413,9 @@ int Memory::AccessTime(const u32 addr, AccessType access_type) {
     return access_cycles;
 }
 
-template int Memory::AccessTime<u8>(const u32 addr, AccessType access_type);
-template int Memory::AccessTime<u16>(const u32 addr, AccessType access_type);
-template int Memory::AccessTime<u32>(const u32 addr, AccessType access_type);
+template int Memory::AccessTime<u8>(const u32 addr, AccessType access_type, bool force_sequential);
+template int Memory::AccessTime<u16>(const u32 addr, AccessType access_type, bool force_sequential);
+template int Memory::AccessTime<u32>(const u32 addr, AccessType access_type, bool force_sequential);
 
 void Memory::UpdateWaitStates() {
     auto WaitStates = [this](int shift) {

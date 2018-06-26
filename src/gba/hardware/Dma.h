@@ -60,7 +60,7 @@ private:
 
     void ReloadWordCount();
     template<typename T>
-    int Transfer(AccessType sequential);
+    int Transfer(bool sequential);
 
     // Control flags
     static constexpr u16 repeat     = 0x0200;

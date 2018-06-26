@@ -59,7 +59,7 @@ enum Interrupt {VBlank  = 0x0001,
 
 enum class AccessType {Normal,
                        Opcode,
-                       Sequential};
+                       Dma};
 
 namespace BaseAddr {
 enum BaseAddr {Bios   = 0x0000'0000,

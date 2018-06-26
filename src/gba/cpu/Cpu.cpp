@@ -314,9 +314,9 @@ void Cpu::InternalCycle(int cycles) {
 }
 
 void Cpu::StorePrefetch() {
-    // If STR/STM/PUSH is executed in ROM while prefetch is enabled, the next opcode fetch will be a sequential access
+    // If STR/STM/PUSH is executed while prefetch is enabled, the next opcode fetch will be a sequential access
     // instead of non-sequential.
-    if (regs[pc] >= BaseAddr::Rom && mem.PrefetchEnabled()) {
+    if (mem.PrefetchEnabled()) {
         mem.MakeNextAccessSequential(regs[pc]);
     }
 }

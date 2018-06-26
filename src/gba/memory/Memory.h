@@ -42,7 +42,7 @@ public:
     template <typename T>
     void WriteMem(const u32 addr, const T data, bool dma = false);
     template <typename T>
-    int AccessTime(const u32 addr, AccessType access_type = AccessType::Normal);
+    int AccessTime(const u32 addr, AccessType access_type = AccessType::Normal, bool force_sequential = false);
 
     void MakeNextAccessSequential(u32 addr) { last_addr = addr; }
     void MakeNextAccessNonsequential() { last_addr = 0; }

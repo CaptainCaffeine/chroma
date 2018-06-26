@@ -86,17 +86,17 @@ int Dma::Run() {
 
         // First read & write accesses are non-sequential, all subsequent accesses are sequential.
         if (TransferWidth() == 2) {
-            cycles_taken += Transfer<u16>(AccessType::Normal);
+            cycles_taken += Transfer<u16>(false);
         } else {
-            cycles_taken += Transfer<u32>(AccessType::Normal);
+            cycles_taken += Transfer<u32>(false);
         }
 
         starting = false;
     } else {
         if (TransferWidth() == 2) {
-            cycles_taken += Transfer<u16>(AccessType::Sequential);
+            cycles_taken += Transfer<u16>(true);
         } else {
-            cycles_taken += Transfer<u32>(AccessType::Sequential);
+            cycles_taken += Transfer<u32>(true);
         }
     }
 
@@ -120,6 +120,10 @@ int Dma::Run() {
         } else {
             // Disable the DMA.
             control &= ~enable;
+
+            if (core.mem->PrefetchEnabled()) {
+                core.mem->MakeNextAccessSequential(core.cpu->GetPc());
+            }
         }
 
         if (id == 3 && dest >= BaseAddr::Eeprom && core.mem->EepromAddr(dest)) {
@@ -136,7 +140,7 @@ int Dma::Run() {
 }
 
 template<typename T>
-int Dma::Transfer(AccessType sequential) {
+int Dma::Transfer(bool sequential) {
     if (!bad_source) {
         core.mem->transfer_reg = core.mem->ReadMem<T>(source, true);
         if (sizeof(T) == sizeof(u16)) {
@@ -145,7 +149,12 @@ int Dma::Transfer(AccessType sequential) {
     }
     core.mem->WriteMem<T>(dest, core.mem->transfer_reg, true);
 
-    int cycles = core.mem->AccessTime<T>(source, sequential) + core.mem->AccessTime<T>(dest, sequential);
+    int cycles = core.mem->AccessTime<T>(source, AccessType::Dma, sequential);
+    if (dest >= BaseAddr::Rom && source >= BaseAddr::Rom) {
+        cycles += core.mem->AccessTime<T>(dest, AccessType::Dma, true);
+    } else {
+        cycles += core.mem->AccessTime<T>(dest, AccessType::Dma, sequential);
+    }
 
     if (source >= BaseAddr::Rom && source < BaseAddr::SRam) {
         // Sequential accesses to ROM always read from the address incrementer.
