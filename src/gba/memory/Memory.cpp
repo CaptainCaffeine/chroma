@@ -336,12 +336,7 @@ int Memory::AccessTime(const u32 addr, AccessType access_type, bool force_sequen
     const bool sequential = force_sequential || (addr - last_addr) <= 4;
     last_addr = addr;
 
-    auto RomTime = [this, sequential, access_type](int i) -> int {
-        if (PrefetchEnabled() && access_type == AccessType::Opcode && prefetched_opcodes > 0) {
-            prefetched_opcodes -= 1;
-            return 1 << u32_access;
-        }
-
+    const auto RomTime = [this, sequential, access_type](int i) -> int {
         int access_cycles;
         if (sequential) {
             access_cycles = wait_state_s[i] << u32_access;
@@ -350,9 +345,14 @@ int Memory::AccessTime(const u32 addr, AccessType access_type, bool force_sequen
         }
 
         if (PrefetchEnabled() && access_type == AccessType::Opcode) {
-            int free_cycles = std::min(access_cycles - (1 << u32_access), prefetch_cycles);
-            access_cycles -= free_cycles;
-            prefetch_cycles -= free_cycles;
+            if (prefetched_opcodes > 0) {
+                prefetched_opcodes -= 1;
+                return 1 << u32_access;
+            } else {
+                int free_cycles = std::min(access_cycles - (1 << u32_access), prefetch_cycles);
+                access_cycles -= free_cycles;
+                prefetch_cycles -= free_cycles;
+            }
         }
 
         return access_cycles;
@@ -404,9 +404,9 @@ int Memory::AccessTime(const u32 addr, AccessType access_type, bool force_sequen
         break;
     }
 
-    if (PrefetchEnabled() && access_type == AccessType::Normal
+    if (PrefetchEnabled() && core.cpu->GetPc() >= BaseAddr::Rom
                           && (addr < BaseAddr::Rom || addr >= BaseAddr::Max)
-                          && core.cpu->GetPc() >= BaseAddr::Rom) {
+                          && access_type == AccessType::Normal) {
         RunPrefetch(access_cycles);
     }
 
