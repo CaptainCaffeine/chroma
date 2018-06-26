@@ -189,7 +189,7 @@ private:
 
     static constexpr Region GetRegion(const u32 addr) {
         constexpr u32 region_offset = 24;
-        return static_cast<Region>((addr >> region_offset) & 0x0F);
+        return static_cast<Region>(addr >> region_offset);
     }
 
     template <typename AccessWidth, typename BusWidth>
