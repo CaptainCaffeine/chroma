@@ -240,7 +240,7 @@ void Lcd::DrawScanline() {
                 // calculating blending effects, the GBA only considers the highest priority sprite on each pixel.
                 for (int i = 0; i < h_pixels; ++i) {
                     if ((sprite_scanlines[p][i] & alpha_bit) == 0) {
-                        if (IsFirstTarget(4) || semi_transparent[i]) {
+                        if (IsFirstTarget(4) || (sprite_flags[i] & semi_transparent_flag)) {
                             highest_first_target[i] = 4;
                         } else if (IsSecondTarget(4)) {
                             highest_second_target[i] = 4;
@@ -288,8 +288,9 @@ void Lcd::DrawScanline() {
                 if ((sprite_scanlines[p][i] & alpha_bit) == 0 && IsWithinWindow(4, i, vcount)) {
                     auto& buffer_pixel = back_buffer[vcount * h_pixels + i];
 
-                    if ((BlendMode() == Effect::AlphaBlend || semi_transparent[i]) && HighestTargetLayers(4, i)
-                                                                                   && IsWithinWindow(5, i, vcount)) {
+                    if ((BlendMode() == Effect::AlphaBlend || (sprite_flags[i] & semi_transparent_flag))
+                            && HighestTargetLayers(4, i)
+                            && IsWithinWindow(5, i, vcount)) {
                         for (int j = 0; j < 3; ++j) {
                             int channel_target1 = (sprite_scanlines[p][i] >> (5 * j)) & 0x1F;
                             int channel_target2 = (buffer_pixel >> (5 * j)) & 0x1F;
@@ -304,7 +305,7 @@ void Lcd::DrawScanline() {
                         // If a semi-transparent sprite blends, no other blending effects can occur on this pixel.
                         // So if a sprite pixel doesn't blend, we remove the semi-transparent flag (if present) so
                         // fade effects can be applied later.
-                        semi_transparent[i] = false;
+                        sprite_flags[i] &= ~semi_transparent_flag;
                     }
 
                     pixel_layer[i] = 4;
@@ -315,7 +316,7 @@ void Lcd::DrawScanline() {
 
     if (BlendMode() == Effect::Brighten || BlendMode() == Effect::Darken) {
         for (int i = 0; i < h_pixels; ++i) {
-            if (IsFirstTarget(pixel_layer[i]) && !(pixel_layer[i] == 4 && semi_transparent[i])
+            if (IsFirstTarget(pixel_layer[i]) && !(pixel_layer[i] == 4 && (sprite_flags[i] & semi_transparent_flag))
                                               && IsWithinWindow(5, i, vcount)) {
                 auto& buffer_pixel = back_buffer[vcount * h_pixels + i];
 
@@ -350,7 +351,7 @@ bool Lcd::IsWithinWindow(int layer_id, int x, int y) const {
         return InWindowContent(0, layer_id);
     } else if (WinEnabled(1) && windows[1].Contains(x, y)) {
         return InWindowContent(1, layer_id);
-    } else if (ObjWinEnabled() && obj_window[x]) {
+    } else if (ObjWinEnabled() && (sprite_flags[x] & obj_window_flag)) {
         return InWindowContent(3, layer_id);
     } else {
         return InWindowContent(2, layer_id);
@@ -432,13 +433,9 @@ void Lcd::DrawSprites() {
         }
     }
 
-    if (semi_transparent_used) {
-        std::fill(semi_transparent.begin(), semi_transparent.end(), false);
+    if (semi_transparent_used || obj_window_used) {
+        std::fill(sprite_flags.begin(), sprite_flags.end(), 0);
         semi_transparent_used = false;
-    }
-
-    if (obj_window_used) {
-        std::fill(obj_window.begin(), obj_window.end(), false);
         obj_window_used = false;
     }
 
@@ -520,7 +517,7 @@ void Lcd::DrawRegularSprite(const Sprite& sprite) {
 
             if ((pixel_colours[i] & alpha_bit) == 0) {
                 if (ObjWinEnabled() && sprite.mode == Sprite::Mode::ObjWindow) {
-                    obj_window[scanline_index] = true;
+                    sprite_flags[scanline_index] |= obj_window_flag;
                     obj_window_used = true;
                 } else {
                     sprite_scanlines[sprite.priority][scanline_index] = pixel_colours[i];
@@ -530,8 +527,10 @@ void Lcd::DrawRegularSprite(const Sprite& sprite) {
                         sprite_scanlines[j][scanline_index] |= alpha_bit;
                     }
 
-                    semi_transparent[scanline_index] = sprite.mode == Sprite::Mode::SemiTransparent;
-                    semi_transparent_used = semi_transparent_used || sprite.mode == Sprite::Mode::SemiTransparent;
+                    if (sprite.mode == Sprite::Mode::SemiTransparent) {
+                        sprite_flags[scanline_index] |= semi_transparent_flag;
+                        semi_transparent_used = true;
+                    }
                 }
             }
 
@@ -599,7 +598,7 @@ void Lcd::DrawAffineSprite(const Sprite& sprite) {
             if (palette_entry != 0) {
                 // Palette entry 0 is transparent.
                 if (ObjWinEnabled() && sprite.mode == Sprite::Mode::ObjWindow) {
-                    obj_window[scanline_index] = true;
+                    sprite_flags[scanline_index] |= obj_window_flag;
                     obj_window_used = true;
                 } else {
                     sprite_scanlines[sprite.priority][scanline_index] = pram[256 + palette_entry] & 0x7FFF;
@@ -609,8 +608,10 @@ void Lcd::DrawAffineSprite(const Sprite& sprite) {
                         sprite_scanlines[j][scanline_index] |= alpha_bit;
                     }
 
-                    semi_transparent[scanline_index] = sprite.mode == Sprite::Mode::SemiTransparent;
-                    semi_transparent_used = semi_transparent_used || sprite.mode == Sprite::Mode::SemiTransparent;
+                    if (sprite.mode == Sprite::Mode::SemiTransparent) {
+                        sprite_flags[scanline_index] |= semi_transparent_flag;
+                        semi_transparent_used = true;
+                    }
                 }
             }
         } else {
@@ -623,7 +624,7 @@ void Lcd::DrawAffineSprite(const Sprite& sprite) {
             if (palette_entry != 0) {
                 // Palette entry 0 is transparent.
                 if (ObjWinEnabled() && sprite.mode == Sprite::Mode::ObjWindow) {
-                    obj_window[scanline_index] = true;
+                    sprite_flags[scanline_index] |= obj_window_flag;
                     obj_window_used = true;
                 } else {
                     sprite_scanlines[sprite.priority][scanline_index] = pram[256 + sprite.palette * 16 + palette_entry] & 0x7FFF;
@@ -633,8 +634,10 @@ void Lcd::DrawAffineSprite(const Sprite& sprite) {
                         sprite_scanlines[j][scanline_index] |= alpha_bit;
                     }
 
-                    semi_transparent[scanline_index] = sprite.mode == Sprite::Mode::SemiTransparent;
-                    semi_transparent_used = semi_transparent_used || sprite.mode == Sprite::Mode::SemiTransparent;
+                    if (sprite.mode == Sprite::Mode::SemiTransparent) {
+                        sprite_flags[scanline_index] |= semi_transparent_flag;
+                        semi_transparent_used = true;
+                    }
                 }
             }
         }

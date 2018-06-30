@@ -253,9 +253,10 @@ private:
     std::vector<Sprite> sprites;
     std::array<std::array<u16, 240>, 4> sprite_scanlines;
     std::array<bool, 4> sprite_scanline_used{{true, true, true, true}};
-    std::array<bool, 240> semi_transparent;
+    std::array<u8, 240> sprite_flags;
+    static constexpr u8 semi_transparent_flag = 0x1;
+    static constexpr u8 obj_window_flag = 0x2;
     bool semi_transparent_used = true;
-    std::array<bool, 240> obj_window;
     bool obj_window_used = true;
 
     void DrawScanline();
