@@ -67,9 +67,14 @@ void Lcd::DumpSprites() const {
             }
 
             while (scanline_index < sprite.pixel_width) {
-                const auto& tile = sprite.tiles[tile_index];
+                int tile_addr = sprite.tile_base_addr + tile_index * sprite.tile_bytes;
+                if (ObjMapping2D()) {
+                    const int h = tile_index / sprite.tile_width;
+                    tile_addr += h * sprite.tile_bytes * ((sprite.single_palette ? 16 : 32) - sprite.tile_width);
+                }
                 tile_index += tile_direction;
-                const std::array<u16, 8> pixel_colours = GetTilePixels(tile, sprite.single_palette, sprite.h_flip,
+
+                const std::array<u16, 8> pixel_colours = GetTilePixels(tile_addr, sprite.single_palette, sprite.h_flip,
                                                                        pixel_row, sprite.palette, 256);
 
                 for (int i = 0; i < 8; ++i) {
@@ -91,22 +96,24 @@ std::vector<BgTile> Bg::ReadEntireTileMap() const {
     // Get all of the map entries from the specified screenblock.
     auto ReadMap = [this, &all_tiles](int screenblock) {
         const int map_addr = (MapBase() + 0x800 * screenblock) / 2;
+        const int tile_bytes = SinglePalette() ? 64 : 32;
 
         for (int i = 0; i < 1024; ++i) {
-            all_tiles.emplace_back(lcd.vram[map_addr + i]);
+            all_tiles.emplace_back(lcd.vram[map_addr + i], TileBase(), tile_bytes);
         }
     };
 
     auto ReadHorizontalMap = [this, &all_tiles](int screenblock) {
         const int map_addr0 = (MapBase() + 0x800 * screenblock) / 2;
         const int map_addr1 = (MapBase() + 0x800 * (screenblock + 1)) / 2;
+        const int tile_bytes = SinglePalette() ? 64 : 32;
 
         for (int j = 0; j < 32; ++j) {
             for (int i = 0; i < 32; ++i) {
-                all_tiles.emplace_back(lcd.vram[map_addr0 + j * 32 + i]);
+                all_tiles.emplace_back(lcd.vram[map_addr0 + j * 32 + i], TileBase(), tile_bytes);
             }
             for (int i = 0; i < 32; ++i) {
-                all_tiles.emplace_back(lcd.vram[map_addr1 + j * 32 + i]);
+                all_tiles.emplace_back(lcd.vram[map_addr1 + j * 32 + i], TileBase(), tile_bytes);
             }
         }
     };
@@ -142,8 +149,7 @@ void Bg::DumpBg() const {
         return;
     }
 
-    std::vector<BgTile> all_tiles = ReadEntireTileMap();
-    ReadTileData(all_tiles);
+    const std::vector<BgTile> all_tiles = ReadEntireTileMap();
 
     std::vector<u16> bg_buffer(all_tiles.size() * 64);
 
@@ -164,7 +170,7 @@ void Bg::DumpBg() const {
             const int pixel_row = (vertical_index) % 8;
             const int flip_row = tile.v_flip ? (7 - pixel_row) : pixel_row;
 
-            std::array<u16, 8> pixel_colours = lcd.GetTilePixels(tile.data, SinglePalette(), tile.h_flip,
+            std::array<u16, 8> pixel_colours = lcd.GetTilePixels(tile.tile_addr, SinglePalette(), tile.h_flip,
                                                                  flip_row, tile.palette, 0);
 
             DrawOverlay(pixel_colours, scanline_index, vertical_index, pixel_width, pixel_height);
@@ -227,20 +233,9 @@ void Bg::DrawOverlay(std::array<u16, 8>& pixel_colours, int scanline_index, int 
 }
 
 void Lcd::DumpTileset(int base, bool single_palette) const {
-    std::vector<Tile> tileset;
     std::vector<u16> tileset_buffer(1024 * 64);
 
-    // Get tile data. Each tile is 32 bytes in 16 palette mode, and 64 bytes in single palette mode.
     const int tile_bytes = single_palette ? 64 : 32;
-    for (int j = 0; j < 1024; ++j) {
-        const int tile_addr = base + j * tile_bytes;
-        Tile tile;
-        for (int i = 0; i < tile_bytes; i += 2) {
-            tile[i] = vram[(tile_addr + i) / 2];
-            tile[i + 1] = vram[(tile_addr + i) / 2] >> 8;
-        }
-        tileset.push_back(tile);
-    }
 
     const int horizontal_tiles = 32;
     const int pixel_width = horizontal_tiles * 8;
@@ -255,19 +250,23 @@ void Lcd::DumpTileset(int base, bool single_palette) const {
         scanline_index = 0;
         tile_index = 0;
         while (scanline_index < pixel_width) {
-            const auto& tile = tileset[(vertical_index / 8) * horizontal_tiles + tile_index++];
+            const int tile_addr = base + ((vertical_index / 8) * horizontal_tiles + tile_index) * tile_bytes;
             const int pixel_row = (vertical_index) % 8;
+            tile_index += 1;
 
             std::array<u16, 8> pixel_colours;
             if (single_palette) {
-                pixel_colours = GetTilePixels(tile, single_palette, false, pixel_row, 0, 0);
+                pixel_colours = GetTilePixels(tile_addr, single_palette, false, pixel_row, 0, 0);
             } else {
                 // Each tile byte specifies the 4-bit palette indices for two pixels.
                 for (int i = 0; i < 8; ++i) {
+                    const int pixel_addr = tile_addr + pixel_row * 4 + i / 2;
+                    const int hi_shift = 8 * (pixel_addr & 0x1);
+
                     // The lower 4 bits are the palette index for even pixels, and the upper 4 bits are for odd pixels.
                     const int odd_shift = 4 * (i & 0x1);
                     // Shift the palette entry left by 1 so it fills the 5 bits needed by the colour channels.
-                    const u8 palette_entry = ((tile[pixel_row * 4 + i / 2] >> odd_shift) & 0xF) << 1;
+                    const u8 palette_entry = ((vram[pixel_addr / 2] >> (hi_shift + odd_shift)) & 0xF) << 1;
                     if (palette_entry == 0) {
                         // Palette entry 0 is transparent.
                         pixel_colours[i] = alpha_bit;

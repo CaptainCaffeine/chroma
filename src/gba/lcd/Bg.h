@@ -27,21 +27,19 @@ namespace Gba {
 
 class Lcd;
 
-using Tile = std::array<u8, 64>;
-
 struct BgTile {
-    BgTile(u16 map_entry)
+    BgTile(u16 map_entry, int tile_base, int tile_bytes)
             : num(map_entry & 0x3FF)
             , h_flip(map_entry & 0x400)
             , v_flip(map_entry & 0x800)
-            , palette(map_entry >> 12) {}
+            , palette(map_entry >> 12)
+            , tile_addr(tile_base + num * tile_bytes) {}
 
-    int num;
+    u16 num;
     bool h_flip;
     bool v_flip;
-    int palette;
-
-    Tile data;
+    u16 palette;
+    int tile_addr;
 };
 
 class Bg {
@@ -101,7 +99,6 @@ private:
     s32 ref_point_y;
 
     void ReadTileMapRow();
-    void ReadTileData(std::vector<BgTile>& input_tiles) const;
 
     std::vector<BgTile> ReadEntireTileMap() const;
     void DrawOverlay(std::array<u16, 8>& pixel_colours, int scanline_index, int vertical_index,

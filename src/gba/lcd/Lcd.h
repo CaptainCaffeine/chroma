@@ -28,8 +28,6 @@ namespace Gba {
 class Core;
 class Bg;
 
-using Tile = std::array<u8, 64>;
-
 class Sprite {
 public:
     Sprite(u32 attr1, u32 attr2)
@@ -44,14 +42,15 @@ public:
             , affine_select((attr1 >> 25) & 0x1F)
             , h_flip(attr1 & 0x1000'0000)
             , v_flip(attr1 & 0x2000'0000)
-            , tile_num(attr2 & 0x3FF)
+            , tile_num(attr2 & (single_palette ? 0x3FE : 0x3FF))
             , priority((attr2 >> 10) & 0x3)
             , palette((attr2 >> 12) & 0xF)
             , pixel_width(Width(attr1))
             , pixel_height(Height(attr1))
             , tile_width(pixel_width / ((affine && double_size) ? 16 : 8))
             , tile_height(pixel_height / ((affine && double_size) ? 16 : 8))
-            , tiles(tile_width * tile_height) {
+            , tile_bytes(single_palette ? 64 : 32)
+            , tile_base_addr(sprite_vram_base + tile_num * 32) {
 
         if (y_pos + pixel_height > 0xFF) {
             y_pos -= 0x100;
@@ -67,6 +66,8 @@ public:
                       Horizontal = 1,
                       Vertical   = 2,
                       Prohibited = 3};
+
+    static constexpr int sprite_vram_base = 0x1'0000;
 
     int y_pos;
     bool affine;
@@ -90,9 +91,10 @@ public:
     int tile_width;
     int tile_height;
 
-    bool drawn = false;
+    int tile_bytes;
+    int tile_base_addr;
 
-    std::vector<Tile> tiles;
+    bool drawn = false;
 
     static bool Disabled(u32 attr1) { return (attr1 & 0x200) && !(attr1 & 0x100); }
     static Shape GetShape(u32 attr1) { return static_cast<Shape>((attr1 >> 14) & 0x3); }
@@ -220,13 +222,11 @@ public:
     const std::vector<u32>& oam;
 
     bool bg_dirty = true;
-    bool obj_dirty = true;
     bool oam_dirty = true;
 
     static constexpr int h_pixels = 240;
     static constexpr int v_pixels = 160;
     static constexpr u16 alpha_bit = 0x8000;
-    static constexpr int sprite_tile_base = 0x1'0000;
 
     void Update(int cycles);
     void WriteControl(const u16 data, const u16 mask);
@@ -236,7 +236,7 @@ public:
     void DumpSprites() const;
     void DumpTileset(int base, bool single_palette) const;
 
-    std::array<u16, 8> GetTilePixels(const Tile& tile, bool single_palette, bool h_flip,
+    std::array<u16, 8> GetTilePixels(int tile_addr, bool single_palette, bool h_flip,
                                      int pixel_row, int palette, int base) const;
 
     // Mosaic flags
@@ -261,7 +261,6 @@ private:
     void DrawScanline();
 
     void ReadOam();
-    void GetTileData();
     void DrawSprites();
     void DrawRegularSprite(const Sprite& sprite);
     void DrawAffineSprite(const Sprite& sprite);
@@ -280,11 +279,12 @@ private:
     int BgMode() const { return control & 0x7; }
     bool DisplayFrame1() const { return control & 0x10; }
     bool HBlankFree() const { return control & 0x20; }
-    bool ObjMapping1D() const { return control & 0x40; }
+    bool ObjMapping2D() const { return !(control & 0x40); }
     bool ForcedBlank() const { return control & 0x80; }
     bool ObjEnabled() const { return control & 0x1000; }
     bool WinEnabled(int win_id) const { return control & (0x2000 << win_id); }
     bool ObjWinEnabled() const { return control & 0x8000; }
+    bool NoWinEnabled() const { return !(control & 0xE000); }
 
     // Status flags
     static constexpr u16 vblank_flag = 0x01;

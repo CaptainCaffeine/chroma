@@ -44,10 +44,11 @@ void Bg::ReadTileMapRow() {
 
     // Get a row of map entries from the specified screenblock.
     auto ReadRowMap = [this, row_num = row_num % 32](int screenblock) {
-        int map_addr = (MapBase() + row_num * 64 + 0x800 * screenblock) / 2;
+        const int map_addr = (MapBase() + row_num * 64 + 0x800 * screenblock) / 2;
+        const int tile_bytes = SinglePalette() ? 64 : 32;
 
         for (int i = map_addr; i < map_addr + 32; ++i) {
-            tiles.emplace_back(lcd.vram[i]);
+            tiles.emplace_back(lcd.vram[i], TileBase(), tile_bytes);
         }
     };
 
@@ -81,24 +82,6 @@ void Bg::ReadTileMapRow() {
     }
 }
 
-void Bg::ReadTileData(std::vector<BgTile>& input_tiles) const {
-    // Get tile data. Each tile is 32 bytes in 16 palette mode, and 64 bytes in single palette mode.
-    const int tile_bytes = SinglePalette() ? 64 : 32;
-    for (auto& tile : input_tiles) {
-        const int tile_addr = TileBase() + tile.num * tile_bytes;
-        if (tile_addr < Lcd::sprite_tile_base) {
-            for (int i = 0; i < tile_bytes; i += 2) {
-                tile.data[i] = lcd.vram[(tile_addr + i) / 2];
-                tile.data[i + 1] = lcd.vram[(tile_addr + i) / 2] >> 8;
-            }
-        } else {
-            // Tiles in OBJ VRAM cannot be used for backgrounds.
-            std::fill_n(tile.data.begin(), tile_bytes, 0x8000);
-            continue;
-        }
-    }
-}
-
 void Bg::DrawRegularScanline() {
     if (Mosaic() && lcd.vcount % lcd.MosaicBgV() != 0) {
         // Reuse the previous scanline.
@@ -106,7 +89,6 @@ void Bg::DrawRegularScanline() {
     }
 
     ReadTileMapRow();
-    ReadTileData(tiles);
 
     const int pixel_row = (scroll_y + lcd.vcount) % 8;
 
@@ -120,7 +102,7 @@ void Bg::DrawRegularScanline() {
         tile_index = (tile_index + 1) % horizontal_tiles;
         const int flip_row = tile.v_flip ? (7 - pixel_row) : pixel_row;
 
-        const std::array<u16, 8> pixel_colours = lcd.GetTilePixels(tile.data, SinglePalette(), tile.h_flip,
+        const std::array<u16, 8> pixel_colours = lcd.GetTilePixels(tile.tile_addr, SinglePalette(), tile.h_flip,
                                                                    flip_row, tile.palette, 0);
 
         // The first and last tiles may be partially scrolled off-screen.

@@ -230,7 +230,6 @@ template <typename T>
 void Memory::WriteVRam(const u32 addr, const T data) {
     if (addr & 0x0001'0000) {
         WriteRegion(vram, vram_addr_mask2, addr, data);
-        core.lcd->obj_dirty = true;
     } else {
         WriteRegion(vram, vram_addr_mask1, addr, data);
         core.lcd->bg_dirty = true;

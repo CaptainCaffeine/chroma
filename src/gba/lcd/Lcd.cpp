@@ -342,7 +342,7 @@ void Lcd::DrawScanline() {
 }
 
 bool Lcd::IsWithinWindow(int layer_id, int x, int y) const {
-    if (!WinEnabled(0) && !WinEnabled(1) && !ObjWinEnabled()) {
+    if (NoWinEnabled()) {
         return true;
     }
 
@@ -391,11 +391,7 @@ void Lcd::ReadOam() {
             }
         }
 
-        GetTileData();
-
         oam_dirty = false;
-    } else if (obj_dirty) {
-        GetTileData();
     }
 
     // The number of sprites that can be drawn on one scanline depends on the number of cycles each sprite takes
@@ -403,6 +399,7 @@ void Lcd::ReadOam() {
     const int max_render_cycles = HBlankFree() ? 954 : 1210;
     int render_cycles_needed = 0;
     for (auto& sprite : sprites) {
+        sprite.drawn = false;
         if (sprite.y_pos <= vcount && vcount < sprite.y_pos + sprite.pixel_height) {
             // All sprites, including offscreen ones, contribute to rendering time.
             if (sprite.affine) {
@@ -413,7 +410,6 @@ void Lcd::ReadOam() {
 
             // Don't draw any more sprites once we run out of rendering cycles.
             if (render_cycles_needed > max_render_cycles) {
-                sprite.drawn = false;
                 continue;
             }
 
@@ -423,44 +419,8 @@ void Lcd::ReadOam() {
                     && (BgMode() < 3 || sprite.tile_num >= 512)) {
                 sprite.drawn = true;
             }
-        } else {
-            sprite.drawn = false;
         }
     }
-}
-
-void Lcd::GetTileData() {
-    // Each tile is 32 bytes in 16 palette mode, and 64 bytes in single palette mode.
-    for (auto& sprite : sprites) {
-        int tile_bytes = 32;
-        if (sprite.single_palette) {
-            tile_bytes = 64;
-            sprite.tile_num &= ~0x1;
-        }
-
-        if (ObjMapping1D()) {
-            for (std::size_t t = 0; t < sprite.tiles.size(); ++t) {
-                const int tile_addr = sprite_tile_base + sprite.tile_num * 32 + t * tile_bytes;
-                for (int i = 0; i < tile_bytes; i += 2) {
-                    sprite.tiles[t][i] = vram[(tile_addr + i) / 2];
-                    sprite.tiles[t][i + 1] = vram[(tile_addr + i) / 2] >> 8;
-                }
-            }
-        } else {
-            for (int h = 0; h < sprite.tile_height; ++h) {
-                for (int w = 0; w < sprite.tile_width; ++w) {
-                    const int tile_addr = sprite_tile_base + sprite.tile_num * 32 + h * 32 * 32 + w * tile_bytes;
-                    const int tile_index = h * sprite.tile_width + w;
-                    for (int i = 0; i < tile_bytes; i += 2) {
-                        sprite.tiles[tile_index][i] = vram[(tile_addr + i) / 2];
-                        sprite.tiles[tile_index][i + 1] = vram[(tile_addr + i) / 2] >> 8;
-                    }
-                }
-            }
-        }
-    }
-
-    obj_dirty = false;
 }
 
 void Lcd::DrawSprites() {
@@ -541,10 +501,14 @@ void Lcd::DrawRegularSprite(const Sprite& sprite) {
     }
 
     while (scanline_index < h_pixels && tile_index <= last_tile && tile_index >= first_tile) {
-        const auto& tile = sprite.tiles[tile_index];
+        int tile_addr = sprite.tile_base_addr + tile_index * sprite.tile_bytes;
+        if (ObjMapping2D()) {
+            const int h = tile_index / sprite.tile_width;
+            tile_addr += h * sprite.tile_bytes * ((sprite.single_palette ? 16 : 32) - sprite.tile_width);
+        }
         tile_index += tile_direction;
 
-        std::array<u16, 8> pixel_colours = GetTilePixels(tile, sprite.single_palette, sprite.h_flip, pixel_row,
+        std::array<u16, 8> pixel_colours = GetTilePixels(tile_addr, sprite.single_palette, sprite.h_flip, pixel_row,
                                                          sprite.palette, 256);
 
         // The first and last tiles may be partially scrolled off-screen.
@@ -578,8 +542,6 @@ void Lcd::DrawRegularSprite(const Sprite& sprite) {
 }
 
 void Lcd::DrawAffineSprite(const Sprite& sprite) {
-    sprite_scanline_used[sprite.priority] = true;
-
     const int tex_centre_x = sprite.pixel_width / 2;
     const int tex_centre_y = sprite.pixel_height / 2;
 
@@ -622,10 +584,18 @@ void Lcd::DrawAffineSprite(const Sprite& sprite) {
         const int pixel_row = tex_y % 8;
         const int tile_index = tile_row * sprite.tile_width + tex_x / 8;
 
+        int tile_addr = sprite.tile_base_addr + tile_index * sprite.tile_bytes;
+        if (ObjMapping2D()) {
+            const int h = tile_index / sprite.tile_width;
+            tile_addr += h * sprite.tile_bytes * ((sprite.single_palette ? 16 : 32) - sprite.tile_width);
+        }
+
         if (sprite.single_palette) {
             // Each tile byte specifies the 8-bit palette index for a pixel.
-            const int pixel_index = pixel_row * 8 + tex_x % 8;
-            const u8 palette_entry = sprite.tiles[tile_index][pixel_index];
+            const int pixel_addr = tile_addr + pixel_row * 8 + tex_x % 8;
+            const int hi_shift = 8 * (pixel_addr & 0x1);
+
+            const u8 palette_entry = (vram[pixel_addr / 2] >> hi_shift) & 0xFF;
             if (palette_entry != 0) {
                 // Palette entry 0 is transparent.
                 if (ObjWinEnabled() && sprite.mode == Sprite::Mode::ObjWindow) {
@@ -644,10 +614,12 @@ void Lcd::DrawAffineSprite(const Sprite& sprite) {
                 }
             }
         } else {
+            const int pixel_addr = tile_addr + pixel_row * 4 + (tex_x % 8) / 2;
+            const int hi_shift = 8 * (pixel_addr & 0x1);
+
             // The lower 4 bits are the palette index for even pixels, and the upper 4 bits are for odd pixels.
             const int odd_shift = 4 * ((tex_x % 8) & 0x1);
-            const int pixel_index = pixel_row * 4 + (tex_x % 8) / 2;
-            const u8 palette_entry = (sprite.tiles[tile_index][pixel_index] >> odd_shift) & 0xF;
+            const u8 palette_entry = (vram[pixel_addr / 2] >> (hi_shift + odd_shift)) & 0xF;
             if (palette_entry != 0) {
                 // Palette entry 0 is transparent.
                 if (ObjWinEnabled() && sprite.mode == Sprite::Mode::ObjWindow) {
@@ -671,14 +643,17 @@ void Lcd::DrawAffineSprite(const Sprite& sprite) {
     }
 }
 
-std::array<u16, 8> Lcd::GetTilePixels(const Tile& tile, bool single_palette, bool h_flip,
+std::array<u16, 8> Lcd::GetTilePixels(int tile_addr, bool single_palette, bool h_flip,
                                       int pixel_row, int palette, int base) const {
     std::array<u16, 8> pixel_colours;
 
     if (single_palette) {
         // Each tile byte specifies the 8-bit palette index for a pixel.
         for (int i = 0; i < 8; ++i) {
-            const u8 palette_entry = tile[pixel_row * 8 + i];
+            const int pixel_addr = tile_addr + pixel_row * 8 + i;
+            const int hi_shift = 8 * (pixel_addr & 0x1);
+
+            const u8 palette_entry = (vram[pixel_addr / 2] >> hi_shift) & 0xFF;
             const int pixel_index = h_flip ? (7 - i) : i;
             if (palette_entry == 0) {
                 // Palette entry 0 is transparent.
@@ -690,9 +665,12 @@ std::array<u16, 8> Lcd::GetTilePixels(const Tile& tile, bool single_palette, boo
     } else {
         // Each tile byte specifies the 4-bit palette indices for two pixels.
         for (int i = 0; i < 8; ++i) {
+            const int pixel_addr = tile_addr + pixel_row * 4 + i / 2;
+            const int hi_shift = 8 * (pixel_addr & 0x1);
+
             // The lower 4 bits are the palette index for even pixels, and the upper 4 bits are for odd pixels.
             const int odd_shift = 4 * (i & 0x1);
-            const u8 palette_entry = (tile[pixel_row * 4 + i / 2] >> odd_shift) & 0xF;
+            const u8 palette_entry = (vram[pixel_addr / 2] >> (hi_shift + odd_shift)) & 0xF;
             const int pixel_index = h_flip ? (7 - i) : i;
             if (palette_entry == 0) {
                 // Palette entry 0 is transparent.
