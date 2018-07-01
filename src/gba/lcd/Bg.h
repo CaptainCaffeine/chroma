@@ -29,17 +29,15 @@ class Lcd;
 
 struct BgTile {
     BgTile(u16 map_entry, int tile_base, int tile_bytes)
-            : num(map_entry & 0x3FF)
+            : tile_addr(tile_base + (map_entry & 0x3FF) * tile_bytes)
             , h_flip(map_entry & 0x400)
             , v_flip(map_entry & 0x800)
-            , palette(map_entry >> 12)
-            , tile_addr(tile_base + num * tile_bytes) {}
+            , palette(map_entry >> 12) {}
 
-    u16 num;
+    int tile_addr;
     bool h_flip;
     bool v_flip;
     u16 palette;
-    int tile_addr;
 };
 
 class Bg {
