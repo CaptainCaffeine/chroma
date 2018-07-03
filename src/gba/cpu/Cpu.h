@@ -80,6 +80,7 @@ private:
     const std::vector<Instruction<Thumb>> thumb_instructions;
     const std::vector<Instruction<Arm>> arm_instructions;
     std::array<const std::function<int(Cpu& cpu, Thumb opcode)> *, 0x400> thumb_decode_table;
+    std::array<std::vector<const Instruction<Arm> *>, 0x100> arm_decode_cache;
 
     std::array<u32, 3> pipeline{};
     bool pc_written = false;
@@ -87,7 +88,7 @@ private:
     bool halted = false;
 
     // Constants
-    using Reg = std::size_t;
+    using Reg = unsigned int;
     static constexpr Reg sp = 13, lr = 14, pc = 15;
     static constexpr u64 carry_bit = 0x1'0000'0000, sign_bit = 0x8000'0000;
 
@@ -130,8 +131,8 @@ private:
 
     CpuMode CurrentCpuMode() const { return static_cast<CpuMode>(cpsr & cpu_mode); }
     // Since bit 4 is 1 for all valid CPU modes, we ignore it when indexing banked registers.
-    std::size_t CurrentCpuModeIndex() const { return cpsr & 0xF; }
-    std::size_t CpuModeIndex(CpuMode mode) const { return static_cast<u32>(mode) & 0xF; }
+    int CurrentCpuModeIndex() const { return cpsr & 0xF; }
+    int CpuModeIndex(CpuMode mode) const { return static_cast<u32>(mode) & 0xF; }
 
     bool HasSpsr() const { return CurrentCpuMode() != CpuMode::User && CurrentCpuMode() != CpuMode::System; }
     bool ValidCpuMode(u32 new_mode) const;
@@ -158,7 +159,7 @@ private:
 
     void PopulateThumbDecodeTable();
     const std::function<int(Cpu& cpu, Thumb opcode)>& DecodeThumb(Thumb opcode) const;
-    const std::function<int(Cpu& cpu, Arm opcode)>& DecodeArm(Arm opcode) const;
+    const std::function<int(Cpu& cpu, Arm opcode)>& DecodeArm(Arm opcode);
 
     // ARM primitives
     static constexpr ResultWithCarry ArmExpandImmediate_C(u32 value) noexcept {

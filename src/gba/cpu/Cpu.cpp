@@ -144,9 +144,22 @@ const std::function<int(Cpu& cpu, Thumb opcode)>& Cpu::DecodeThumb(Thumb opcode)
     return *thumb_decode_table[opcode >> 6];
 }
 
-const std::function<int(Cpu& cpu, Arm opcode)>& Cpu::DecodeArm(Arm opcode) const {
+const std::function<int(Cpu& cpu, Arm opcode)>& Cpu::DecodeArm(Arm opcode) {
+    int opcode_hash = ((opcode >> 16) ^ opcode) * 0x45D9F3B;
+    opcode_hash = ((opcode_hash >> 16) ^ opcode_hash) * 0x45D9F3B;
+    opcode_hash = ((opcode_hash >> 16) ^ opcode_hash) % arm_decode_cache.size();
+
+    auto& cache_entries = arm_decode_cache[opcode_hash];
+    for (const auto& instr : cache_entries) {
+        if (instr->Match(opcode)) {
+            return instr->impl_func;
+        }
+    }
+
+    // Opcode not in cache.
     for (const auto& instr : arm_instructions) {
         if (instr.Match(opcode)) {
+            cache_entries.push_back(&instr);
             return instr.impl_func;
         }
     }
