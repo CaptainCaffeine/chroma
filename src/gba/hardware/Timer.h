@@ -43,10 +43,12 @@ private:
 
     u32 timer_clock = 0;
     int delay = 0;
+    int cycles_per_tick = 0;
 
-    bool TimerRunning() const { return control & 0x0080; }
+    bool TimerEnabled() const { return control & 0x0080; }
     bool InterruptEnabled() const { return control & 0x0040; }
-    int CyclesPerTick() const;
+    // We only check the timer counter if the timer is enabled and cascade is disabled.
+    bool TimerNotRunning() const { return (control & 0x0084) != 0x0080; }
 };
 
 } // End namespace Gba

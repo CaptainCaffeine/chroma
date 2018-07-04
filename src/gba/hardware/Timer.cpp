@@ -32,31 +32,37 @@ Timer::Timer(int _id, Core& _core)
 }
 
 void Timer::Tick(int cycles) {
-    if (!TimerRunning() || CascadeEnabled()) {
+    if (TimerNotRunning()) {
         timer_clock += cycles;
         return;
     }
 
-    while (cycles-- > 0) {
-        timer_clock += 1;
-        if (delay > 0) {
+    if (delay > 0) {
+        while (delay > 0 && cycles > 0) {
             delay -= 1;
-            continue;
-        }
-
-        if ((timer_clock & (CyclesPerTick() - 1)) == 0) {
-            CounterTick();
+            cycles -= 1;
+            timer_clock += 1;
         }
     }
-}
 
-int Timer::CyclesPerTick() const {
-    const int prescaler_select = control & 0x0003;
-    
-    if (prescaler_select == 0) {
-        return 1;
-    } else {
-        return 16 << (2 * prescaler_select);
+    while (cycles > 0) {
+        if (cycles_per_tick == 1) {
+            timer_clock += cycles;
+            while (cycles-- > 0) {
+                CounterTick();
+            }
+        } else {
+            int remaining_cycles = cycles_per_tick - (timer_clock & (cycles_per_tick - 1));
+            if (remaining_cycles > cycles) {
+                timer_clock += cycles;
+                return;
+            }
+
+            timer_clock += remaining_cycles;
+            cycles -= remaining_cycles;
+
+            CounterTick();
+        }
     }
 }
 
@@ -68,32 +74,40 @@ void Timer::CounterTick() {
             core.mem->RequestInterrupt(Interrupt::Timer0 << id);
         }
 
-        if (id < 3 && core.timers[id + 1].TimerRunning() && core.timers[id + 1].CascadeEnabled()) {
+        if (id < 3 && core.timers[id + 1].TimerEnabled() && core.timers[id + 1].CascadeEnabled()) {
             core.timers[id + 1].CounterTick();
         }
     }
 }
 
 void Timer::WriteControl(const u16 data, const u16 mask) {
-    bool was_stopped = !TimerRunning();
+    bool was_stopped = !TimerEnabled();
     control.Write(data, mask);
 
-    if (was_stopped && TimerRunning()) {
+    if (was_stopped && TimerEnabled()) {
         // The counter is reloaded when a timer is enabled.
         counter = reload;
         // Timers have a two cycle start up delay.
         delay = 2;
     }
+
+    const int prescaler_select = control & 0x0003;
+
+    if (prescaler_select == 0) {
+        cycles_per_tick = 1;
+    } else {
+        cycles_per_tick = 16 << (2 * prescaler_select);
+    }
 }
 
 int Timer::NextEvent() const {
-    if (!TimerRunning()) {
+    if (!TimerEnabled()) {
         return 0;
     } else if (CascadeEnabled()) {
         return core.timers[id - 1].NextEvent();
     } else {
-        int remaining_cycles_this_tick = CyclesPerTick() - (timer_clock & (CyclesPerTick() - 1));
-        int remaining_ticks = (0xFFFF - counter) * CyclesPerTick();
+        int remaining_cycles_this_tick = cycles_per_tick - (timer_clock & (cycles_per_tick - 1));
+        int remaining_ticks = (0xFFFF - counter) * cycles_per_tick;
         return delay + remaining_cycles_this_tick + remaining_ticks;
     }
 }
