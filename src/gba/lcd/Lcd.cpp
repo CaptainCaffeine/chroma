@@ -254,16 +254,20 @@ void Lcd::DrawScanline() {
         return layer == highest_first_target[i] && pixel_layer[i] == highest_second_target[i];
     };
 
+    for (int w = 0; w < 2; ++w) {
+        windows[w].IsOnThisScanline(WinEnabled(w), vcount);
+    }
+
     // Draw the scanlines from each enabled background, starting with the lowest priority level.
     std::array<int, 3> channels;
     for (int p = 3; p >= 0; --p) {
         for (const auto& bg : priorities[p]) {
             for (int i = 0; i < h_pixels; ++i) {
-                if ((bg->scanline[i] & alpha_bit) == 0 && IsWithinWindow(bg->id, i, vcount)) {
+                if ((bg->scanline[i] & alpha_bit) == 0 && IsWithinWindow(bg->id, i)) {
                     auto& buffer_pixel = back_buffer[vcount * h_pixels + i];
 
                     if (BlendMode() == Effect::AlphaBlend && HighestTargetLayers(bg->id, i)
-                                                          && IsWithinWindow(5, i, vcount)) {
+                            && IsWithinWindow(5, i)) {
                         for (int j = 0; j < 3; ++j) {
                             int channel_target1 = (bg->scanline[i] >> (5 * j)) & 0x1F;
                             int channel_target2 = (buffer_pixel >> (5 * j)) & 0x1F;
@@ -284,12 +288,12 @@ void Lcd::DrawScanline() {
         if (ObjEnabled() && sprite_scanline_used[p]) {
             // Draw sprites of the same priority level.
             for (int i = 0; i < h_pixels; ++i) {
-                if ((sprite_scanlines[p][i] & alpha_bit) == 0 && IsWithinWindow(4, i, vcount)) {
+                if ((sprite_scanlines[p][i] & alpha_bit) == 0 && IsWithinWindow(4, i)) {
                     auto& buffer_pixel = back_buffer[vcount * h_pixels + i];
 
                     if ((BlendMode() == Effect::AlphaBlend || (sprite_flags[i] & semi_transparent_flag))
                             && HighestTargetLayers(4, i)
-                            && IsWithinWindow(5, i, vcount)) {
+                            && IsWithinWindow(5, i)) {
                         for (int j = 0; j < 3; ++j) {
                             int channel_target1 = (sprite_scanlines[p][i] >> (5 * j)) & 0x1F;
                             int channel_target2 = (buffer_pixel >> (5 * j)) & 0x1F;
@@ -316,7 +320,7 @@ void Lcd::DrawScanline() {
     if (BlendMode() == Effect::Brighten || BlendMode() == Effect::Darken) {
         for (int i = 0; i < h_pixels; ++i) {
             if (IsFirstTarget(pixel_layer[i]) && !(pixel_layer[i] == 4 && (sprite_flags[i] & semi_transparent_flag))
-                                              && IsWithinWindow(5, i, vcount)) {
+                    && IsWithinWindow(5, i)) {
                 auto& buffer_pixel = back_buffer[vcount * h_pixels + i];
 
                 if (BlendMode() == Effect::Brighten) {
@@ -341,34 +345,19 @@ void Lcd::DrawScanline() {
     }
 }
 
-bool Lcd::IsWithinWindow(int layer_id, int x, int y) const {
+bool Lcd::IsWithinWindow(int layer_id, int x) const {
     if (NoWinEnabled()) {
         return true;
     }
 
-    if (WinEnabled(0) && windows[0].Contains(x, y)) {
-        return InWindowContent(0, layer_id);
-    } else if (WinEnabled(1) && windows[1].Contains(x, y)) {
-        return InWindowContent(1, layer_id);
-    } else if (ObjWinEnabled() && (sprite_flags[x] & obj_window_flag)) {
-        return InWindowContent(3, layer_id);
-    } else {
-        return InWindowContent(2, layer_id);
-    }
-}
-
-bool Lcd::InWindowContent(int win_id, int layer_id) const {
-    switch (win_id) {
-    case 0:
+    if (windows[0].Contains(x)) {
         return winin & (1 << layer_id);
-    case 1:
+    } else if (windows[1].Contains(x)) {
         return (winin >> 8) & (1 << layer_id);
-    case 2:
-        return winout & (1 << layer_id);
-    case 3:
+    } else if (ObjWinEnabled() && (sprite_flags[x] & obj_window_flag)) {
         return (winout >> 8) & (1 << layer_id);
-    default:
-        return false;
+    } else {
+        return winout & (1 << layer_id);
     }
 }
 

@@ -177,13 +177,19 @@ public:
     IOReg width  = {0x0000, 0x0000, 0xFFFF};
     IOReg height = {0x0000, 0x0000, 0xFFFF};
 
+    bool on_this_scanline = false;
+
     int Left() const { return width >> 8; }
     int Right() const { return width & 0xFF; }
     int Top() const { return height >> 8; }
     int Bottom() const { return height & 0xFF; }
 
-    bool Contains(int x, int y) const {
-        if (!(y >= Top() && y < Bottom())) {
+    void IsOnThisScanline(bool enabled, int y) {
+        on_this_scanline = enabled && y >= Top() && y < Bottom();
+    }
+
+    bool Contains(int x) const {
+        if (!on_this_scanline) {
             return false;
         }
 
@@ -266,8 +272,7 @@ private:
     void DrawRegularSprite(const Sprite& sprite);
     void DrawAffineSprite(const Sprite& sprite);
 
-    bool IsWithinWindow(int layer_id, int x, int y) const;
-    bool InWindowContent(int win_id, int layer_id) const;
+    bool IsWithinWindow(int layer_id, int x) const;
 
     bool IsFirstTarget(int target) const { return (FirstTargets() >> target) & 0x1; }
     bool IsSecondTarget(int target) const { return (SecondTargets() >> target) & 0x1; }
