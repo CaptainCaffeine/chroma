@@ -640,36 +640,43 @@ std::array<u16, 8> Lcd::GetTilePixels(int tile_addr, bool single_palette, bool h
 
     if (single_palette) {
         // Each tile byte specifies the 8-bit palette index for a pixel.
-        for (int i = 0; i < 8; ++i) {
-            const int pixel_addr = tile_addr + pixel_row * 8 + i;
-            const int hi_shift = 8 * (pixel_addr & 0x1);
+        // We read two bytes at a time from VRAM.
+        for (int i = 0; i < 4; ++i) {
+            const int pixel_addr = tile_addr + pixel_row * 8 + i * 2;
+            const u16 vram_entry = vram[pixel_addr / 2];
 
-            const u8 palette_entry = (vram[pixel_addr / 2] >> hi_shift) & 0xFF;
-            const int pixel_index = h_flip ? (7 - i) : i;
-            if (palette_entry == 0) {
-                // Palette entry 0 is transparent.
-                pixel_colours[pixel_index] = alpha_bit;
-            } else {
-                pixel_colours[pixel_index] = pram[base + palette_entry] & 0x7FFF;
+            for (int j = 0; j < 2; ++j) {
+                const u8 palette_entry = (vram_entry >> (j * 8)) & 0xFF;
+                if (palette_entry == 0) {
+                    // Palette entry 0 is transparent.
+                    pixel_colours[i * 2 + j] = alpha_bit;
+                } else {
+                    pixel_colours[i * 2 + j] = pram[base + palette_entry] & 0x7FFF;
+                }
             }
         }
     } else {
         // Each tile byte specifies the 4-bit palette indices for two pixels.
-        for (int i = 0; i < 8; ++i) {
-            const int pixel_addr = tile_addr + pixel_row * 4 + i / 2;
-            const int hi_shift = 8 * (pixel_addr & 0x1);
+        // The lower 4 bits are the palette index for even pixels, and the upper 4 bits are for odd pixels.
+        // We read two bytes at a time from VRAM.
+        for (int i = 0; i < 2; ++i) {
+            const int pixel_addr = tile_addr + pixel_row * 4 + i * 2;
+            const u16 vram_entry = vram[pixel_addr / 2];
 
-            // The lower 4 bits are the palette index for even pixels, and the upper 4 bits are for odd pixels.
-            const int odd_shift = 4 * (i & 0x1);
-            const u8 palette_entry = (vram[pixel_addr / 2] >> (hi_shift + odd_shift)) & 0xF;
-            const int pixel_index = h_flip ? (7 - i) : i;
-            if (palette_entry == 0) {
-                // Palette entry 0 is transparent.
-                pixel_colours[pixel_index] = alpha_bit;
-            } else {
-                pixel_colours[pixel_index] = pram[base + palette * 16 + palette_entry] & 0x7FFF;
+            for (int j = 0; j < 4; ++j) {
+                const u8 palette_entry = (vram_entry >> (j * 4)) & 0xF;
+                if (palette_entry == 0) {
+                    // Palette entry 0 is transparent.
+                    pixel_colours[i * 4 + j] = alpha_bit;
+                } else {
+                    pixel_colours[i * 4 + j] = pram[base + palette * 16 + palette_entry] & 0x7FFF;
+                }
             }
         }
+    }
+
+    if (h_flip) {
+        std::reverse(pixel_colours.begin(), pixel_colours.end());
     }
 
     return pixel_colours;
