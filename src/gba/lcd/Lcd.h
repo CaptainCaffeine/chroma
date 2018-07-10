@@ -202,6 +202,18 @@ public:
     }
 };
 
+class PixelInfo {
+public:
+    u8 layer = 5;
+    // The targets are initialized with non-existent layer 6.
+    u8 highest_second_target = 6;
+    u8 highest_first_target = 6;
+
+    bool HighestTargetLayers(int new_layer) const {
+        return new_layer == highest_first_target && layer == highest_second_target;
+    }
+};
+
 class Lcd {
 public:
     Lcd(const std::vector<u16>& _pram, const std::vector<u16>& _vram, const std::vector<u32>& _oam, Core& _core);

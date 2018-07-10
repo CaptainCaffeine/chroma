@@ -211,11 +211,13 @@ void Lcd::DrawScanline() {
 
     // The first palette entry is the backdrop colour.
     std::fill_n(back_buffer.begin() + vcount * h_pixels, h_pixels, pram[0] & 0x7FFF);
-    std::vector<int> pixel_layer(240, 5);
 
-    // The target vectors are initialized with non-existent layer 6.
-    std::vector<int> highest_second_target(240, IsSecondTarget(5) ? 5 : 6);
-    std::vector<int> highest_first_target(240, 6);
+    std::array<PixelInfo, 240> pixel_info{};
+    if (IsSecondTarget(5)) {
+        for (auto& pixel : pixel_info) {
+            pixel.highest_second_target = 5;
+        }
+    }
 
     // If alpha blending is enabled, or if semi-transparent sprites are present, calculate the highest first target
     // layer and second target layer for each pixel.
@@ -226,9 +228,9 @@ void Lcd::DrawScanline() {
                 for (int i = 0; i < h_pixels; ++i) {
                     if ((bg->scanline[i] & alpha_bit) == 0) {
                         if (IsFirstTarget(bg->id)) {
-                            highest_first_target[i] = bg->id;
+                            pixel_info[i].highest_first_target = bg->id;
                         } else if (IsSecondTarget(bg->id)) {
-                            highest_second_target[i] = bg->id;
+                            pixel_info[i].highest_second_target = bg->id;
                         }
                     }
                 }
@@ -240,19 +242,15 @@ void Lcd::DrawScanline() {
                 for (int i = 0; i < h_pixels; ++i) {
                     if ((sprite_scanlines[p][i] & alpha_bit) == 0) {
                         if (IsFirstTarget(4) || (sprite_flags[i] & semi_transparent_flag)) {
-                            highest_first_target[i] = 4;
+                            pixel_info[i].highest_first_target = 4;
                         } else if (IsSecondTarget(4)) {
-                            highest_second_target[i] = 4;
+                            pixel_info[i].highest_second_target = 4;
                         }
                     }
                 }
             }
         }
     }
-
-    auto HighestTargetLayers = [&highest_first_target, &highest_second_target, &pixel_layer](int layer, int i) {
-        return layer == highest_first_target[i] && pixel_layer[i] == highest_second_target[i];
-    };
 
     for (int w = 0; w < 2; ++w) {
         windows[w].IsOnThisScanline(WinEnabled(w), vcount);
@@ -266,7 +264,7 @@ void Lcd::DrawScanline() {
                 if ((bg->scanline[i] & alpha_bit) == 0 && IsWithinWindow(bg->id, i)) {
                     auto& buffer_pixel = back_buffer[vcount * h_pixels + i];
 
-                    if (BlendMode() == Effect::AlphaBlend && HighestTargetLayers(bg->id, i)
+                    if (BlendMode() == Effect::AlphaBlend && pixel_info[i].HighestTargetLayers(bg->id)
                             && IsWithinWindow(5, i)) {
                         for (int j = 0; j < 3; ++j) {
                             int channel_target1 = (bg->scanline[i] >> (5 * j)) & 0x1F;
@@ -280,7 +278,7 @@ void Lcd::DrawScanline() {
                         buffer_pixel = bg->scanline[i];
                     }
 
-                    pixel_layer[i] = bg->id;
+                    pixel_info[i].layer = bg->id;
                 }
             }
         }
@@ -292,7 +290,7 @@ void Lcd::DrawScanline() {
                     auto& buffer_pixel = back_buffer[vcount * h_pixels + i];
 
                     if ((BlendMode() == Effect::AlphaBlend || (sprite_flags[i] & semi_transparent_flag))
-                            && HighestTargetLayers(4, i)
+                            && pixel_info[i].HighestTargetLayers(4)
                             && IsWithinWindow(5, i)) {
                         for (int j = 0; j < 3; ++j) {
                             int channel_target1 = (sprite_scanlines[p][i] >> (5 * j)) & 0x1F;
@@ -311,7 +309,7 @@ void Lcd::DrawScanline() {
                         sprite_flags[i] &= ~semi_transparent_flag;
                     }
 
-                    pixel_layer[i] = 4;
+                    pixel_info[i].layer = 4;
                 }
             }
         }
@@ -319,7 +317,8 @@ void Lcd::DrawScanline() {
 
     if (BlendMode() == Effect::Brighten || BlendMode() == Effect::Darken) {
         for (int i = 0; i < h_pixels; ++i) {
-            if (IsFirstTarget(pixel_layer[i]) && !(pixel_layer[i] == 4 && (sprite_flags[i] & semi_transparent_flag))
+            if (IsFirstTarget(pixel_info[i].layer)
+                    && !(pixel_info[i].layer == 4 && (sprite_flags[i] & semi_transparent_flag))
                     && IsWithinWindow(5, i)) {
                 auto& buffer_pixel = back_buffer[vcount * h_pixels + i];
 
