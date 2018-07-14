@@ -43,10 +43,10 @@ Dma::Dma(int _id, Core& _core)
 }
 
 void Dma::WriteControl(const u16 data, const u16 mask) {
-    bool was_enabled = control & enable;
+    bool was_enabled = DmaEnabled();
     control.Write(data, mask);
 
-    if (!was_enabled && (control & enable)) {
+    if (!was_enabled && DmaEnabled()) {
         source = source_l | (source_h << 16);
         dest = dest_l | (dest_h << 16);
 
@@ -71,7 +71,7 @@ void Dma::WriteControl(const u16 data, const u16 mask) {
 }
 
 void Dma::Trigger(DmaTiming event) {
-    if ((control & enable) && StartTiming() == event) {
+    if (DmaEnabled() && StartTiming() == event) {
         paused = false;
         core.cpu->dma_active = true;
     }
@@ -102,7 +102,7 @@ int Dma::Run() {
 
     if (--remaining_chunks == 0) {
         // The transfer has finished.
-        if (control & irq_enable) {
+        if (InterruptEnabled()) {
             core.mem->RequestInterrupt(Interrupt::Dma0 << id);
         }
 
@@ -113,13 +113,12 @@ int Dma::Run() {
             }
         }
 
-        if ((control & repeat) && StartTiming() != Immediate) {
+        if (RepeatEnabled() && StartTiming() != Immediate) {
             // If repeat is enabled, reload the chunk count and wait for the next DMA trigger event.
             ReloadWordCount();
             paused = true;
         } else {
-            // Disable the DMA.
-            control &= ~enable;
+            DisableDma();
 
             if (core.mem->PrefetchEnabled()) {
                 core.mem->MakeNextAccessSequential(core.cpu->GetPc());

@@ -43,7 +43,7 @@ public:
     int Run();
 
     void WriteControl(const u16 data, const u16 mask);
-    bool Active() const { return (control & enable) && !paused; }
+    bool Active() const { return DmaEnabled() && !paused; }
     void Trigger(DmaTiming event);
 
 private:
@@ -62,21 +62,22 @@ private:
     template<typename T>
     int Transfer(bool sequential);
 
-    // Control flags
-    static constexpr u16 repeat     = 0x0200;
-    static constexpr u16 drq_flag   = 0x0800;
-    static constexpr u16 irq_enable = 0x4000;
-    static constexpr u16 enable     = 0x8000;
+    void DisableDma() { control &= ~0x8000; }
 
+    // Control flags
     enum AddrControl {Increment = 0,
                       Decrement = 1,
                       Fixed     = 2,
                       Reload    = 3};
-
     int DestControl() const { return (control >> 5) & 0x3; }
     int SourceControl() const { return (control >> 7) & 0x3; }
+    bool RepeatEnabled() const { return control & 0x0200; }
     int TransferWidth() const { return (control & 0x0400) ? 4 : 2; }
+    bool DrqEnabled() const { return control & 0x0800; }
     int StartTiming() const { return (control >> 12) & 0x3; }
+    bool InterruptEnabled() const { return control & 0x4000; }
+    bool DmaEnabled() const { return control & 0x8000; }
+
 };
 
 } // End namespace Gba
