@@ -14,7 +14,7 @@ At the moment, Chroma's only dependencies are fmt and SDL 2.0.5. fmt is bundled 
 * Windows: Download SDL2 from their [website](https://www.libsdl.org/download-2.0.php).
 
 ### Building
-A recent C++14 compiler is required to build Chroma (GCC 5.x is known not to work). I only regularly test whatever versions are currently in the Arch Linux repos, so older compilers will break from time to time.
+A C++17 compiler is required to build Chroma (GCC 8 or Clang 6 and above). I only regularly test whatever versions are currently in the Arch Linux repos, so older compilers will break from time to time.
 
 `mkdir build`
 
