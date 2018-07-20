@@ -16,20 +16,28 @@
 
 #include "gb/audio/Audio.h"
 #include "gb/core/GameBoy.h"
+#include "common/Biquad.h"
 
 namespace Gb {
 
 Audio::Audio(bool enable_filter, const GameBoy& _gameboy)
         : gameboy(_gameboy)
         , enable_iir(enable_filter)
-        , left_upsampled((enable_filter) ? interpolated_buffer_size : 0)
-        , right_upsampled((enable_filter) ? interpolated_buffer_size : 0) {
+        , resample_buffer((enable_filter) ? interpolated_buffer_size * 2 : 0) {
 
     square1.LinkToAudio(this);
     square2.LinkToAudio(this);
     wave.LinkToAudio(this);
     noise.LinkToAudio(this);
+
+    for (unsigned int i = 0; i < q.size(); ++i) {
+        left_biquads.emplace_back(interpolated_buffer_size, q[i]);
+        right_biquads.emplace_back(interpolated_buffer_size, q[i]);
+    }
 }
+
+// Needed to declare std::vector with forward-declared type in the header file.
+Audio::~Audio() = default;
 
 void Audio::UpdateAudio() {
     FrameSequencerTick();
@@ -190,79 +198,20 @@ u8 Audio::ReadNR52() const {
 void Audio::Resample() {
     // The Game Boy generates 35112 samples per channel per frame, which we pre-downsample to 5016. We then resample
     // to 800 samples per channel by interpolating by a factor of 100 and decimating by a factor of 627.
-    Upsample();
-    LowPassIIRFilter();
-    Downsample();
-}
-
-void Audio::Upsample() {
-    // Upsample the signal by placing interpolation_factor-1 zeroes between each sample.
-    for (std::size_t i = 0; i < interpolated_buffer_size; ++i) {
-        left_upsampled[i] = 0;
-        right_upsampled[i] = 0;
-    }
+    std::fill(resample_buffer.begin(), resample_buffer.end(), 0.0);
 
     for (std::size_t i = 0; i < num_samples; ++i) {
         // Multiply the samples by 64 to increase the amplitude for the IIR filter.
-        left_upsampled[i * interpolation_factor] = sample_buffer[i * 2] * 64.0;
-        right_upsampled[i * interpolation_factor] = sample_buffer[i * 2 + 1] * 64.0;
+        resample_buffer[i * interpolation_factor * 2] = sample_buffer[i * 2] * 64.0;
+        resample_buffer[i * interpolation_factor * 2 + 1] = sample_buffer[i * 2 + 1] * 64.0;
     }
-}
 
-void Audio::Downsample() {
+    Common::Biquad::LowPassFilter(resample_buffer, left_biquads, right_biquads);
+
     for (std::size_t i = 0; i < output_buffer.size() / 2; ++i) {
         // Multiply by 64 to scale the volume for s16 samples.
-        output_buffer[i * 2] = left_upsampled[i * decimation_factor] * 64;
-        output_buffer[i * 2 + 1] = right_upsampled[i * decimation_factor] * 64;
-    }
-}
-
-void Audio::LowPassIIRFilter() {
-    // Two-pass Butterworth lowpass IIR filter.
-    // Biquad form used is the Transposed Direct Form 2.
-    for (std::size_t i = 0; i < interpolated_buffer_size; ++i) {
-        // Left signal first pass.
-        double in = left_upsampled[i];
-        double inb0 = in * left_biquad1.b0;
-        double out = left_biquad1.z2 + inb0;
-        left_biquad1.z2 = in * left_biquad1.b1 - out * left_biquad1.a1 + left_biquad1.z1;
-        left_biquad1.z1 = inb0 - out * left_biquad1.a2;
-
-        // Left signal second pass.
-        in = out;
-        inb0 = in * left_biquad2.b0;
-        out = left_biquad2.z2 + inb0;
-        left_biquad2.z2 = in * left_biquad2.b1 - out * left_biquad2.a1 + left_biquad2.z1;
-        left_biquad2.z1 = inb0 - out * left_biquad2.a2;
-        left_upsampled[i] = out;
-
-        // Right signal first pass.
-        in = right_upsampled[i];
-        inb0 = in * right_biquad1.b0;
-        out = right_biquad1.z2 + inb0;
-        right_biquad1.z2 = in * right_biquad1.b1 - out * right_biquad1.a1 + right_biquad1.z1;
-        right_biquad1.z1 = inb0 - out * right_biquad1.a2;
-
-        // Right signal second pass.
-        in = out;
-        inb0 = in * right_biquad2.b0;
-        out = right_biquad2.z2 + inb0;
-        right_biquad2.z2 = in * right_biquad2.b1 - out * right_biquad2.a1 + right_biquad2.z1;
-        right_biquad2.z1 = inb0 - out * right_biquad2.a2;
-        right_upsampled[i] = out;
-
-        // This algorithm has minor numerical issues which often leave extremely small values in the z delays
-        // (like 1E-400) which are far too small to leave an impact on the signal and slow down the calculation
-        // significantly. So we clear any z delays with absolute value less than 1E-15.
-        constexpr double limit = 0.000000000000001;
-        if (std::abs(left_biquad1.z1) < limit) { left_biquad1.z1 = 0.0; }
-        if (std::abs(left_biquad1.z2) < limit) { left_biquad1.z2 = 0.0; }
-        if (std::abs(left_biquad2.z1) < limit) { left_biquad2.z1 = 0.0; }
-        if (std::abs(left_biquad2.z2) < limit) { left_biquad2.z2 = 0.0; }
-        if (std::abs(right_biquad1.z1) < limit) { right_biquad1.z1 = 0.0; }
-        if (std::abs(right_biquad1.z2) < limit) { right_biquad1.z2 = 0.0; }
-        if (std::abs(right_biquad2.z1) < limit) { right_biquad2.z1 = 0.0; }
-        if (std::abs(right_biquad2.z2) < limit) { right_biquad2.z2 = 0.0; }
+        output_buffer[i * 2] = resample_buffer[i * decimation_factor * 2] * 64;
+        output_buffer[i * 2 + 1] = resample_buffer[i * decimation_factor * 2 + 1] * 64;
     }
 }
 

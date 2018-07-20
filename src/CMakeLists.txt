@@ -77,6 +77,7 @@ set(HEADERS
     common/CommonFuncs.h
     common/CommonEnums.h
     common/Screenshot.h
+    common/Biquad.h
 
     emu/SDLContext.h
     emu/ParseOptions.h

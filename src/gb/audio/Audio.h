@@ -18,49 +18,21 @@
 
 #include <array>
 #include <vector>
-#include <cmath>
 
 #include "common/CommonTypes.h"
 #include "gb/core/Enums.h"
 #include "gb/audio/Channel.h"
 
+namespace Common { class Biquad; }
+
 namespace Gb {
 
 class GameBoy;
 
-struct Biquad {
-    Biquad(std::size_t interpolated_buffer_size, double fc, double qu)
-            : sampling_frequency(interpolated_buffer_size * 60.0)
-            , cutoff_frequency(fc)
-            , q(qu)
-            , k(std::tan(M_PI * cutoff_frequency / sampling_frequency))
-            , norm(1 / (1 + k / q + k * k))
-            , b0(k * k * norm)
-            , b1(2 * b0)
-            , b2(b0)
-            , a1(2 * (k * k - 1) * norm)
-            , a2((1 - k / q + k * k) * norm) {}
-
-    const double sampling_frequency;
-    const double cutoff_frequency;
-    const double q;
-
-    const double k;
-    const double norm;
-
-    const double b0;
-    const double b1;
-    const double b2;
-    const double a1;
-    const double a2;
-
-    double z1 = 0.0;
-    double z2 = 0.0;
-};
-
 class Audio {
 public:
     Audio(bool enable_filter, const GameBoy& _gameboy);
+    ~Audio();
 
     void UpdateAudio();
 
@@ -199,25 +171,19 @@ private:
     static constexpr std::size_t interpolated_buffer_size = num_samples * interpolation_factor;
 
     std::vector<int> sample_buffer;
-    std::vector<double> left_upsampled;
-    std::vector<double> right_upsampled;
+    std::vector<double> resample_buffer;
 
     // Q values are for a 4th order cascaded Butterworth lowpass filter.
     // Obtained from http://www.earlevel.com/main/2016/09/29/cascading-filters/.
-    Biquad left_biquad1 {interpolated_buffer_size, 24000.0, 0.54119610};
-    Biquad left_biquad2 {interpolated_buffer_size, 24000.0, 1.3065630};
-    Biquad right_biquad1 {interpolated_buffer_size, 24000.0, 0.54119610};
-    Biquad right_biquad2 {interpolated_buffer_size, 24000.0, 1.3065630};
+    static constexpr std::array<double, 2> q{0.54119610, 1.3065630};
+    std::vector<Common::Biquad> left_biquads;
+    std::vector<Common::Biquad> right_biquads;
 
     void FrameSequencerTick();
     void UpdatePowerOnState();
     void ClearRegisters();
     void QueueSample(u8 left_sample, u8 right_sample);
-
     void Resample();
-    void Upsample();
-    void Downsample();
-    void LowPassIIRFilter();
 };
 
 } // End namespace Gb
