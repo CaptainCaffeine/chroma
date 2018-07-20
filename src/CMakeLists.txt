@@ -34,6 +34,7 @@ set(SOURCES
     gba/lcd/Lcd.cpp
     gba/lcd/Bg.cpp
     gba/lcd/Debug.cpp
+    gba/audio/Audio.cpp
     gba/hardware/Timer.cpp
     gba/hardware/Dma.cpp
     gba/hardware/Keypad.cpp
@@ -68,6 +69,7 @@ set(HEADERS
     gba/cpu/Disassembler.h
     gba/lcd/Lcd.h
     gba/lcd/Bg.h
+    gba/audio/Audio.h
     gba/hardware/Timer.h
     gba/hardware/Dma.h
     gba/hardware/Keypad.h

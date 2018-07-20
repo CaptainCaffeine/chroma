@@ -22,6 +22,7 @@
 #include "gba/cpu/Cpu.h"
 #include "gba/cpu/Disassembler.h"
 #include "gba/lcd/Lcd.h"
+#include "gba/audio/Audio.h"
 #include "gba/hardware/Timer.h"
 #include "gba/hardware/Dma.h"
 #include "gba/hardware/Keypad.h"
@@ -37,6 +38,7 @@ Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::ve
         , cpu(std::make_unique<Cpu>(*mem, *this))
         , disasm(std::make_unique<Disassembler>(level, *this))
         , lcd(std::make_unique<Lcd>(mem->PramReference(), mem->VramReference(), mem->OamReference(), *this))
+        , audio(std::make_unique<Audio>(*this))
         , timers{{0, *this}, {1, *this}, {2, *this}, {3, *this}}
         , dma{{0, *this}, {1, *this}, {2, *this}, {3, *this}}
         , keypad(std::make_unique<Keypad>(*this))
@@ -58,6 +60,8 @@ void Core::EmulatorLoop() {
     auto max_frame_time = 0us;
     auto avg_frame_time = 0us;
     int frame_count = 0;
+
+    sdl_context.UnpauseAudio();
 
     while (!quit) {
         const auto start_time = steady_clock::now();
@@ -88,8 +92,11 @@ void Core::EmulatorLoop() {
             frame_count = 0;
         }
 
+        sdl_context.PushBackAudio(audio->output_buffer);
         sdl_context.RenderFrame(front_buffer.data());
     }
+
+    sdl_context.PauseAudio();
 }
 
 void Core::UpdateHardware(int cycles) {
@@ -103,6 +110,8 @@ void Core::UpdateHardware(int cycles) {
         timer.Tick(cycles);
     }
 
+    audio->Update();
+
     mem->DelayedSaveOp(cycles);
 }
 
@@ -110,7 +119,7 @@ int Core::HaltCycles(int remaining_cpu_cycles) const {
     int halt_cycles = lcd->NextEvent();
 
     for (const auto& timer : timers) {
-        if (!mem->InterruptEnabled(Interrupt::Timer0 << timer.id)) {
+        if (timer.id != 0 && timer.id != 1 && !mem->InterruptEnabled(Interrupt::Timer0 << timer.id)) {
             continue;
         }
 

@@ -60,17 +60,21 @@ void Dma::WriteControl(const u16 data, const u16 mask) {
 
         ReloadWordCount();
 
-        if (StartTiming() != Immediate) {
+        if (StartTiming() != Timing::Immediate) {
             // If DMA0 is initialized with Special start timing, it will never get triggered.
             paused = true;
         } else {
             paused = false;
             core.cpu->dma_active = true;
         }
+    } else if (was_enabled && !DmaEnabled()) {
+        core.cpu->dma_active = std::any_of(core.dma.cbegin(), core.dma.cend(), [](const auto& dma) {
+            return dma.Active();
+        });
     }
 }
 
-void Dma::Trigger(DmaTiming event) {
+void Dma::Trigger(Timing event) {
     if (DmaEnabled() && StartTiming() == event) {
         paused = false;
         core.cpu->dma_active = true;
@@ -113,7 +117,7 @@ int Dma::Run() {
             }
         }
 
-        if (RepeatEnabled() && StartTiming() != Immediate) {
+        if (RepeatEnabled() && StartTiming() != Timing::Immediate) {
             // If repeat is enabled, reload the chunk count and wait for the next DMA trigger event.
             ReloadWordCount();
             paused = true;
@@ -171,23 +175,27 @@ int Dma::Transfer(bool sequential) {
         }
     }
 
-    switch (DestControl()) {
-    case Increment:
-    case Reload:
-        dest += TransferWidth();
-        break;
-    case Decrement:
-        dest -= TransferWidth();
-        break;
-    default:
-        break;
+    if (!FifoTimingEnabled()) {
+        switch (DestControl()) {
+        case Increment:
+        case Reload:
+            dest += TransferWidth();
+            break;
+        case Decrement:
+            dest -= TransferWidth();
+            break;
+        default:
+            break;
+        }
     }
 
     return cycles;
 }
 
 void Dma::ReloadWordCount() {
-    if (word_count != 0) {
+    if (FifoTimingEnabled()) {
+        remaining_chunks = 4;
+    } else if (word_count != 0) {
         remaining_chunks = word_count;
     } else {
         // If the word count register contains 0, the actual count is 0x1'0000 for DMA3 and 0x4000 otherwise.

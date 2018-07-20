@@ -18,6 +18,7 @@
 #include "gba/core/Core.h"
 #include "gba/core/Enums.h"
 #include "gba/memory/Memory.h"
+#include "gba/audio/Audio.h"
 
 namespace Gba {
 
@@ -77,6 +78,14 @@ void Timer::CounterTick() {
         if (id < 3 && core.timers[id + 1].TimerEnabled() && core.timers[id + 1].CascadeEnabled()) {
             core.timers[id + 1].CounterTick();
         }
+
+        if (id < 2) {
+            for (int f = 0; f < 2; ++f) {
+                if (id == core.audio->FifoTimerSelect(f)) {
+                    core.audio->ConsumeSample(f);
+                }
+            }
+        }
     }
 }
 
@@ -97,6 +106,17 @@ void Timer::WriteControl(const u16 data, const u16 mask) {
         cycles_per_tick = 1;
     } else {
         cycles_per_tick = 16 << (2 * prescaler_select);
+    }
+
+    if (id < 2) {
+        for (int f = 0; f < 2; ++f) {
+            if (id == core.audio->FifoTimerSelect(f)) {
+                core.audio->fifos[f].samples_per_frame = (280896 / (cycles_per_tick * (0x1'0000 - reload))) * 5;
+                if (core.audio->fifos[f].samples_per_frame <= 4 * 5) {
+                    core.audio->fifos[f].sample_buffer.clear();
+                }
+            }
+        }
     }
 }
 

@@ -52,12 +52,12 @@ void Lcd::Update(int cycles) {
             DrawScanline();
 
             for (auto& dma : core.dma) {
-                dma.Trigger(Dma::HBlank);
+                dma.Trigger(Dma::Timing::HBlank);
             }
         }
 
         if (vcount > 1 && vcount < 162) {
-            core.dma[3].Trigger(Dma::Special);
+            core.dma[3].Trigger(Dma::Timing::Special);
         }
     } else if (updated_cycles >= 1232) {
         updated_cycles -= 1232;
@@ -73,7 +73,7 @@ void Lcd::Update(int cycles) {
             }
 
             for (auto& dma : core.dma) {
-                dma.Trigger(Dma::VBlank);
+                dma.Trigger(Dma::Timing::VBlank);
             }
 
             for (int b = 2; b < 4; ++b) {

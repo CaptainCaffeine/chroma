@@ -35,16 +35,20 @@ public:
     IOReg word_count = {0x0000, 0x0000, 0x3FFF};
     IOReg control    = {0x0000, 0xF7E0, 0xF7E0};
 
-    enum DmaTiming {Immediate = 0,
-                    VBlank    = 1,
-                    HBlank    = 2,
-                    Special   = 3};
+    enum class Timing {Immediate = 0,
+                       VBlank    = 1,
+                       HBlank    = 2,
+                       Special   = 3};
 
     int Run();
 
     void WriteControl(const u16 data, const u16 mask);
     bool Active() const { return DmaEnabled() && !paused; }
-    void Trigger(DmaTiming event);
+    void Trigger(Timing event);
+    bool WritingToFifo(int f) const {
+        static constexpr u32 fifo_base_addr = 0x0400'00A0;
+        return dest == fifo_base_addr + 4 * f;
+    }
 
 private:
     const int id;
@@ -63,6 +67,7 @@ private:
     int Transfer(bool sequential);
 
     void DisableDma() { control &= ~0x8000; }
+    bool FifoTimingEnabled() const { return StartTiming() == Timing::Special && (id == 1 || id == 2); }
 
     // Control flags
     enum AddrControl {Increment = 0,
@@ -72,12 +77,11 @@ private:
     int DestControl() const { return (control >> 5) & 0x3; }
     int SourceControl() const { return (control >> 7) & 0x3; }
     bool RepeatEnabled() const { return control & 0x0200; }
-    int TransferWidth() const { return (control & 0x0400) ? 4 : 2; }
+    int TransferWidth() const { return ((control & 0x0400) || FifoTimingEnabled()) ? 4 : 2; }
     bool DrqEnabled() const { return control & 0x0800; }
-    int StartTiming() const { return (control >> 12) & 0x3; }
+    Timing StartTiming() const { return static_cast<Timing>((control >> 12) & 0x3); }
     bool InterruptEnabled() const { return control & 0x4000; }
     bool DmaEnabled() const { return control & 0x8000; }
-
 };
 
 } // End namespace Gba

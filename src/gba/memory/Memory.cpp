@@ -21,6 +21,7 @@
 #include "gba/cpu/Cpu.h"
 #include "gba/lcd/Lcd.h"
 #include "gba/lcd/Bg.h"
+#include "gba/audio/Audio.h"
 #include "gba/hardware/Timer.h"
 #include "gba/hardware/Dma.h"
 #include "gba/hardware/Keypad.h"
@@ -524,8 +525,14 @@ u16 Memory::ReadIO(const u32 addr) const {
         return core.lcd->blend_control.Read();
     case BLDALPHA:
         return core.lcd->blend_alpha.Read();
+    case SOUNDCNT_L:
+        return core.audio->psg_control.Read();
+    case SOUNDCNT_H:
+        return core.audio->fifo_control.Read();
+    case SOUNDCNT_X:
+        return core.audio->sound_on.Read();
     case SOUNDBIAS:
-        return soundbias.Read();
+        return core.audio->soundbias.Read();
     case DMA0CNT_L:
         return 0x0000;
     case DMA0CNT_H:
@@ -743,8 +750,25 @@ void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
     case BLDY:
         core.lcd->blend_fade.Write(data, mask);
         break;
+    case SOUNDCNT_L:
+        core.audio->psg_control.Write(data, mask);
+        break;
+    case SOUNDCNT_H:
+        core.audio->WriteFifoControl(data, mask);
+        break;
+    case SOUNDCNT_X:
+        core.audio->sound_on.Write(data, mask);
+        break;
     case SOUNDBIAS:
-        soundbias.Write(data, mask);
+        core.audio->soundbias.Write(data, mask);
+        break;
+    case FIFO_A_L:
+    case FIFO_A_H:
+        core.audio->fifos[0].Write(data, mask);
+        break;
+    case FIFO_B_L:
+    case FIFO_B_H:
+        core.audio->fifos[1].Write(data, mask);
         break;
     case DMA0SAD_L:
         core.dma[0].source_l.Write(data, mask);

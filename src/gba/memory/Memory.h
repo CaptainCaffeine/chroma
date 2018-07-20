@@ -251,125 +251,152 @@ private:
     void InitEeprom(int stream_size, int non_addr_bits);
 
     // IO registers
-    static constexpr u32 DISPCNT    = 0x0400'0000;
-    static constexpr u32 GREENSWAP  = 0x0400'0002;
-    static constexpr u32 DISPSTAT   = 0x0400'0004;
-    static constexpr u32 VCOUNT     = 0x0400'0006;
+    static constexpr u32 DISPCNT     = 0x0400'0000;
+    static constexpr u32 GREENSWAP   = 0x0400'0002;
+    static constexpr u32 DISPSTAT    = 0x0400'0004;
+    static constexpr u32 VCOUNT      = 0x0400'0006;
 
-    static constexpr u32 BG0CNT     = 0x0400'0008;
-    static constexpr u32 BG1CNT     = 0x0400'000A;
-    static constexpr u32 BG2CNT     = 0x0400'000C;
-    static constexpr u32 BG3CNT     = 0x0400'000E;
-    static constexpr u32 BG0HOFS    = 0x0400'0010;
-    static constexpr u32 BG0VOFS    = 0x0400'0012;
-    static constexpr u32 BG1HOFS    = 0x0400'0014;
-    static constexpr u32 BG1VOFS    = 0x0400'0016;
-    static constexpr u32 BG2HOFS    = 0x0400'0018;
-    static constexpr u32 BG2VOFS    = 0x0400'001A;
-    static constexpr u32 BG3HOFS    = 0x0400'001C;
-    static constexpr u32 BG3VOFS    = 0x0400'001E;
+    static constexpr u32 BG0CNT      = 0x0400'0008;
+    static constexpr u32 BG1CNT      = 0x0400'000A;
+    static constexpr u32 BG2CNT      = 0x0400'000C;
+    static constexpr u32 BG3CNT      = 0x0400'000E;
+    static constexpr u32 BG0HOFS     = 0x0400'0010;
+    static constexpr u32 BG0VOFS     = 0x0400'0012;
+    static constexpr u32 BG1HOFS     = 0x0400'0014;
+    static constexpr u32 BG1VOFS     = 0x0400'0016;
+    static constexpr u32 BG2HOFS     = 0x0400'0018;
+    static constexpr u32 BG2VOFS     = 0x0400'001A;
+    static constexpr u32 BG3HOFS     = 0x0400'001C;
+    static constexpr u32 BG3VOFS     = 0x0400'001E;
 
-    static constexpr u32 BG2PA      = 0x0400'0020;
-    static constexpr u32 BG2PB      = 0x0400'0022;
-    static constexpr u32 BG2PC      = 0x0400'0024;
-    static constexpr u32 BG2PD      = 0x0400'0026;
-    static constexpr u32 BG2X_L     = 0x0400'0028;
-    static constexpr u32 BG2X_H     = 0x0400'002A;
-    static constexpr u32 BG2Y_L     = 0x0400'002C;
-    static constexpr u32 BG2Y_H     = 0x0400'002E;
+    static constexpr u32 BG2PA       = 0x0400'0020;
+    static constexpr u32 BG2PB       = 0x0400'0022;
+    static constexpr u32 BG2PC       = 0x0400'0024;
+    static constexpr u32 BG2PD       = 0x0400'0026;
+    static constexpr u32 BG2X_L      = 0x0400'0028;
+    static constexpr u32 BG2X_H      = 0x0400'002A;
+    static constexpr u32 BG2Y_L      = 0x0400'002C;
+    static constexpr u32 BG2Y_H      = 0x0400'002E;
 
-    static constexpr u32 BG3PA      = 0x0400'0030;
-    static constexpr u32 BG3PB      = 0x0400'0032;
-    static constexpr u32 BG3PC      = 0x0400'0034;
-    static constexpr u32 BG3PD      = 0x0400'0036;
-    static constexpr u32 BG3X_L     = 0x0400'0038;
-    static constexpr u32 BG3X_H     = 0x0400'003A;
-    static constexpr u32 BG3Y_L     = 0x0400'003C;
-    static constexpr u32 BG3Y_H     = 0x0400'003E;
+    static constexpr u32 BG3PA       = 0x0400'0030;
+    static constexpr u32 BG3PB       = 0x0400'0032;
+    static constexpr u32 BG3PC       = 0x0400'0034;
+    static constexpr u32 BG3PD       = 0x0400'0036;
+    static constexpr u32 BG3X_L      = 0x0400'0038;
+    static constexpr u32 BG3X_H      = 0x0400'003A;
+    static constexpr u32 BG3Y_L      = 0x0400'003C;
+    static constexpr u32 BG3Y_H      = 0x0400'003E;
 
-    static constexpr u32 WIN0H      = 0x0400'0040;
-    static constexpr u32 WIN1H      = 0x0400'0042;
-    static constexpr u32 WIN0V      = 0x0400'0044;
-    static constexpr u32 WIN1V      = 0x0400'0046;
-    static constexpr u32 WININ      = 0x0400'0048;
-    static constexpr u32 WINOUT     = 0x0400'004A;
+    static constexpr u32 WIN0H       = 0x0400'0040;
+    static constexpr u32 WIN1H       = 0x0400'0042;
+    static constexpr u32 WIN0V       = 0x0400'0044;
+    static constexpr u32 WIN1V       = 0x0400'0046;
+    static constexpr u32 WININ       = 0x0400'0048;
+    static constexpr u32 WINOUT      = 0x0400'004A;
 
-    static constexpr u32 MOSAIC     = 0x0400'004C;
-    static constexpr u32 BLDCNT     = 0x0400'0050;
-    static constexpr u32 BLDALPHA   = 0x0400'0052;
-    static constexpr u32 BLDY       = 0x0400'0054;
+    static constexpr u32 MOSAIC      = 0x0400'004C;
+    static constexpr u32 BLDCNT      = 0x0400'0050;
+    static constexpr u32 BLDALPHA    = 0x0400'0052;
+    static constexpr u32 BLDY        = 0x0400'0054;
 
-    static constexpr u32 SOUNDBIAS  = 0x0400'0088;
-    IOReg soundbias = {0x0000, 0xC3FE, 0xC3FE};
+    static constexpr u32 SOUND1CNT_L = 0x0400'0060;
+    static constexpr u32 SOUND1CNT_H = 0x0400'0062;
+    static constexpr u32 SOUND1CNT_X = 0x0400'0064;
+    static constexpr u32 SOUND2CNT_L = 0x0400'0068;
+    static constexpr u32 SOUND2CNT_H = 0x0400'006C;
+    static constexpr u32 SOUND3CNT_L = 0x0400'0070;
+    static constexpr u32 SOUND3CNT_H = 0x0400'0072;
+    static constexpr u32 SOUND3CNT_X = 0x0400'0074;
+    static constexpr u32 SOUND4CNT_L = 0x0400'0078;
+    static constexpr u32 SOUND4CNT_H = 0x0400'007C;
 
-    static constexpr u32 DMA0SAD_L  = 0x0400'00B0;
-    static constexpr u32 DMA0SAD_H  = 0x0400'00B2;
-    static constexpr u32 DMA0DAD_L  = 0x0400'00B4;
-    static constexpr u32 DMA0DAD_H  = 0x0400'00B6;
-    static constexpr u32 DMA0CNT_L  = 0x0400'00B8;
-    static constexpr u32 DMA0CNT_H  = 0x0400'00BA;
+    static constexpr u32 SOUNDCNT_L  = 0x0400'0080;
+    static constexpr u32 SOUNDCNT_H  = 0x0400'0082;
+    static constexpr u32 SOUNDCNT_X  = 0x0400'0084;
+    static constexpr u32 SOUNDBIAS   = 0x0400'0088;
 
-    static constexpr u32 DMA1SAD_L  = 0x0400'00BC;
-    static constexpr u32 DMA1SAD_H  = 0x0400'00BE;
-    static constexpr u32 DMA1DAD_L  = 0x0400'00C0;
-    static constexpr u32 DMA1DAD_H  = 0x0400'00C2;
-    static constexpr u32 DMA1CNT_L  = 0x0400'00C4;
-    static constexpr u32 DMA1CNT_H  = 0x0400'00C6;
+    static constexpr u32 WAVE_RAM0_L = 0x0400'0090;
+    static constexpr u32 WAVE_RAM0_H = 0x0400'0092;
+    static constexpr u32 WAVE_RAM1_L = 0x0400'0094;
+    static constexpr u32 WAVE_RAM1_H = 0x0400'0096;
+    static constexpr u32 WAVE_RAM2_L = 0x0400'0098;
+    static constexpr u32 WAVE_RAM2_H = 0x0400'009A;
+    static constexpr u32 WAVE_RAM3_L = 0x0400'009C;
+    static constexpr u32 WAVE_RAM3_H = 0x0400'009E;
 
-    static constexpr u32 DMA2SAD_L  = 0x0400'00C8;
-    static constexpr u32 DMA2SAD_H  = 0x0400'00CA;
-    static constexpr u32 DMA2DAD_L  = 0x0400'00CC;
-    static constexpr u32 DMA2DAD_H  = 0x0400'00CE;
-    static constexpr u32 DMA2CNT_L  = 0x0400'00D0;
-    static constexpr u32 DMA2CNT_H  = 0x0400'00D2;
+    static constexpr u32 FIFO_A_L    = 0x0400'00A0;
+    static constexpr u32 FIFO_A_H    = 0x0400'00A2;
+    static constexpr u32 FIFO_B_L    = 0x0400'00A4;
+    static constexpr u32 FIFO_B_H    = 0x0400'00A6;
 
-    static constexpr u32 DMA3SAD_L  = 0x0400'00D4;
-    static constexpr u32 DMA3SAD_H  = 0x0400'00D6;
-    static constexpr u32 DMA3DAD_L  = 0x0400'00D8;
-    static constexpr u32 DMA3DAD_H  = 0x0400'00DA;
-    static constexpr u32 DMA3CNT_L  = 0x0400'00DC;
-    static constexpr u32 DMA3CNT_H  = 0x0400'00DE;
+    static constexpr u32 DMA0SAD_L   = 0x0400'00B0;
+    static constexpr u32 DMA0SAD_H   = 0x0400'00B2;
+    static constexpr u32 DMA0DAD_L   = 0x0400'00B4;
+    static constexpr u32 DMA0DAD_H   = 0x0400'00B6;
+    static constexpr u32 DMA0CNT_L   = 0x0400'00B8;
+    static constexpr u32 DMA0CNT_H   = 0x0400'00BA;
 
-    static constexpr u32 TM0CNT_L   = 0x0400'0100;
-    static constexpr u32 TM0CNT_H   = 0x0400'0102;
-    static constexpr u32 TM1CNT_L   = 0x0400'0104;
-    static constexpr u32 TM1CNT_H   = 0x0400'0106;
-    static constexpr u32 TM2CNT_L   = 0x0400'0108;
-    static constexpr u32 TM2CNT_H   = 0x0400'010A;
-    static constexpr u32 TM3CNT_L   = 0x0400'010C;
-    static constexpr u32 TM3CNT_H   = 0x0400'010E;
+    static constexpr u32 DMA1SAD_L   = 0x0400'00BC;
+    static constexpr u32 DMA1SAD_H   = 0x0400'00BE;
+    static constexpr u32 DMA1DAD_L   = 0x0400'00C0;
+    static constexpr u32 DMA1DAD_H   = 0x0400'00C2;
+    static constexpr u32 DMA1CNT_L   = 0x0400'00C4;
+    static constexpr u32 DMA1CNT_H   = 0x0400'00C6;
 
-    static constexpr u32 SIOMULTI0  = 0x0400'0120; // Also SIODATA32_L
-    static constexpr u32 SIOMULTI1  = 0x0400'0122; // Also SIODATA32_H
-    static constexpr u32 SIOMULTI2  = 0x0400'0124;
-    static constexpr u32 SIOMULTI3  = 0x0400'0126;
-    static constexpr u32 SIOCNT     = 0x0400'0128;
-    static constexpr u32 SIOMLTSEND = 0x0400'012A; // Also SIODATA8
+    static constexpr u32 DMA2SAD_L   = 0x0400'00C8;
+    static constexpr u32 DMA2SAD_H   = 0x0400'00CA;
+    static constexpr u32 DMA2DAD_L   = 0x0400'00CC;
+    static constexpr u32 DMA2DAD_H   = 0x0400'00CE;
+    static constexpr u32 DMA2CNT_L   = 0x0400'00D0;
+    static constexpr u32 DMA2CNT_H   = 0x0400'00D2;
 
-    static constexpr u32 KEYINPUT   = 0x0400'0130;
-    static constexpr u32 KEYCNT     = 0x0400'0132;
+    static constexpr u32 DMA3SAD_L   = 0x0400'00D4;
+    static constexpr u32 DMA3SAD_H   = 0x0400'00D6;
+    static constexpr u32 DMA3DAD_L   = 0x0400'00D8;
+    static constexpr u32 DMA3DAD_H   = 0x0400'00DA;
+    static constexpr u32 DMA3CNT_L   = 0x0400'00DC;
+    static constexpr u32 DMA3CNT_H   = 0x0400'00DE;
 
-    static constexpr u32 RCNT       = 0x0400'0134;
-    static constexpr u32 JOYCNT     = 0x0400'0140;
-    static constexpr u32 JOYRECV_L  = 0x0400'0150;
-    static constexpr u32 JOYRECV_H  = 0x0400'0152;
-    static constexpr u32 JOYTRANS_L = 0x0400'0154;
-    static constexpr u32 JOYTRANS_H = 0x0400'0156;
-    static constexpr u32 JOYSTAT    = 0x0400'0158;
+    static constexpr u32 TM0CNT_L    = 0x0400'0100;
+    static constexpr u32 TM0CNT_H    = 0x0400'0102;
+    static constexpr u32 TM1CNT_L    = 0x0400'0104;
+    static constexpr u32 TM1CNT_H    = 0x0400'0106;
+    static constexpr u32 TM2CNT_L    = 0x0400'0108;
+    static constexpr u32 TM2CNT_H    = 0x0400'010A;
+    static constexpr u32 TM3CNT_L    = 0x0400'010C;
+    static constexpr u32 TM3CNT_H    = 0x0400'010E;
 
-    static constexpr u32 IE = 0x0400'0200;
+    static constexpr u32 SIOMULTI0   = 0x0400'0120; // Also SIODATA32_L
+    static constexpr u32 SIOMULTI1   = 0x0400'0122; // Also SIODATA32_H
+    static constexpr u32 SIOMULTI2   = 0x0400'0124;
+    static constexpr u32 SIOMULTI3   = 0x0400'0126;
+    static constexpr u32 SIOCNT      = 0x0400'0128;
+    static constexpr u32 SIOMLTSEND  = 0x0400'012A; // Also SIODATA8
+
+    static constexpr u32 KEYINPUT    = 0x0400'0130;
+    static constexpr u32 KEYCNT      = 0x0400'0132;
+
+    static constexpr u32 RCNT        = 0x0400'0134;
+    static constexpr u32 JOYCNT      = 0x0400'0140;
+    static constexpr u32 JOYRECV_L   = 0x0400'0150;
+    static constexpr u32 JOYRECV_H   = 0x0400'0152;
+    static constexpr u32 JOYTRANS_L  = 0x0400'0154;
+    static constexpr u32 JOYTRANS_H  = 0x0400'0156;
+    static constexpr u32 JOYSTAT     = 0x0400'0158;
+
+    static constexpr u32 IE          = 0x0400'0200;
     IOReg intr_enable = {0x0000, 0x3FFF, 0x3FFF};
 
-    static constexpr u32 IF = 0x0400'0202;
+    static constexpr u32 IF          = 0x0400'0202;
     IOReg intr_flags = {0x0000, 0x3FFF, 0x3FFF};
 
-    static constexpr u32 WAITCNT = 0x0400'0204;
+    static constexpr u32 WAITCNT     = 0x0400'0204;
     IOReg waitcnt = {0x0000, 0x5FFF, 0x5FFF};
 
-    static constexpr u32 IME = 0x0400'0208;
+    static constexpr u32 IME         = 0x0400'0208;
     IOReg master_enable = {0x0000, 0x0001, 0x0001};
 
-    static constexpr u32 HALTCNT = 0x0400'0300; // Also POSTFLG
+    static constexpr u32 HALTCNT     = 0x0400'0300; // Also POSTFLG
     IOReg haltcnt = {0x0000, 0x0001, 0x8001};
 };
 

@@ -31,6 +31,7 @@ class Memory;
 class Cpu;
 class Disassembler;
 class Lcd;
+class Audio;
 class Timer;
 class Dma;
 class Keypad;
@@ -46,6 +47,7 @@ public:
     std::unique_ptr<Cpu> cpu;
     std::unique_ptr<Disassembler> disasm;
     std::unique_ptr<Lcd> lcd;
+    std::unique_ptr<Audio> audio;
     std::vector<Timer> timers;
     std::vector<Dma> dma;
     std::unique_ptr<Keypad> keypad;
