@@ -44,7 +44,7 @@ public:
             , v_flip(attr1 & 0x2000'0000)
             , tile_num(attr2 & (single_palette ? 0x3FE : 0x3FF))
             , priority((attr2 >> 10) & 0x3)
-            , palette((attr2 >> 12) & 0xF)
+            , palette(single_palette ? 0 : ((attr2 >> 12) & 0xF))
             , pixel_width(Width(attr1))
             , pixel_height(Height(attr1))
             , tile_width(pixel_width / ((affine && double_size) ? 16 : 8))
@@ -276,6 +276,7 @@ private:
     void DrawSprites();
     void DrawRegularSprite(const Sprite& sprite);
     void DrawAffineSprite(const Sprite& sprite);
+    void UpdateSpritePixel(const Sprite& sprite, int scanline_index);
 
     bool IsWithinWindow(int layer_id, int x) const;
 

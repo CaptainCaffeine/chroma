@@ -498,20 +498,7 @@ void Lcd::DrawRegularSprite(const Sprite& sprite) {
                     obj_window_used = true;
                 } else {
                     sprite_scanlines[sprite.priority][scanline_index] = pixel_colours[i];
-
-                    // Erase sprite pixels at a lower priority than this one, since we only have one object plane.
-                    for (int j = sprite.priority + 1; j < 4; ++j) {
-                        sprite_scanlines[j][scanline_index] |= alpha_bit;
-                    }
-
-                    if (sprite.mode == Sprite::Mode::SemiTransparent) {
-                        sprite_flags[scanline_index] |= semi_transparent_flag;
-                        semi_transparent_used = true;
-                    } else {
-                        // The semi-transparent flag must be cleared if a non-semi-transparent sprite is drawn on top
-                        // of a semi-transparent one.
-                        sprite_flags[scanline_index] &= ~semi_transparent_flag;
-                    }
+                    UpdateSpritePixel(sprite, scanline_index);
                 }
             }
 
@@ -570,68 +557,50 @@ void Lcd::DrawAffineSprite(const Sprite& sprite) {
             tile_addr += h * sprite.tile_bytes * ((sprite.single_palette ? 16 : 32) - sprite.tile_width);
         }
 
+        u8 palette_entry;
         if (sprite.single_palette) {
             // Each tile byte specifies the 8-bit palette index for a pixel.
             const int pixel_addr = tile_addr + pixel_row * 8 + tex_x % 8;
             const int hi_shift = 8 * (pixel_addr & 0x1);
 
-            const u8 palette_entry = (vram[pixel_addr / 2] >> hi_shift) & 0xFF;
-            if (palette_entry != 0) {
-                // Palette entry 0 is transparent.
-                if (ObjWinEnabled() && sprite.mode == Sprite::Mode::ObjWindow) {
-                    sprite_flags[scanline_index] |= obj_window_flag;
-                    obj_window_used = true;
-                } else {
-                    sprite_scanlines[sprite.priority][scanline_index] = pram[256 + palette_entry] & 0x7FFF;
-
-                    // Erase sprite pixels at a lower priority than this one, since we only have one object plane.
-                    for (int j = sprite.priority + 1; j < 4; ++j) {
-                        sprite_scanlines[j][scanline_index] |= alpha_bit;
-                    }
-
-                    if (sprite.mode == Sprite::Mode::SemiTransparent) {
-                        sprite_flags[scanline_index] |= semi_transparent_flag;
-                        semi_transparent_used = true;
-                    } else {
-                        // The semi-transparent flag must be cleared if a non-semi-transparent sprite is drawn on top
-                        // of a semi-transparent one.
-                        sprite_flags[scanline_index] &= ~semi_transparent_flag;
-                    }
-                }
-            }
+            palette_entry = (vram[pixel_addr / 2] >> hi_shift) & 0xFF;
         } else {
             const int pixel_addr = tile_addr + pixel_row * 4 + (tex_x % 8) / 2;
             const int hi_shift = 8 * (pixel_addr & 0x1);
 
             // The lower 4 bits are the palette index for even pixels, and the upper 4 bits are for odd pixels.
             const int odd_shift = 4 * ((tex_x % 8) & 0x1);
-            const u8 palette_entry = (vram[pixel_addr / 2] >> (hi_shift + odd_shift)) & 0xF;
-            if (palette_entry != 0) {
-                // Palette entry 0 is transparent.
-                if (ObjWinEnabled() && sprite.mode == Sprite::Mode::ObjWindow) {
-                    sprite_flags[scanline_index] |= obj_window_flag;
-                    obj_window_used = true;
-                } else {
-                    sprite_scanlines[sprite.priority][scanline_index] = pram[256 + sprite.palette * 16 + palette_entry] & 0x7FFF;
+            palette_entry = (vram[pixel_addr / 2] >> (hi_shift + odd_shift)) & 0xF;
+        }
 
-                    // Erase sprite pixels at a lower priority than this one, since we only have one object plane.
-                    for (int j = sprite.priority + 1; j < 4; ++j) {
-                        sprite_scanlines[j][scanline_index] |= alpha_bit;
-                    }
-
-                    if (sprite.mode == Sprite::Mode::SemiTransparent) {
-                        sprite_flags[scanline_index] |= semi_transparent_flag;
-                        semi_transparent_used = true;
-                    } else {
-                        // The semi-transparent flag must be cleared if a non-semi-transparent sprite is drawn on top
-                        // of a semi-transparent one.
-                        sprite_flags[scanline_index] &= ~semi_transparent_flag;
-                    }
-                }
+        if (palette_entry != 0) {
+            // Palette entry 0 is transparent.
+            if (ObjWinEnabled() && sprite.mode == Sprite::Mode::ObjWindow) {
+                sprite_flags[scanline_index] |= obj_window_flag;
+                obj_window_used = true;
+            } else {
+                sprite_scanlines[sprite.priority][scanline_index] = pram[256 + sprite.palette * 16 + palette_entry] & 0x7FFF;
+                UpdateSpritePixel(sprite, scanline_index);
             }
         }
 
         scanline_index += 1;
+    }
+}
+
+void Lcd::UpdateSpritePixel(const Sprite& sprite, int scanline_index) {
+    // Erase sprite pixels at a lower priority than this one, since we only have one object plane.
+    for (int j = sprite.priority + 1; j < 4; ++j) {
+        sprite_scanlines[j][scanline_index] |= alpha_bit;
+    }
+
+    if (sprite.mode == Sprite::Mode::SemiTransparent) {
+        sprite_flags[scanline_index] |= semi_transparent_flag;
+        semi_transparent_used = true;
+    } else {
+        // The semi-transparent flag must be cleared if a non-semi-transparent sprite is drawn on top
+        // of a semi-transparent one.
+        sprite_flags[scanline_index] &= ~semi_transparent_flag;
     }
 }
 
