@@ -202,16 +202,9 @@ public:
     }
 };
 
-class PixelInfo {
-public:
-    u8 layer = 5;
-    // The targets are initialized with non-existent layer 6.
-    u8 highest_second_target = 6;
-    u8 highest_first_target = 6;
-
-    bool HighestTargetLayers(int new_layer) const {
-        return new_layer == highest_first_target && layer == highest_second_target;
-    }
+struct PixelInfo {
+    u8 last_layer = 5;
+    u8 highest_first_target = 5;
 };
 
 class Lcd {

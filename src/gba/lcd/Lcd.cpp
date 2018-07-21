@@ -211,13 +211,7 @@ void Lcd::DrawScanline() {
 
     // The first palette entry is the backdrop colour.
     std::fill_n(back_buffer.begin() + vcount * h_pixels, h_pixels, pram[0] & 0x7FFF);
-
     std::array<PixelInfo, 240> pixel_info{};
-    if (IsSecondTarget(5)) {
-        for (auto& pixel : pixel_info) {
-            pixel.highest_second_target = 5;
-        }
-    }
 
     // If alpha blending is enabled, or if semi-transparent sprites are present, calculate the highest first target
     // layer and second target layer for each pixel.
@@ -226,12 +220,8 @@ void Lcd::DrawScanline() {
         for (int p = 3; p >= 0; --p) {
             for (const auto& bg : priorities[p]) {
                 for (int i = 0; i < h_pixels; ++i) {
-                    if ((bg->scanline[i] & alpha_bit) == 0) {
-                        if (IsFirstTarget(bg->id)) {
-                            pixel_info[i].highest_first_target = bg->id;
-                        } else if (IsSecondTarget(bg->id)) {
-                            pixel_info[i].highest_second_target = bg->id;
-                        }
+                    if ((bg->scanline[i] & alpha_bit) == 0 && IsFirstTarget(bg->id)) {
+                        pixel_info[i].highest_first_target = bg->id;
                     }
                 }
             }
@@ -240,12 +230,9 @@ void Lcd::DrawScanline() {
                 // There is only one sprite layer, even though each sprite can have varying priorities. When
                 // calculating blending effects, the GBA only considers the highest priority sprite on each pixel.
                 for (int i = 0; i < h_pixels; ++i) {
-                    if ((sprite_scanlines[p][i] & alpha_bit) == 0) {
-                        if (IsFirstTarget(4) || (sprite_flags[i] & semi_transparent_flag)) {
-                            pixel_info[i].highest_first_target = 4;
-                        } else if (IsSecondTarget(4)) {
-                            pixel_info[i].highest_second_target = 4;
-                        }
+                    if ((sprite_scanlines[p][i] & alpha_bit) == 0
+                            && (IsFirstTarget(4) || (sprite_flags[i] & semi_transparent_flag))) {
+                        pixel_info[i].highest_first_target = 4;
                     }
                 }
             }
@@ -264,7 +251,9 @@ void Lcd::DrawScanline() {
                 if ((bg->scanline[i] & alpha_bit) == 0 && IsWithinWindow(bg->id, i)) {
                     auto& buffer_pixel = back_buffer[vcount * h_pixels + i];
 
-                    if (BlendMode() == Effect::AlphaBlend && pixel_info[i].HighestTargetLayers(bg->id)
+                    if (BlendMode() == Effect::AlphaBlend
+                            && pixel_info[i].highest_first_target == bg->id
+                            && IsSecondTarget(pixel_info[i].last_layer)
                             && IsWithinWindow(5, i)) {
                         for (int j = 0; j < 3; ++j) {
                             int channel_target1 = (bg->scanline[i] >> (5 * j)) & 0x1F;
@@ -278,7 +267,7 @@ void Lcd::DrawScanline() {
                         buffer_pixel = bg->scanline[i];
                     }
 
-                    pixel_info[i].layer = bg->id;
+                    pixel_info[i].last_layer = bg->id;
                 }
             }
         }
@@ -290,7 +279,8 @@ void Lcd::DrawScanline() {
                     auto& buffer_pixel = back_buffer[vcount * h_pixels + i];
 
                     if ((BlendMode() == Effect::AlphaBlend || (sprite_flags[i] & semi_transparent_flag))
-                            && pixel_info[i].HighestTargetLayers(4)
+                            && pixel_info[i].highest_first_target == 4
+                            && IsSecondTarget(pixel_info[i].last_layer)
                             && IsWithinWindow(5, i)) {
                         for (int j = 0; j < 3; ++j) {
                             int channel_target1 = (sprite_scanlines[p][i] >> (5 * j)) & 0x1F;
@@ -309,7 +299,7 @@ void Lcd::DrawScanline() {
                         sprite_flags[i] &= ~semi_transparent_flag;
                     }
 
-                    pixel_info[i].layer = 4;
+                    pixel_info[i].last_layer = 4;
                 }
             }
         }
@@ -317,8 +307,8 @@ void Lcd::DrawScanline() {
 
     if (BlendMode() == Effect::Brighten || BlendMode() == Effect::Darken) {
         for (int i = 0; i < h_pixels; ++i) {
-            if (IsFirstTarget(pixel_info[i].layer)
-                    && !(pixel_info[i].layer == 4 && (sprite_flags[i] & semi_transparent_flag))
+            if (IsFirstTarget(pixel_info[i].last_layer)
+                    && !(pixel_info[i].last_layer == 4 && (sprite_flags[i] & semi_transparent_flag))
                     && IsWithinWindow(5, i)) {
                 auto& buffer_pixel = back_buffer[vcount * h_pixels + i];
 
@@ -517,6 +507,10 @@ void Lcd::DrawRegularSprite(const Sprite& sprite) {
                     if (sprite.mode == Sprite::Mode::SemiTransparent) {
                         sprite_flags[scanline_index] |= semi_transparent_flag;
                         semi_transparent_used = true;
+                    } else {
+                        // The semi-transparent flag must be cleared if a non-semi-transparent sprite is drawn on top
+                        // of a semi-transparent one.
+                        sprite_flags[scanline_index] &= ~semi_transparent_flag;
                     }
                 }
             }
@@ -598,6 +592,10 @@ void Lcd::DrawAffineSprite(const Sprite& sprite) {
                     if (sprite.mode == Sprite::Mode::SemiTransparent) {
                         sprite_flags[scanline_index] |= semi_transparent_flag;
                         semi_transparent_used = true;
+                    } else {
+                        // The semi-transparent flag must be cleared if a non-semi-transparent sprite is drawn on top
+                        // of a semi-transparent one.
+                        sprite_flags[scanline_index] &= ~semi_transparent_flag;
                     }
                 }
             }
@@ -624,6 +622,10 @@ void Lcd::DrawAffineSprite(const Sprite& sprite) {
                     if (sprite.mode == Sprite::Mode::SemiTransparent) {
                         sprite_flags[scanline_index] |= semi_transparent_flag;
                         semi_transparent_used = true;
+                    } else {
+                        // The semi-transparent flag must be cleared if a non-semi-transparent sprite is drawn on top
+                        // of a semi-transparent one.
+                        sprite_flags[scanline_index] &= ~semi_transparent_flag;
                     }
                 }
             }
