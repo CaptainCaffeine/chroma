@@ -30,7 +30,7 @@ void Memory::ReadSaveFile() {
     std::ifstream save_file(save_path);
     if (!save_file) {
         // Save file doesn't exist.
-        CheckOverrides();
+        CheckSaveOverrides();
         return;
     }
 
@@ -297,7 +297,7 @@ template void Memory::WriteFlash<u8>(const u32 addr, const u8 data);
 template void Memory::WriteFlash<u16>(const u32 addr, const u16 data);
 template void Memory::WriteFlash<u32>(const u32 addr, const u32 data);
 
-void Memory::CheckOverrides() {
+void Memory::CheckSaveOverrides() {
     // Credit goes to mGBA for this list of save overrides. As of June 2018, the original can be found here:
     // https://github.com/mgba-emu/mgba/blob/master/src/gba/overrides.c
     const std::unordered_map<std::string, SaveType> save_overrides {
@@ -520,6 +520,18 @@ void Memory::CheckOverrides() {
         save_type = SaveType::Eeprom;
     } else {
         save_type = SaveType::Unknown;
+    }
+}
+
+void Memory::CheckHardwareOverrides() {
+    // Read the game code from the ROM header.
+    const std::string game_code{reinterpret_cast<const char*>(rom.data()) + 0xAC, 4};
+
+    if (game_code[0] == 'F') {
+        // In Classic NES Series games, the ROM contents are mirrored throughout the ROM region.
+        rom_addr_mask = rom_size - 1;
+    } else {
+        rom_addr_mask = rom_max_size - 1;
     }
 }
 

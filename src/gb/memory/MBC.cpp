@@ -33,7 +33,6 @@ void Memory::ReadSaveFile(unsigned int cart_ram_size) {
     std::ifstream save_file(save_path);
     if (!save_file) {
         // Save file doesn't exist.
-        //ext_ram = std::vector<u8>(cart_header.ram_size);
         ext_ram.resize(cart_ram_size);
         return;
     }

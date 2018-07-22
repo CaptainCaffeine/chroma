@@ -40,7 +40,7 @@ bool GetFilterEnable(const std::vector<std::string>& tokens);
 std::size_t GetFileSize(std::ifstream& filestream);
 Gb::Console CheckRomFile(const std::string& filename);
 template<typename T>
-std::vector<T> LoadRom(const std::string& filename, Gb::Console console);
+std::vector<T> LoadRom(const std::string& filename);
 std::string SaveGamePath(const std::string& rom_path);
 std::vector<u32> LoadGbaBios();
 void CheckPathIsRegularFile(const std::string& filename);

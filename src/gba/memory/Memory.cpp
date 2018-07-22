@@ -38,10 +38,11 @@ Memory::Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom, cons
         , vram(vram_size / sizeof(u16))
         , oam(oam_size / sizeof(u32))
         , rom(_rom)
-        , save_path(_save_path)
-        , large_rom(rom.size() / 2 > 16 * mbyte) {
+        , rom_size(rom.size() * 2)
+        , save_path(_save_path) {
 
     ReadSaveFile();
+    CheckHardwareOverrides();
 }
 
 Memory::~Memory() {
@@ -50,39 +51,39 @@ Memory::~Memory() {
 
 // Bus width 16.
 template <>
-u32 Memory::ReadRegion(const std::vector<u16>& region, const AddressMask region_mask, const u32 addr) const {
+u32 Memory::ReadRegion(const std::vector<u16>& region, const u32 region_mask, const u32 addr) const {
     // Unaligned accesses are word-aligned.
     const u32 region_addr = ((addr & region_mask) / sizeof(u16)) & ~0x1;
     return region[region_addr] | (region[region_addr + 1] << 16);
 }
 
 template <>
-u16 Memory::ReadRegion(const std::vector<u16>& region, const AddressMask region_mask, const u32 addr) const {
+u16 Memory::ReadRegion(const std::vector<u16>& region, const u32 region_mask, const u32 addr) const {
     const u32 region_addr = (addr & region_mask) / sizeof(u16);
     return region[region_addr];
 }
 
 template <>
-u8 Memory::ReadRegion(const std::vector<u16>& region, const AddressMask region_mask, const u32 addr) const {
+u8 Memory::ReadRegion(const std::vector<u16>& region, const u32 region_mask, const u32 addr) const {
     const u32 region_addr = (addr & region_mask) / sizeof(u16);
     return region[region_addr] >> (8 * (addr & 0x1));
 }
 
 // Bus width 32.
 template <>
-u32 Memory::ReadRegion(const std::vector<u32>& region, const AddressMask region_mask, const u32 addr) const {
+u32 Memory::ReadRegion(const std::vector<u32>& region, const u32 region_mask, const u32 addr) const {
     const u32 region_addr = (addr & region_mask) / sizeof(u32);
     return region[region_addr];
 }
 
 template <>
-u16 Memory::ReadRegion(const std::vector<u32>& region, const AddressMask region_mask, const u32 addr) const {
+u16 Memory::ReadRegion(const std::vector<u32>& region, const u32 region_mask, const u32 addr) const {
     const u32 region_addr = (addr & region_mask) / sizeof(u32);
     return region[region_addr] >> (8 * (addr & 0x2));
 }
 
 template <>
-u8 Memory::ReadRegion(const std::vector<u32>& region, const AddressMask region_mask, const u32 addr) const {
+u8 Memory::ReadRegion(const std::vector<u32>& region, const u32 region_mask, const u32 addr) const {
     const u32 region_addr = (addr & region_mask) / sizeof(u32);
     return region[region_addr] >> (8 * (addr & 0x3));
 }
@@ -124,12 +125,11 @@ T Memory::ReadMem(const u32 addr, bool dma) {
     case Region::Oam:
         return ReadOam<T>(addr);
     case Region::Rom0_l:
-    case Region::Rom1_l:
-    case Region::Rom2_l:
-        return ReadRomLo<T>(addr);
     case Region::Rom0_h:
+    case Region::Rom1_l:
     case Region::Rom1_h:
-        return ReadRomHi<T>(addr);
+    case Region::Rom2_l:
+        return ReadRom<T>(addr);
     case Region::Eeprom:
         if (save_type == SaveType::Eeprom && EepromAddr(addr)) {
             if (dma && eeprom_ready) {
@@ -145,7 +145,7 @@ T Memory::ReadMem(const u32 addr, bool dma) {
                 return eeprom_ready;
             }
         } else {
-            return ReadRomHi<T>(addr);
+            return ReadRom<T>(addr);
         }
     case Region::SRam_l:
     case Region::SRam_h:
@@ -180,7 +180,7 @@ template u32 Memory::ReadMem<u32>(const u32 addr, bool dma);
 
 // Bus width 16.
 template <>
-void Memory::WriteRegion(std::vector<u16>& region, const AddressMask region_mask, const u32 addr, const u32 data) {
+void Memory::WriteRegion(std::vector<u16>& region, const u32 region_mask, const u32 addr, const u32 data) {
     // 32 bit writes must be aligned.
     const u32 region_addr = ((addr & region_mask) / sizeof(u16)) & ~0x1;
 
@@ -189,14 +189,14 @@ void Memory::WriteRegion(std::vector<u16>& region, const AddressMask region_mask
 }
 
 template <>
-void Memory::WriteRegion(std::vector<u16>& region, const AddressMask region_mask, const u32 addr, const u16 data) {
+void Memory::WriteRegion(std::vector<u16>& region, const u32 region_mask, const u32 addr, const u16 data) {
     const u32 region_addr = (addr & region_mask) / sizeof(u16);
 
     region[region_addr] = data;
 }
 
 template <>
-void Memory::WriteRegion(std::vector<u16>& region, const AddressMask region_mask, const u32 addr, const u8 data) {
+void Memory::WriteRegion(std::vector<u16>& region, const u32 region_mask, const u32 addr, const u8 data) {
     const u32 region_addr = (addr & region_mask) / sizeof(u16);
 
     const u32 hi_shift = 8 * (addr & 0x1);
@@ -205,14 +205,14 @@ void Memory::WriteRegion(std::vector<u16>& region, const AddressMask region_mask
 
 // Bus width 32.
 template <>
-void Memory::WriteRegion(std::vector<u32>& region, const AddressMask region_mask, const u32 addr, const u32 data) {
+void Memory::WriteRegion(std::vector<u32>& region, const u32 region_mask, const u32 addr, const u32 data) {
     const u32 region_addr = (addr & region_mask) / sizeof(u32);
 
     region[region_addr] = data;
 }
 
 template <>
-void Memory::WriteRegion(std::vector<u32>& region, const AddressMask region_mask, const u32 addr, const u16 data) {
+void Memory::WriteRegion(std::vector<u32>& region, const u32 region_mask, const u32 addr, const u16 data) {
     const u32 region_addr = (addr & region_mask) / sizeof(u32);
 
     const u32 hi_shift = 8 * (addr & 0x2);
@@ -220,7 +220,7 @@ void Memory::WriteRegion(std::vector<u32>& region, const AddressMask region_mask
 }
 
 template <>
-void Memory::WriteRegion(std::vector<u32>& region, const AddressMask region_mask, const u32 addr, const u8 data) {
+void Memory::WriteRegion(std::vector<u32>& region, const u32 region_mask, const u32 addr, const u8 data) {
     const u32 region_addr = (addr & region_mask) / sizeof(u32);
 
     const u32 hi_shift = 8 * (addr & 0x3);

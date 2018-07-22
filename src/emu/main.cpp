@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
 
         if (Emu::CheckRomFile(rom_path) == Gb::Console::AGB) {
             const std::vector<u32> bios{Emu::LoadGbaBios()};
-            const std::vector<u16> rom{Emu::LoadRom<u16>(rom_path, Gb::Console::AGB)};
+            const std::vector<u16> rom{Emu::LoadRom<u16>(rom_path)};
             Gba::Memory::CheckHeader(rom);
 
             const std::string save_path{Emu::SaveGamePath(rom_path)};
@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
 
             gba_core.EmulatorLoop();
         } else {
-            const std::vector<u8> rom{Emu::LoadRom<u8>(rom_path, Gb::Console::CGB)};
+            const std::vector<u8> rom{Emu::LoadRom<u8>(rom_path)};
             const Gb::CartridgeHeader cart_header{gameboy_type, rom, multicart};
 
             const std::string save_path{Emu::SaveGamePath(rom_path)};

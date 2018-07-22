@@ -57,7 +57,7 @@ public:
     void RequestInterrupt(u16 intr) { intr_flags |= intr; };
     bool InterruptEnabled(u16 intr) const { return intr_enable & intr; };
 
-    bool EepromAddr(u32 addr) const { return !large_rom || addr >= 0x0DFF'FF00; }
+    bool EepromAddr(u32 addr) const { return rom_size <= 16 * mbyte || addr >= 0x0DFF'FF00; }
     void ParseEepromCommand();
 
     void DelayedSaveOp(int cycles);
@@ -90,10 +90,12 @@ private:
     std::array<int, 3> wait_state_s;
     int wait_state_sram;
 
+    const unsigned int rom_size;
+    u32 rom_addr_mask;
+
     enum class SaveType;
     SaveType save_type;
     const std::string& save_path;
-    const bool large_rom;
 
     int eeprom_addr_len = 0;
     std::vector<u8> eeprom_bitstream;
@@ -159,16 +161,16 @@ private:
                        SRam_l = 0xE,
                        SRam_h = 0xF};
 
-    enum RegionSize {bios_size  = 16 * kbyte,
-                     xram_size  = 256 * kbyte,
-                     iram_size  = 32 * kbyte,
-                     io_size    = kbyte,
-                     pram_size  = kbyte,
-                     vram_size  = 96 * kbyte,
-                     oam_size   = kbyte,
-                     rom_size   = 32 * mbyte,
-                     sram_size  = 32 * kbyte,
-                     flash_size = 64 * kbyte};
+    enum RegionSize {bios_size    = 16 * kbyte,
+                     xram_size    = 256 * kbyte,
+                     iram_size    = 32 * kbyte,
+                     io_size      = kbyte,
+                     pram_size    = kbyte,
+                     vram_size    = 96 * kbyte,
+                     oam_size     = kbyte,
+                     rom_max_size = 32 * mbyte,
+                     sram_size    = 32 * kbyte,
+                     flash_size   = 64 * kbyte};
 
     enum AddressMask : u32 {bios_addr_mask  = bios_size - 1,
                             xram_addr_mask  = xram_size - 1,
@@ -177,8 +179,7 @@ private:
                             pram_addr_mask  = pram_size - 1,
                             vram_addr_mask1 = 0x0000'FFFF,
                             vram_addr_mask2 = 0x0001'7FFF,
-                            oam_addr_mask   = oam_size - 1,
-                            rom_addr_mask   = rom_size - 1};
+                            oam_addr_mask   = oam_size - 1};
 
     enum class SaveType {Unknown,
                          SRam,
@@ -193,9 +194,9 @@ private:
     }
 
     template <typename AccessWidth, typename BusWidth>
-    AccessWidth ReadRegion(const std::vector<BusWidth>& region, const AddressMask region_mask, const u32 addr) const;
+    AccessWidth ReadRegion(const std::vector<BusWidth>& region, const u32 region_mask, const u32 addr) const;
     template <typename AccessWidth, typename BusWidth>
-    void WriteRegion(std::vector<BusWidth>& region, const AddressMask region_mask, const u32 addr, const AccessWidth data);
+    void WriteRegion(std::vector<BusWidth>& region, const u32 region_mask, const u32 addr, const AccessWidth data);
 
     template <typename T>
     T ReadBios(const u32 addr) const;
@@ -214,9 +215,13 @@ private:
     template <typename T>
     T ReadOam(const u32 addr) const { return ReadRegion<T>(oam, oam_addr_mask, addr); }
     template <typename T>
-    T ReadRomLo(const u32 addr) const { return ReadRegion<T>(rom, rom_addr_mask, addr); }
-    template <typename T>
-    T ReadRomHi(const u32 addr) const { return (large_rom) ? ReadRegion<T>(rom, rom_addr_mask, addr) : 0; }
+    T ReadRom(const u32 addr) const {
+        if ((addr & rom_addr_mask) < rom_size) {
+            return ReadRegion<T>(rom, rom_addr_mask, addr);
+        } else {
+            return 0;
+        }
+    }
     template <typename T>
     T ReadSRam(const u32 addr) const { return sram[bank_num * flash_size + (addr & sram_addr_mask)] * 0x0101'0101; }
 
@@ -244,7 +249,8 @@ private:
 
     void ReadSaveFile();
     void WriteSaveFile() const;
-    void CheckOverrides();
+    void CheckSaveOverrides();
+    void CheckHardwareOverrides();
     void InitSRam();
     void InitFlash();
     u16 ParseEepromAddr(int stream_size, int non_addr_bits);
