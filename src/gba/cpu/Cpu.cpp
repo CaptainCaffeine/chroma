@@ -339,13 +339,10 @@ int Cpu::BxWritePC(u32 addr) {
         // Switch to Thumb mode.
         cpsr |= thumb_mode;
         regs[pc] = addr & ~0x1;
-    } else if ((addr & 0x2) == 0x0) {
+    } else {
         // Switch to Arm mode.
         cpsr &= ~thumb_mode;
         regs[pc] = addr;
-    } else {
-        // Unpredictable if the lower 2 bits of the address are 0b10.
-        assert(false);
     }
 
     return FlushPipeline();
