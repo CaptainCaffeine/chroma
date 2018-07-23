@@ -18,6 +18,7 @@
 
 #include <vector>
 #include <cmath>
+#include <limits>
 
 namespace Common {
 
@@ -62,10 +63,9 @@ public:
             }
             resample_buffer[i * 2 + 1] = sample;
 
-            // This algorithm has minor numerical issues which often leave extremely small values in the z delays
-            // (like 1E-400) which are far too small to leave an impact on the signal and slow down the calculation
-            // significantly. So we clear any z delays with absolute value less than 1E-15.
-            constexpr double limit = 0.000000000000001;
+            // This algorithm often generates denormal values in the z delays. These values are far too small
+            // to impact the signal and they slow down the algorithm significantly, so we round denormal values to 0.
+            constexpr double limit = std::numeric_limits<double>::min();
             for (unsigned int j = 0; j < left_biquads.size(); ++j) {
                 if (std::abs(left_biquads[j].z1) < limit) { left_biquads[j].z1 = 0.0; }
                 if (std::abs(left_biquads[j].z2) < limit) { left_biquads[j].z2 = 0.0; }
