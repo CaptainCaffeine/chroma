@@ -309,8 +309,8 @@ int Cpu::Thumb_BT2(u32 imm11) {
 }
 
 int Cpu::Thumb_BlH1(u32 imm11) {
-    // Unpredictable if the next instruction is not BlH2. This apparently might not be an issue on the GBA.
-    assert((mem.ReadMem<u16>(regs[pc] - 2) & 0xF800) == 0xF800);
+    // ARM says this instruction is unpredictable if the next instruction is not BLH2.
+    // However, executing them independently works fine on the GBA.
 
     s32 signed_imm32 = SignExtend(imm11 << 12, 23);
     regs[lr] = regs[pc] + signed_imm32;
@@ -319,8 +319,8 @@ int Cpu::Thumb_BlH1(u32 imm11) {
 }
 
 int Cpu::Thumb_BlH2(u32 imm11) {
-    // Unpredictable if the previous instruction is not BlH1. This apparently might not be an issue on the GBA.
-    assert((mem.ReadMem<u16>(regs[pc] - 6) & 0xF800) == 0xF000);
+    // ARM says this instruction is unpredictable if the previous instruction was not BLH1.
+    // However, executing them independently works fine on the GBA.
 
     u32 next_instr_addr = regs[pc] - 2;
     int cycles = Thumb_BranchWritePC(regs[lr] + (imm11 << 1));
