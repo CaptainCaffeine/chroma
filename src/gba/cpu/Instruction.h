@@ -30,30 +30,19 @@ namespace Gba {
 class Cpu;
 class Disassembler;
 
-template<typename T>
+template<typename T, typename Dispatcher>
 class Instruction {
 public:
     template<typename... Args>
-    Instruction(const char* instr_layout, int(Cpu::* impl)(Args...)) {
+    Instruction(const char* instr_layout, typename Dispatcher::ReturnType(Dispatcher::* impl)(Args...)) {
         const auto fields = CreateMasks<sizeof...(Args)>(instr_layout);
         impl_func = GetImplFunction(impl, fields, std::index_sequence_for<Args...>{});
     }
 
-    template<typename... Args>
-    Instruction(const char* instr_layout, std::string(Disassembler::* impl)(Args...)) {
-        const auto fields = CreateMasks<sizeof...(Args)>(instr_layout);
-        disasm_func = GetImplFunction(impl, fields, std::index_sequence_for<Args...>{});
-    }
+    std::function<typename Dispatcher::ReturnType(Dispatcher& dis, T opcode)> impl_func;
 
-    bool Match(T opcode) const {
-        return (opcode & fixed_mask) == instr_mask;
-    }
-
-    template<typename Dispatcher>
-    static std::vector<Instruction<T>> GetInstructionTable();
-
-    std::function<int(Cpu& cpu, T opcode)> impl_func;
-    std::function<std::string(Disassembler& dis, T opcode)> disasm_func;
+    bool Match(T opcode) const { return (opcode & fixed_mask) == instr_mask; }
+    std::size_t FixedMaskSize() const { return Popcount(fixed_mask); }
 
 private:
     static constexpr auto num_bits = sizeof(T) * 8;
@@ -103,13 +92,19 @@ private:
         return fields;
     }
 
-    template<typename ReturnType, typename D, typename... Args, std::size_t... Is>
-    auto GetImplFunction(ReturnType(D::* impl)(Args...), const std::array<FieldMask, sizeof...(Args)>& fields,
+    template<typename... Args, std::size_t... Is>
+    auto GetImplFunction(typename Dispatcher::ReturnType(Dispatcher::* impl)(Args...),
+                         const std::array<FieldMask, sizeof...(Args)>& fields,
                          std::index_sequence<Is...>) {
-        return [impl, fields](D& dis, T opcode) -> ReturnType {
+        return [impl, fields](Dispatcher& dis, T opcode) -> typename Dispatcher::ReturnType {
             return (dis.*impl)(static_cast<Args>((opcode & fields[Is].mask) >> fields[Is].shift)...);
         };
     }
 };
+
+template<typename Dispatcher>
+std::vector<Instruction<Thumb, Dispatcher>> GetThumbInstructionTable();
+template<typename Dispatcher>
+std::vector<Instruction<Arm, Dispatcher>> GetArmInstructionTable();
 
 } // End namespace Gba

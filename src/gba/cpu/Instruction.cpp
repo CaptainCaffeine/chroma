@@ -22,10 +22,9 @@
 
 namespace Gba {
 
-template<>
 template<typename Dispatcher>
-std::vector<Instruction<Thumb>> Instruction<Thumb>::GetInstructionTable() {
-    std::vector<Instruction<Thumb>> thumb_instructions {
+std::vector<Instruction<Thumb, Dispatcher>> GetThumbInstructionTable() {
+    std::vector<Instruction<Thumb, Dispatcher>> thumb_instructions {
         {"0100000101mmmddd", &Dispatcher::Thumb_AdcReg},     // ADCS Rdn, Rm
 
         {"0001110iiinnnddd", &Dispatcher::Thumb_AddImmT1},   // ADDS Rd, Rn, #imm
@@ -126,19 +125,18 @@ std::vector<Instruction<Thumb>> Instruction<Thumb>::GetInstructionTable() {
     };
 
     std::sort(thumb_instructions.begin(), thumb_instructions.end(), [](const auto& instr1, const auto& instr2) {
-        return Popcount(instr2.fixed_mask) < Popcount(instr1.fixed_mask);
+        return instr2.FixedMaskSize() < instr1.FixedMaskSize();
     });
 
     return thumb_instructions;
 }
 
-template std::vector<Instruction<Thumb>> Instruction<Thumb>::GetInstructionTable<Cpu>();
-template std::vector<Instruction<Thumb>> Instruction<Thumb>::GetInstructionTable<Disassembler>();
+template std::vector<Instruction<Thumb, Cpu>> GetThumbInstructionTable<Cpu>();
+template std::vector<Instruction<Thumb, Disassembler>> GetThumbInstructionTable<Disassembler>();
 
-template<>
 template<typename Dispatcher>
-std::vector<Instruction<Arm>> Instruction<Arm>::GetInstructionTable() {
-    std::vector<Instruction<Arm>> arm_instructions {
+std::vector<Instruction<Arm, Dispatcher>> GetArmInstructionTable() {
+    std::vector<Instruction<Arm, Dispatcher>> arm_instructions {
         {"cccc0010101Snnnnddddiiiiiiiiiiii", &Dispatcher::Arm_AdcImm},        // ADC Rd, Rn, #imm
         {"cccc0000101Snnnnddddiiiiiqq0mmmm", &Dispatcher::Arm_AdcReg},        // ADC Rd, Rn, Rm, {shift}
         {"cccc0000101Snnnnddddssss0qq1mmmm", &Dispatcher::Arm_AdcRegShifted}, // ADC Rd, Rn, Rm, type, Rs
@@ -287,13 +285,13 @@ std::vector<Instruction<Arm>> Instruction<Arm>::GetInstructionTable() {
     };
 
     std::sort(arm_instructions.begin(), arm_instructions.end(), [](const auto& instr1, const auto& instr2) {
-        return Popcount(instr2.fixed_mask) < Popcount(instr1.fixed_mask);
+        return instr2.FixedMaskSize() < instr1.FixedMaskSize();
     });
 
     return arm_instructions;
 }
 
-template std::vector<Instruction<Arm>> Instruction<Arm>::GetInstructionTable<Cpu>();
-template std::vector<Instruction<Arm>> Instruction<Arm>::GetInstructionTable<Disassembler>();
+template std::vector<Instruction<Arm, Cpu>> GetArmInstructionTable<Cpu>();
+template std::vector<Instruction<Arm, Disassembler>> GetArmInstructionTable<Disassembler>();
 
 } // End namespace Gba

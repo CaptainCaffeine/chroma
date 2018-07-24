@@ -31,7 +31,7 @@ namespace Gba {
 
 class Core;
 
-template<typename T>
+template<typename T, typename D>
 class Instruction;
 
 struct ImmediateShift;
@@ -40,6 +40,9 @@ class Disassembler {
 public:
     Disassembler(LogLevel level, Core& _core);
     ~Disassembler();
+
+    // Return type for Instruction impl functions.
+    using ReturnType = std::string;
 
     void DisassembleThumb(Thumb opcode, const std::array<u32, 16>& regs, u32 cpsr);
     void DisassembleArm(Arm opcode, const std::array<u32, 16>& regs, u32 cpsr);
@@ -64,8 +67,8 @@ public:
 private:
     Core& core;
 
-    const std::vector<Instruction<Thumb>> thumb_instructions;
-    const std::vector<Instruction<Arm>> arm_instructions;
+    const std::vector<Instruction<Thumb, Disassembler>> thumb_instructions;
+    const std::vector<Instruction<Arm, Disassembler>> arm_instructions;
 
     LogLevel log_level = LogLevel::None;
     LogLevel alt_level;

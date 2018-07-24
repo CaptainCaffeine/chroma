@@ -29,8 +29,8 @@ namespace Gba {
 Cpu::Cpu(Memory& _mem, Core& _core)
         : mem(_mem)
         , core(_core)
-        , thumb_instructions(Instruction<Thumb>::GetInstructionTable<Cpu>())
-        , arm_instructions(Instruction<Arm>::GetInstructionTable<Cpu>()) {
+        , thumb_instructions(GetThumbInstructionTable<Cpu>())
+        , arm_instructions(GetArmInstructionTable<Cpu>()) {
 
     PopulateThumbDecodeTable();
 }

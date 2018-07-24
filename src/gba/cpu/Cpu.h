@@ -30,7 +30,7 @@ namespace Gba {
 class Memory;
 class Core;
 
-template<typename T>
+template<typename T, typename D>
 class Instruction;
 
 // Declared outside of class for Disassembler.
@@ -43,6 +43,9 @@ class Cpu {
 public:
     Cpu(Memory& _mem, Core& _core);
     ~Cpu();
+
+    // Return type for Instruction impl functions.
+    using ReturnType = int;
 
     bool dma_active = false;
     u32 last_bios_fetch = 0x0;
@@ -77,10 +80,10 @@ private:
     std::array<u32, 16> lr_banked{};
     std::array<u32, 5> fiq_banked_regs{};
 
-    const std::vector<Instruction<Thumb>> thumb_instructions;
-    const std::vector<Instruction<Arm>> arm_instructions;
+    const std::vector<Instruction<Thumb, Cpu>> thumb_instructions;
+    const std::vector<Instruction<Arm, Cpu>> arm_instructions;
     std::array<const std::function<int(Cpu& cpu, Thumb opcode)> *, 0x400> thumb_decode_table;
-    std::array<std::vector<const Instruction<Arm> *>, 0x100> arm_decode_cache;
+    std::array<std::vector<const Instruction<Arm, Cpu> *>, 0x100> arm_decode_cache;
 
     std::array<u32, 3> pipeline{};
     bool pc_written = false;

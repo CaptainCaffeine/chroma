@@ -25,8 +25,8 @@ namespace Gba {
 
 Disassembler::Disassembler(LogLevel level, Core& _core)
         : core(_core)
-        , thumb_instructions(Instruction<Thumb>::GetInstructionTable<Disassembler>())
-        , arm_instructions(Instruction<Arm>::GetInstructionTable<Disassembler>())
+        , thumb_instructions(GetThumbInstructionTable<Disassembler>())
+        , arm_instructions(GetArmInstructionTable<Disassembler>())
         , alt_level(level) {
     // Leave log_stream unopened if logging disabled.
     if (level != LogLevel::None) {
@@ -48,7 +48,7 @@ void Disassembler::DisassembleThumb(Thumb opcode, const std::array<u32, 16>& reg
 
     for (const auto& instr : thumb_instructions) {
         if (instr.Match(opcode)) {
-            fmt::print(log_stream, "0x{:0>8X}, T: {}\n", regs[pc], instr.disasm_func(*this, opcode));
+            fmt::print(log_stream, "0x{:0>8X}, T: {}\n", regs[pc], instr.impl_func(*this, opcode));
             break;
         }
     }
@@ -65,7 +65,7 @@ void Disassembler::DisassembleArm(Arm opcode, const std::array<u32, 16>& regs, u
 
     for (const auto& instr : arm_instructions) {
         if (instr.Match(opcode)) {
-            fmt::print(log_stream, "0x{:0>8X}, A: {}\n", regs[pc], instr.disasm_func(*this, opcode));
+            fmt::print(log_stream, "0x{:0>8X}, A: {}\n", regs[pc], instr.impl_func(*this, opcode));
             break;
         }
     }
