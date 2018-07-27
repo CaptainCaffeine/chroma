@@ -13,4 +13,4 @@ include_directories(${SDL2_INCLUDE_DIR})
 add_subdirectory(externals)
 add_subdirectory(src)
 
-target_compile_options(chroma PRIVATE -Wall -Wextra -Wshadow -fdiagnostics-color)
+target_compile_options(chroma PRIVATE -Wall -Wextra -Wshadow -fdiagnostics-color -msse2)

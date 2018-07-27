@@ -23,7 +23,7 @@ namespace Gb {
 Audio::Audio(bool enable_filter, const GameBoy& _gameboy)
         : gameboy(_gameboy)
         , enable_iir(enable_filter)
-        , resample_buffer((enable_filter) ? interpolated_buffer_size * 2 : 0) {
+        , resample_buffer((enable_filter) ? interpolated_buffer_size : 0) {
 
     square1.LinkToAudio(this);
     square2.LinkToAudio(this);
@@ -31,9 +31,10 @@ Audio::Audio(bool enable_filter, const GameBoy& _gameboy)
     noise.LinkToAudio(this);
 
     for (unsigned int i = 0; i < q.size(); ++i) {
-        left_biquads.emplace_back(interpolated_buffer_size, q[i]);
-        right_biquads.emplace_back(interpolated_buffer_size, q[i]);
+        biquads.emplace_back(interpolated_buffer_size, q[i]);
     }
+
+    Common::Vec2d::SetFlushToZero();
 }
 
 // Needed to declare std::vector with forward-declared type in the header file.
@@ -198,20 +199,22 @@ u8 Audio::ReadNR52() const {
 void Audio::Resample() {
     // The Game Boy generates 35112 samples per channel per frame, which we pre-downsample to 5016. We then resample
     // to 800 samples per channel by interpolating by a factor of 100 and decimating by a factor of 627.
-    std::fill(resample_buffer.begin(), resample_buffer.end(), 0.0);
+    std::fill(resample_buffer.begin(), resample_buffer.end(), Common::Vec2d{0.0, 0.0});
 
     for (std::size_t i = 0; i < num_samples; ++i) {
         // Multiply the samples by 64 to increase the amplitude for the IIR filter.
-        resample_buffer[i * interpolation_factor * 2] = sample_buffer[i * 2] * 64.0;
-        resample_buffer[i * interpolation_factor * 2 + 1] = sample_buffer[i * 2 + 1] * 64.0;
+        resample_buffer[i * interpolation_factor] = Common::Vec2d{sample_buffer[i * 2] * 64.0,
+                                                                  sample_buffer[i * 2 + 1] * 64.0};
     }
 
-    Common::Biquad::LowPassFilter(resample_buffer, left_biquads, right_biquads);
+    Common::Biquad::LowPassFilter(resample_buffer, biquads);
 
     for (std::size_t i = 0; i < output_buffer.size() / 2; ++i) {
         // Multiply by 64 to scale the volume for s16 samples.
-        output_buffer[i * 2] = resample_buffer[i * decimation_factor * 2] * 64;
-        output_buffer[i * 2 + 1] = resample_buffer[i * decimation_factor * 2 + 1] * 64;
+        auto [left_sample, right_sample] = resample_buffer[i * decimation_factor].UnpackSamples();
+
+        output_buffer[i * 2] = left_sample * 64;
+        output_buffer[i * 2 + 1] = right_sample * 64;
     }
 }
 

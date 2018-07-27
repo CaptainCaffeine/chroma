@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "common/CommonTypes.h"
+#include "common/Vec2d.h"
 #include "gb/core/Enums.h"
 #include "gb/audio/Channel.h"
 
@@ -171,13 +172,12 @@ private:
     static constexpr std::size_t interpolated_buffer_size = num_samples * interpolation_factor;
 
     std::vector<int> sample_buffer;
-    std::vector<double> resample_buffer;
+    std::vector<Common::Vec2d> resample_buffer;
 
     // Q values are for a 4th order cascaded Butterworth lowpass filter.
     // Obtained from http://www.earlevel.com/main/2016/09/29/cascading-filters/.
     static constexpr std::array<double, 2> q{0.54119610, 1.3065630};
-    std::vector<Common::Biquad> left_biquads;
-    std::vector<Common::Biquad> right_biquads;
+    std::vector<Common::Biquad> biquads;
 
     void FrameSequencerTick();
     void UpdatePowerOnState();

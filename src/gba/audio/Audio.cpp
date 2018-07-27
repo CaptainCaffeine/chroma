@@ -24,7 +24,10 @@
 namespace Gba {
 
 Audio::Audio(Core& _core)
-        : core(_core) {}
+        : core(_core) {
+
+    Common::Vec2d::SetFlushToZero();
+}
 
 // Needed to declare std::vector with forward-declared type in the header file.
 Audio::~Audio() = default;
@@ -46,20 +49,18 @@ void Audio::Update() {
         // use, we assume they're using the same sample rate.
         int samples_per_frame = std::max(fifos[0].samples_per_frame, fifos[1].samples_per_frame);
 
-        std::fill(resample_buffer.begin(), resample_buffer.end(), 0.0);
+        std::fill(resample_buffer.begin(), resample_buffer.end(), Common::Vec2d{0.0, 0.0});
 
         if (samples_per_frame != prev_samples_per_frame) {
             // The sample rate changed, so we need to update the resampling parameters and biquads.
             interpolated_buffer_size = std::lcm(800, samples_per_frame);
             interpolation_factor = interpolated_buffer_size / samples_per_frame;
             decimation_factor = interpolated_buffer_size / 800;
-            resample_buffer.resize(interpolated_buffer_size * 2);
+            resample_buffer.resize(interpolated_buffer_size);
 
-            left_biquads.clear();
-            right_biquads.clear();
+            biquads.clear();
             for (unsigned int i = 0; i < q.size(); ++i) {
-                left_biquads.emplace_back(interpolated_buffer_size, q[i]);
-                right_biquads.emplace_back(interpolated_buffer_size, q[i]);
+                biquads.emplace_back(interpolated_buffer_size, q[i]);
             }
 
             prev_samples_per_frame = samples_per_frame;
@@ -88,18 +89,19 @@ void Audio::Update() {
             left_sample = ClampSample(left_sample);
             right_sample = ClampSample(right_sample);
 
-            resample_buffer[i * interpolation_factor * 2] = left_sample;
-            resample_buffer[i * interpolation_factor * 2 + 1] = right_sample;
+            resample_buffer[i * interpolation_factor] = Common::Vec2d{left_sample, right_sample};
         }
 
         fifos[0].sample_buffer.clear();
         fifos[1].sample_buffer.clear();
 
-        Common::Biquad::LowPassFilter(resample_buffer, left_biquads, right_biquads);
+        Common::Biquad::LowPassFilter(resample_buffer, biquads);
 
         for (int i = 0; i < 800; ++i) {
-            output_buffer[i * 2] = resample_buffer[i * decimation_factor * 2] * 2;
-            output_buffer[i * 2 + 1] = resample_buffer[i * decimation_factor * 2 + 1] * 2;
+            auto [left_sample, right_sample] = resample_buffer[i * decimation_factor].UnpackSamples();
+
+            output_buffer[i * 2] = left_sample * 2;
+            output_buffer[i * 2 + 1] = right_sample * 2;
         }
     }
 }

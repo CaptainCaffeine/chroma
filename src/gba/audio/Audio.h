@@ -21,6 +21,7 @@
 #include <algorithm>
 
 #include "common/CommonTypes.h"
+#include "common/Vec2d.h"
 #include "gba/memory/IOReg.h"
 
 namespace Common { class Biquad; }
@@ -123,7 +124,7 @@ public:
 private:
     Core& core;
 
-    std::vector<double> resample_buffer;
+    std::vector<Common::Vec2d> resample_buffer;
     int interpolated_buffer_size = 0;
     int interpolation_factor = 0;
     int decimation_factor = 0;
@@ -132,8 +133,7 @@ private:
     // Q values are for an 8th order cascaded Butterworth lowpass filter.
     // Obtained from http://www.earlevel.com/main/2016/09/29/cascading-filters/.
     static constexpr std::array<double, 4> q{0.50979558, 0.60134489, 0.89997622, 2.5629154};
-    std::vector<Common::Biquad> left_biquads;
-    std::vector<Common::Biquad> right_biquads;
+    std::vector<Common::Biquad> biquads;
 
     int PsgVolumeRight() const { return psg_control & 0x7; }
     int PsgVolumeLeft() const { return (psg_control >> 4) & 0x7; }
