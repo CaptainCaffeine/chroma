@@ -210,15 +210,15 @@ private:
     static int MultiplyCycles(u32 operand);
 
     // Implementation Helpers
-    ArithOp add_op = [](u32 value1, u32 value2, u32 carry) { return AddWithCarry(value1, value2, carry); };
-    ArithOp sub_op = [](u32 value1, u32 value2, u32 carry) { return AddWithCarry(value1, ~value2, carry); };
-    ArithOp rsb_op = [](u32 value1, u32 value2, u32 carry) { return AddWithCarry(~value1, value2, carry); };
+    const ArithOp add_op = [](u32 value1, u32 value2, u32 carry) { return AddWithCarry(value1, value2, carry); };
+    const ArithOp sub_op = [](u32 value1, u32 value2, u32 carry) { return AddWithCarry(value1, ~value2, carry); };
+    const ArithOp rsb_op = [](u32 value1, u32 value2, u32 carry) { return AddWithCarry(~value1, value2, carry); };
 
-    LogicOp and_op = [](u32 value1, u32 value2) { return value1 & value2; };
-    LogicOp bic_op = [](u32 value1, u32 value2) { return value1 & ~value2; };
-    LogicOp eor_op = [](u32 value1, u32 value2) { return value1 ^ value2; };
-    LogicOp orr_op = [](u32 value1, u32 value2) { return value1 | value2; };
-    LogicOp mvn_op = [](u32, u32 value) { return ~value; };
+    const LogicOp and_op = [](u32 value1, u32 value2) { return value1 & value2; };
+    const LogicOp bic_op = [](u32 value1, u32 value2) { return value1 & ~value2; };
+    const LogicOp eor_op = [](u32 value1, u32 value2) { return value1 ^ value2; };
+    const LogicOp orr_op = [](u32 value1, u32 value2) { return value1 | value2; };
+    const LogicOp mvn_op = [](u32, u32 value) { return ~value; };
 
     int Thumb_ArithImm(u32 imm, Reg n, Reg d, ArithOp op, u32 carry);
     int Thumb_ArithReg(Reg m, Reg n, Reg d, ArithOp op, u32 carry);
