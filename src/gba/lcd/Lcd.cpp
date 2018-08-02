@@ -28,7 +28,6 @@ namespace Gba {
 
 Lcd::Lcd(const std::vector<u16>& _pram, const std::vector<u16>& _vram, const std::vector<u32>& _oam, Core& _core)
         : bgs{{0, *this}, {1, *this}, {2, *this}, {3, *this}}
-        , windows(2)
         , pram(_pram)
         , vram(_vram)
         , oam(_oam)

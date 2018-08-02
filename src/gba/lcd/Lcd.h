@@ -226,7 +226,7 @@ public:
     IOReg blend_fade    = {0x0000, 0x0000, 0x001F};
 
     std::vector<Bg> bgs;
-    std::vector<Window> windows;
+    std::array<Window, 2> windows;
 
     const std::vector<u16>& pram;
     const std::vector<u16>& vram;
