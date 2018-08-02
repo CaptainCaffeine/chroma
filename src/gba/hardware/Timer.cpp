@@ -38,22 +38,20 @@ void Timer::Tick(int cycles) {
         return;
     }
 
-    if (delay > 0) {
-        while (delay > 0 && cycles > 0) {
-            delay -= 1;
-            cycles -= 1;
-            timer_clock += 1;
-        }
+    while (delay > 0 && cycles > 0) {
+        delay -= 1;
+        cycles -= 1;
+        timer_clock += 1;
     }
 
-    while (cycles > 0) {
-        if (cycles_per_tick == 1) {
-            timer_clock += cycles;
-            while (cycles-- > 0) {
-                CounterTick();
-            }
-        } else {
-            int remaining_cycles = cycles_per_tick - (timer_clock & (cycles_per_tick - 1));
+    if (cycles_per_tick == 1) {
+        timer_clock += cycles;
+        while (cycles-- > 0) {
+            CounterTick();
+        }
+    } else {
+        while (cycles > 0) {
+            const int remaining_cycles = cycles_per_tick - (timer_clock & (cycles_per_tick - 1));
             if (remaining_cycles > cycles) {
                 timer_clock += cycles;
                 return;
