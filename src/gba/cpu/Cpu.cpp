@@ -342,7 +342,7 @@ int Cpu::BxWritePC(u32 addr) {
     } else {
         // Switch to Arm mode.
         cpsr &= ~thumb_mode;
-        regs[pc] = addr;
+        regs[pc] = addr & ~0x3;
     }
 
     return FlushPipeline();
