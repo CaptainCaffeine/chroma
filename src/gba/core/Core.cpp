@@ -129,7 +129,7 @@ int Core::HaltCycles(int remaining_cpu_cycles) const {
         }
     }
 
-    return std::min(halt_cycles + 1, remaining_cpu_cycles);
+    return std::min(halt_cycles, remaining_cpu_cycles);
 }
 
 void Core::RegisterCallbacks() {
