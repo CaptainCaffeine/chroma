@@ -33,11 +33,6 @@ Timer::Timer(int _id, Core& _core)
 }
 
 void Timer::Tick(int cycles) {
-    if (TimerNotRunning()) {
-        timer_clock += cycles;
-        return;
-    }
-
     while (delay > 0 && cycles > 0) {
         delay -= 1;
         cycles -= 1;
@@ -99,6 +94,8 @@ void Timer::CounterTick() {
 }
 
 void Timer::WriteControl(const u16 data, const u16 mask) {
+    Tick(core.timer_cycle_counter[id]);
+
     bool was_stopped = !TimerEnabled();
     control.Write(data, mask);
 
@@ -127,6 +124,25 @@ void Timer::WriteControl(const u16 data, const u16 mask) {
             }
         }
     }
+
+    core.timer_cycle_counter[id] = 0;
+    core.next_timer_event_cycles[id] = NextEvent();
+}
+
+u16 Timer::ReadCounter() {
+    Tick(core.timer_cycle_counter[id]);
+    core.timer_cycle_counter[id] = 0;
+    core.next_timer_event_cycles[id] = NextEvent();
+
+    return counter;
+}
+
+void Timer::WriteReload(const u16 data, const u16 mask) {
+    Tick(core.timer_cycle_counter[id]);
+    core.timer_cycle_counter[id] = 0;
+    core.next_timer_event_cycles[id] = NextEvent();
+
+    reload.Write(data, mask);
 }
 
 int Timer::NextEvent() const {
@@ -135,9 +151,15 @@ int Timer::NextEvent() const {
     } else if (CascadeEnabled()) {
         return core.timers[id - 1].NextEvent();
     } else {
-        int remaining_cycles_this_tick = cycles_per_tick - (timer_clock & (cycles_per_tick - 1));
-        int remaining_ticks = (0xFFFF - counter) * cycles_per_tick;
-        return delay + remaining_cycles_this_tick + remaining_ticks;
+        const int remaining_cycles_this_tick = cycles_per_tick - (timer_clock & (cycles_per_tick - 1));
+        const int remaining_ticks = (0xFFFF - counter) * cycles_per_tick;
+        if (cycles_per_tick == 1) {
+            return delay + remaining_cycles_this_tick + remaining_ticks;
+        } else {
+            // The timer_clock continues to increment during the delay, so it doesn't delay when the next tick
+            // happens, it just prevents a tick from occuring in the next two cycles.
+            return remaining_cycles_this_tick + remaining_ticks;
+        }
     }
 }
 

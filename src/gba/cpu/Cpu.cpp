@@ -117,8 +117,10 @@ int Cpu::Execute(int cycles) {
         }
 
         // Sync hardware again after the rest of the instruction has executed.
-        core.UpdateHardware(cycles_taken);
-        cycles -= cycles_taken;
+        if (cycles_taken != 0) {
+            core.UpdateHardware(cycles_taken);
+            cycles -= cycles_taken;
+        }
 
         pc_written = false;
     }

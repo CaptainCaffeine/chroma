@@ -35,9 +35,16 @@ public:
 
     void Tick(int cycles);
     void CounterTick();
-    void WriteControl(const u16 data, const u16 mask);
-    bool CascadeEnabled() const { return control & 0x0004; }
+    void InactiveTick(int cycles) { timer_clock += cycles; }
     int NextEvent() const;
+
+    u16 ReadCounter();
+    void WriteReload(const u16 data, const u16 mask);
+    void WriteControl(const u16 data, const u16 mask);
+
+    bool CascadeEnabled() const { return control & 0x0004; }
+    // We only check the timer counter if the timer is enabled and cascade is disabled.
+    bool TimerNotRunning() const { return (control & 0x0084) != 0x0080; }
 private:
     Core& core;
 
@@ -47,8 +54,6 @@ private:
 
     bool TimerEnabled() const { return control & 0x0080; }
     bool InterruptEnabled() const { return control & 0x0040; }
-    // We only check the timer counter if the timer is enabled and cascade is disabled.
-    bool TimerNotRunning() const { return (control & 0x0084) != 0x0080; }
 };
 
 } // End namespace Gba

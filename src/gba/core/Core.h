@@ -53,6 +53,11 @@ public:
     std::unique_ptr<Keypad> keypad;
     std::unique_ptr<Serial> serial;
 
+    int next_lcd_event_cycles = 0;
+    int lcd_cycle_counter = 0;
+    std::array<int, 4> next_timer_event_cycles{};
+    std::array<int, 4> timer_cycle_counter{};
+
     void EmulatorLoop();
     void UpdateHardware(int cycles);
     int HaltCycles(int remaining_cpu_cycles) const;

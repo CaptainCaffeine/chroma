@@ -58,6 +58,11 @@ void Lcd::Update(int cycles) {
         if (vcount > 1 && vcount < 162) {
             core.dma[3].Trigger(Dma::Timing::Special);
         }
+    } else if (scanline_cycles < 1006 && updated_cycles >= 1006) {
+        // The hblank flag isn't set until 46 cycles into the hblank period.
+        status |= hblank_flag;
+        // TODO: mGBA triggers the HBlank IRQ and DMAs at this point instead of at 960 cycles, but higan does not.
+        // Need to do more research on the correct timing.
     } else if (updated_cycles >= 1232) {
         updated_cycles -= 1232;
 
@@ -98,12 +103,6 @@ void Lcd::Update(int cycles) {
         } else {
             status &= ~vcount_flag;
         }
-    } else if (scanline_cycles < 1006 && updated_cycles >= 1006) {
-        // The hblank flag isn't set until 46 cycles into the hblank period.
-        // This is placed last so it can be skipped while in halt mode.
-        status |= hblank_flag;
-        // TODO: mGBA triggers the HBlank IRQ and DMAs at this point instead of at 960 cycles, but higan does not.
-        // Need to do more research on the correct timing.
     }
 
     scanline_cycles = updated_cycles;
@@ -128,6 +127,8 @@ void Lcd::WriteControl(const u16 data, const u16 mask) {
 int Lcd::NextEvent() const {
     if (scanline_cycles < 960) {
         return 960 - scanline_cycles;
+    } else if (scanline_cycles < 1006) {
+        return 1006 - scanline_cycles;
     } else {
         return 1232 - scanline_cycles;
     }

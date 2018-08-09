@@ -100,14 +100,26 @@ void Core::EmulatorLoop() {
 }
 
 void Core::UpdateHardware(int cycles) {
-    if (cycles == 0) {
-        return;
+    lcd_cycle_counter += cycles;
+    if (lcd_cycle_counter >= next_lcd_event_cycles) {
+        lcd->Update(lcd_cycle_counter);
+        lcd_cycle_counter = 0;
+        next_lcd_event_cycles = lcd->NextEvent();
     }
 
-    lcd->Update(cycles);
+    for (int i = 0; i < 4; ++i) {
+        auto& timer = timers[i];
+        if (timer.TimerNotRunning()) {
+            timer.InactiveTick(cycles);
+        } else {
+            timer_cycle_counter[i] += cycles;
 
-    for (auto& timer : timers) {
-        timer.Tick(cycles);
+            if (timer_cycle_counter[i] >= next_timer_event_cycles[i]) {
+                timer.Tick(timer_cycle_counter[i]);
+                timer_cycle_counter[i] = 0;
+                next_timer_event_cycles[i] = timer.NextEvent();
+            }
+        }
     }
 
     audio->Update();
@@ -116,14 +128,10 @@ void Core::UpdateHardware(int cycles) {
 }
 
 int Core::HaltCycles(int remaining_cpu_cycles) const {
-    int halt_cycles = lcd->NextEvent();
+    int halt_cycles = next_lcd_event_cycles - lcd_cycle_counter;
 
-    for (const auto& timer : timers) {
-        if (timer.id != 0 && timer.id != 1 && !mem->InterruptEnabled(Interrupt::Timer0 << timer.id)) {
-            continue;
-        }
-
-        int next_event_cycles = timer.NextEvent();
+    for (int i = 0; i < 4; ++i) {
+        int next_event_cycles = next_timer_event_cycles[i] - timer_cycle_counter[i];
         if (next_event_cycles != 0) {
             halt_cycles = std::min(halt_cycles, next_event_cycles);
         }

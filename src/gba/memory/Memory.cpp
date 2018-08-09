@@ -550,19 +550,19 @@ u16 Memory::ReadIO(const u32 addr) const {
     case DMA3CNT_H:
         return core.dma[3].control.Read();
     case TM0CNT_L:
-        return core.timers[0].counter.Read();
+        return core.timers[0].ReadCounter();
     case TM0CNT_H:
         return core.timers[0].control.Read();
     case TM1CNT_L:
-        return core.timers[1].counter.Read();
+        return core.timers[1].ReadCounter();
     case TM1CNT_H:
         return core.timers[1].control.Read();
     case TM2CNT_L:
-        return core.timers[2].counter.Read();
+        return core.timers[2].ReadCounter();
     case TM2CNT_H:
         return core.timers[2].control.Read();
     case TM3CNT_L:
-        return core.timers[3].counter.Read();
+        return core.timers[3].ReadCounter();
     case TM3CNT_H:
         return core.timers[3].control.Read();
     case SIOMULTI0:
@@ -843,25 +843,25 @@ void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
         core.dma[3].WriteControl(data, mask);
         break;
     case TM0CNT_L:
-        core.timers[0].reload.Write(data, mask);
+        core.timers[0].WriteReload(data, mask);
         break;
     case TM0CNT_H:
         core.timers[0].WriteControl(data, mask);
         break;
     case TM1CNT_L:
-        core.timers[1].reload.Write(data, mask);
+        core.timers[1].WriteReload(data, mask);
         break;
     case TM1CNT_H:
         core.timers[1].WriteControl(data, mask);
         break;
     case TM2CNT_L:
-        core.timers[2].reload.Write(data, mask);
+        core.timers[2].WriteReload(data, mask);
         break;
     case TM2CNT_H:
         core.timers[2].WriteControl(data, mask);
         break;
     case TM3CNT_L:
-        core.timers[3].reload.Write(data, mask);
+        core.timers[3].WriteReload(data, mask);
         break;
     case TM3CNT_H:
         core.timers[3].WriteControl(data, mask);
