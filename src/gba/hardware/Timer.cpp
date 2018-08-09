@@ -46,7 +46,18 @@ void Timer::Tick(int cycles) {
 
     if (cycles_per_tick == 1) {
         timer_clock += cycles;
-        while (cycles-- > 0) {
+
+        while (cycles > 0) {
+            const int remaining_ticks = 0x1'0000 - counter;
+            if (remaining_ticks > cycles) {
+                counter += cycles;
+                return;
+            }
+
+            // Set the counter so it overflows in CounterTick().
+            counter += remaining_ticks - 1;
+            cycles -= remaining_ticks;
+
             CounterTick();
         }
     } else {
