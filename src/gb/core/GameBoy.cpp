@@ -53,7 +53,12 @@ GameBoy::GameBoy(const Console _console, const CartridgeHeader& header, Emu::SDL
 GameBoy::~GameBoy() = default;
 
 void GameBoy::EmulatorLoop() {
-    constexpr int cycles_per_frame = 70224;
+    // The Game Boy executes exactly 70224 cycles per frame. However, the display runs at a rate of ~59.7275Hz
+    // instead of 60Hz, so on a 60Hz monitor we need to execute 69905 cycles per frame to run at the correct speed.
+    // Unfortunately, the sample rate that gives us does not resample nicely to 800 samples per frame at all. So
+    // instead we execute 69920 cycles per frame, which is very close to the correct speed and resamples much
+    // better to our target sample rate.
+    static constexpr int cycles_per_frame = 69920;
     int overspent_cycles = 0;
 
     sdl_context.UnpauseAudio();

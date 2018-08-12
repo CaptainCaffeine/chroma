@@ -23,7 +23,7 @@ namespace Gb {
 Audio::Audio(bool enable_filter, const GameBoy& _gameboy)
         : gameboy(_gameboy)
         , enable_iir(enable_filter)
-        , resample_buffer((enable_filter) ? interpolated_buffer_size : 0) {
+        , resample_buffer(enable_iir ? interpolated_buffer_size : 0) {
 
     square1.LinkToAudio(this);
     square2.LinkToAudio(this);
@@ -71,13 +71,13 @@ void Audio::UpdateAudio() {
     square2.EnvelopeTick();
     noise.EnvelopeTick();
 
-    u8 left_sample = 0x00;
-    u8 right_sample = 0x00;
+    int left_sample = 0x00;
+    int right_sample = 0x00;
 
-    u8 sample_channel1 = square1.GenSample();
-    u8 sample_channel2 = square2.GenSample();
-    u8 sample_channel3 = wave.GenSample();
-    u8 sample_channel4 = noise.GenSample();
+    const int sample_channel1 = square1.GenSample();
+    const int sample_channel2 = square2.GenSample();
+    const int sample_channel3 = wave.GenSample();
+    const int sample_channel4 = noise.GenSample();
 
     if (square1.EnabledLeft(sound_select)) {
         left_sample += sample_channel1;
@@ -153,69 +153,59 @@ void Audio::ClearRegisters() {
     sound_on = 0x00;
 }
 
-void Audio::QueueSample(u8 left_sample, u8 right_sample) {
-    if (enable_iir) {
-        sample_counter += 1;
-
-        // We pre-downsample the signal by 7 so the IIR filter can run in real time. So technically aliasing can still
-        // occur, but it's much better than nearest-neighbour downsampling by 44.
-        if (sample_counter % divisor == 0) {
-            // Multiply the samples by the master volume. This is done after the DAC and after the channels have been
-            // mixed, and so the final sample value can be greater than 0x0F.
-            sample_buffer.push_back(left_sample * (((master_volume & 0x70) >> 4) + 1));
-            sample_buffer.push_back(right_sample * ((master_volume & 0x07) + 1));
-        }
-
-        if (sample_buffer.size() == num_samples * 2) {
-            Resample();
-            sample_buffer.clear();
-        }
-    } else {
-        sample_counter += 1 % 35112;
-
-        // Take every 44th sample to get 1596 samples per frame. We need 800 samples per channel per frame for 
-        // 48kHz at 60FPS, so take another sample at 1/4 and 3/4 through the frame.
-        if (sample_counter % 44 == 0 || sample_counter == 8778 || sample_counter == 26334) {
-            // Multiply the samples by the master volume. This is done after the DAC and after the channels have been
-            // mixed, and so can be greater than 0x0F.
-            sample_buffer.push_back(left_sample * (((master_volume & 0x70) >> 4) + 1));
-            sample_buffer.push_back(right_sample * ((master_volume & 0x07) + 1));
-        }
-
-        if (sample_buffer.size() == output_buffer.size()) {
-            for (std::size_t i = 0; i < sample_buffer.size(); ++i) {
-                output_buffer[i] = sample_buffer[i] * 64;
-            }
-
-            sample_buffer.clear();
-        }
-    }
-}
-
 u8 Audio::ReadNR52() const {
     return sound_on | 0x70 | square1.EnabledFlag() | square2.EnabledFlag() | wave.EnabledFlag() | noise.EnabledFlag();
 }
 
-void Audio::Resample() {
-    // The Game Boy generates 35112 samples per channel per frame, which we pre-downsample to 5016. We then resample
-    // to 800 samples per channel by interpolating by a factor of 100 and decimating by a factor of 627.
-    std::fill(resample_buffer.begin(), resample_buffer.end(), Common::Vec2d{0.0, 0.0});
+void Audio::QueueSample(int left_sample, int right_sample) {
+    // Multiply the samples by the master volume. This is done after the DAC and after the channels have been
+    // mixed, and so the final sample value can be greater than 0x0F.
+    left_sample *= ((master_volume & 0x70) >> 4) + 1;
+    right_sample *= (master_volume & 0x07) + 1;
 
-    for (std::size_t i = 0; i < num_samples; ++i) {
-        // Multiply the samples by 64 to increase the amplitude for the IIR filter.
-        resample_buffer[i * interpolation_factor] = Common::Vec2d{sample_buffer[i * 2] * 64.0,
-                                                                  sample_buffer[i * 2 + 1] * 64.0};
+    // Multiply by 64 to scale the volume for s16 samples.
+    left_sample *= 64;
+    right_sample *= 64;
+
+    if (enable_iir) {
+        resample_buffer[sample_counter * interpolation_factor] = Common::Vec2d{left_sample, right_sample};
+        sample_counter += 1;
+
+        if (sample_counter == samples_per_frame) {
+            Resample();
+            sample_counter = 0;
+        }
+    } else {
+        sample_counter += 1;
+
+        // Take every 44th sample to get 795 samples per frame. We need 800 samples per channel per frame for
+        // 48kHz at 60FPS, so we take five more throughout the frame.
+        if (sample_counter % 44 == 0
+                || sample_counter % (samples_per_frame / 5) == 0
+                || sample_counter % (samples_per_frame / 2) == 0) {
+            sample_buffer.push_back(left_sample);
+            sample_buffer.push_back(right_sample);
+        }
+
+        if (sample_counter == samples_per_frame) {
+            std::copy(sample_buffer.cbegin(), sample_buffer.cend(), output_buffer.begin());
+            sample_buffer.clear();
+            sample_counter = 0;
+        }
     }
+}
 
+void Audio::Resample() {
     Common::Biquad::LowPassFilter(resample_buffer, biquads);
 
     for (std::size_t i = 0; i < output_buffer.size() / 2; ++i) {
-        // Multiply by 64 to scale the volume for s16 samples.
         auto [left_sample, right_sample] = resample_buffer[i * decimation_factor].UnpackSamples();
 
-        output_buffer[i * 2] = left_sample * 64;
-        output_buffer[i * 2 + 1] = right_sample * 64;
+        output_buffer[i * 2] = left_sample * 8;
+        output_buffer[i * 2 + 1] = right_sample * 8;
     }
+
+    std::fill(resample_buffer.begin(), resample_buffer.end(), Common::Vec2d{0.0, 0.0});
 }
 
 } // End namespace Gb

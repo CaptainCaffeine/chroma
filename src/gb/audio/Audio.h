@@ -18,6 +18,7 @@
 
 #include <array>
 #include <vector>
+#include <numeric>
 
 #include "common/CommonTypes.h"
 #include "common/Vec2d.h"
@@ -163,15 +164,14 @@ private:
     bool prev_frame_seq_inc = false;
 
     // IIR filter
+    static constexpr int samples_per_frame = 34960;
+    static constexpr int interpolated_buffer_size = std::lcm(800, samples_per_frame);
+    static constexpr int interpolation_factor = interpolated_buffer_size / samples_per_frame;
+    static constexpr int decimation_factor = interpolated_buffer_size / 800;
     const bool enable_iir;
-    unsigned int sample_counter = 0;
-    static constexpr unsigned int divisor = 7;
-    static constexpr unsigned int num_samples = 35112 / divisor;
-    static constexpr unsigned int interpolation_factor = 100;
-    static constexpr unsigned int decimation_factor = num_samples / 8;
-    static constexpr std::size_t interpolated_buffer_size = num_samples * interpolation_factor;
+    int sample_counter = 0;
 
-    std::vector<int> sample_buffer;
+    std::vector<s16> sample_buffer;
     std::vector<Common::Vec2d> resample_buffer;
 
     // Q values are for a 4th order cascaded Butterworth lowpass filter.
@@ -182,7 +182,7 @@ private:
     void FrameSequencerTick();
     void UpdatePowerOnState();
     void ClearRegisters();
-    void QueueSample(u8 left_sample, u8 right_sample);
+    void QueueSample(int left_sample, int right_sample);
     void Resample();
 };
 
