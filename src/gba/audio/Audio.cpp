@@ -124,7 +124,7 @@ void Audio::ConsumeSample(int f) {
 
     fifos[f].ReadSample();
 
-    if (fifos[f].size <= 16) {
+    if (fifos[f].NeedsMoreSamples()) {
         for (int i = 1; i < 3; ++i) {
             if (core.dma[i].WritingToFifo(f)) {
                 core.dma[i].Trigger(Dma::Timing::Special);

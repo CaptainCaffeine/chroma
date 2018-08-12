@@ -37,12 +37,6 @@ enum Generator {Square1 = 0x01,
 
 class Fifo {
 public:
-    static constexpr int fifo_length = 32;
-    std::array<s8, fifo_length> ring_buffer{};
-    int read_index = 0;
-    int write_index = 0;
-    int size = 0;
-
     std::vector<s8> sample_buffer;
     unsigned int samples_per_frame = 0;
 
@@ -54,7 +48,7 @@ public:
             return;
         }
 
-        s8 sample = ring_buffer[read_index++];
+        const s8 sample = ring_buffer[read_index++];
         read_index %= fifo_length;
         size -= 1;
 
@@ -100,6 +94,15 @@ public:
         write_index = 0;
         size = 0;
     }
+
+    bool NeedsMoreSamples() const { return size <= 16; }
+
+private:
+    static constexpr int fifo_length = 32;
+    std::array<s8, fifo_length> ring_buffer{};
+    int read_index = 0;
+    int write_index = 0;
+    int size = 0;
 };
 
 class Audio {
