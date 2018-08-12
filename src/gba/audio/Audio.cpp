@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <algorithm>
 #include <numeric>
 
 #include "gba/audio/Audio.h"
@@ -132,6 +133,72 @@ void Audio::ConsumeSample(int f) {
             }
         }
     }
+}
+
+int Audio::ClampSample(int sample) const {
+    // The bias is added to the final 10-bit sample. With the default bias of 0x200, this constrains the
+    // output range to a signed 9-bit value (-0x200...0x1FF).
+    sample += BiasLevel();
+    sample = std::clamp(sample, 0, 0x3FF);
+    sample -= BiasLevel();
+
+    // We multiply the final sample by 64 to fill the s16 range.
+    return sample * 64;
+}
+
+void Fifo::ReadSample() {
+    if (size == 0) {
+        for (int i = 0; i < 5; ++i) {
+            sample_buffer.push_back(0);
+        }
+        return;
+    }
+
+    const s8 sample = ring_buffer[read_index++];
+    read_index %= fifo_length;
+    size -= 1;
+
+    // We duplicate every sample five times so the sample rate is high enough for the resample filter to work.
+    // If the source sample rate is lower than the target (800 samples per channel per frame), then ringing and
+    // noise appears in the final audio.
+    for (int i = 0; i < 5; ++i) {
+        sample_buffer.push_back(sample);
+    }
+}
+
+void Fifo::Write(u16 data, u16 mask_8bit) {
+    if (size == fifo_length) {
+        // The FIFO is full.
+        return;
+    }
+
+    if (mask_8bit == 0xFFFF) {
+        // 16-bit write.
+        ring_buffer[write_index++] = data & 0xFF;
+        write_index %= fifo_length;
+        size += 1;
+        if (size != fifo_length) {
+            ring_buffer[write_index++] = data >> 8;
+            write_index %= fifo_length;
+            size += 1;
+        }
+    } else {
+        // 8-bit write.
+        if (mask_8bit == 0x00FF) {
+            ring_buffer[write_index++] = data & 0xFF;
+        } else {
+            ring_buffer[write_index++] = data >> 8;
+        }
+        write_index %= fifo_length;
+        size += 1;
+    }
+}
+
+void Fifo::Reset() {
+    std::fill(ring_buffer.begin(), ring_buffer.end(), 0);
+    read_index = 0;
+    write_index = 0;
+    size = 0;
 }
 
 } // End namespace Gba
