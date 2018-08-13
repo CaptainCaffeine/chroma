@@ -101,75 +101,8 @@ public:
     static int GetSize(u32 attr1) { return (attr1 >> 30) & 0x3; }
     static bool DoubleSize(u32 attr1) { return (attr1 & 0x200) && (attr1 & 0x100); }
 
-    static int Height(u32 attr1) {
-        Shape shape = Sprite::GetShape(attr1);
-        int size = Sprite::GetSize(attr1);
-
-        int pixel_height;
-        switch (shape) {
-        case Shape::Square:
-            // 8, 16, 32, 64
-            pixel_height = 8 << size;
-            break;
-        case Shape::Horizontal:
-            // 8, 8, 16, 32
-            if (size > 0) {
-                size -= 1;
-            }
-            pixel_height = 8 << size;
-            break;
-        case Shape::Vertical:
-            // 16, 32, 32, 64
-            if (size > 1) {
-                size -= 1;
-            }
-            pixel_height = 16 << size;
-            break;
-        default:
-            return 0;
-        }
-
-        if (DoubleSize(attr1)) {
-            return pixel_height * 2;
-        } else {
-            return pixel_height;
-        }
-    }
-
-    static int Width(u32 attr1) {
-        Shape shape = Sprite::GetShape(attr1);
-        int size = Sprite::GetSize(attr1);
-
-        int pixel_width;
-        switch (shape) {
-        case Shape::Square:
-            // 8, 16, 32, 64
-            pixel_width = 8 << size;
-            break;
-        case Shape::Horizontal:
-            // 16, 32, 32, 64
-            if (size > 1) {
-                size -= 1;
-            }
-            pixel_width = 16 << size;
-            break;
-        case Shape::Vertical:
-            // 8, 8, 16, 32
-            if (size > 0) {
-                size -= 1;
-            }
-            pixel_width = 8 << size;
-            break;
-        default:
-            return 0;
-        }
-
-        if (DoubleSize(attr1)) {
-            return pixel_width * 2;
-        } else {
-            return pixel_width;
-        }
-    }
+    static int Height(u32 attr1);
+    static int Width(u32 attr1);
 };
 
 class Window {
@@ -271,6 +204,7 @@ private:
     bool obj_window_used = true;
 
     void DrawScanline();
+    std::array<std::vector<const Bg*>, 4> DrawBackgrounds();
 
     void ReadOam();
     void DrawSprites();

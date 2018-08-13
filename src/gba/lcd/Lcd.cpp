@@ -154,60 +154,7 @@ void Lcd::DrawScanline() {
         bg_dirty = false;
     }
 
-    std::array<std::vector<const Bg*>, 4> priorities;
-
-    if (BgMode() == 0) {
-        for (int b = 0; b < 4; ++b) {
-            if (bgs[b].Enabled()) {
-                bgs[b].DrawRegularScanline();
-            }
-        }
-
-        // Organize the backgrounds by their priorities. 0 is the highest priority value, and 3 is the lowest.
-        // If multiple backgrounds have the same priority value, the lower-numbered background has higher priority.
-        for (int b = 3; b >= 0; --b) {
-            if (bgs[b].Enabled()) {
-                priorities[bgs[b].Priority()].push_back(&bgs[b]);
-            }
-        }
-    } else if (BgMode() == 1) {
-        for (int b = 0; b < 2; ++b) {
-            if (bgs[b].Enabled()) {
-                bgs[b].DrawRegularScanline();
-            }
-        }
-
-        if (bgs[2].Enabled()) {
-            bgs[2].DrawAffineScanline();
-        }
-
-        for (int b = 2; b >= 0; --b) {
-            if (bgs[b].Enabled()) {
-                priorities[bgs[b].Priority()].push_back(&bgs[b]);
-            }
-        }
-    } else if (BgMode() == 2) {
-        for (int b = 2; b < 4; ++b) {
-            if (bgs[b].Enabled()) {
-                bgs[b].DrawAffineScanline();
-            }
-        }
-
-        for (int b = 3; b >= 2; --b) {
-            if (bgs[b].Enabled()) {
-                priorities[bgs[b].Priority()].push_back(&bgs[b]);
-            }
-        }
-    } else if (BgMode() == 3 || BgMode() == 4 || BgMode() == 5) {
-        // Bitmap modes.
-        if (bgs[2].Enabled()) {
-            bgs[2].DrawBitmapScanline(BgMode(), DisplayFrame1() ? 0xA000 : 0);
-            priorities[0].push_back(&bgs[2]);
-        }
-    } else {
-        // It probably just doesn't draw any background in this case, but if this ever happens I'd like to know.
-        throw std::runtime_error("Invalid BG mode.");
-    }
+    const auto priorities{DrawBackgrounds()};
 
     // The first palette entry is the backdrop colour.
     std::fill_n(back_buffer.begin() + vcount * h_pixels, h_pixels, pram[0] & 0x7FFF);
@@ -332,6 +279,77 @@ void Lcd::DrawScanline() {
             bg.enable_delay -= 1;
         }
     }
+}
+
+std::array<std::vector<const Bg*>, 4> Lcd::DrawBackgrounds() {
+    std::array<std::vector<const Bg*>, 4> priorities;
+
+    switch (BgMode()) {
+    case 0:
+        for (int b = 0; b < 4; ++b) {
+            if (bgs[b].Enabled()) {
+                bgs[b].DrawRegularScanline();
+            }
+        }
+
+        // Organize the backgrounds by their priorities. 0 is the highest priority value, and 3 is the lowest.
+        // If multiple backgrounds have the same priority value, the lower-numbered background has higher priority.
+        for (int b = 3; b >= 0; --b) {
+            if (bgs[b].Enabled()) {
+                priorities[bgs[b].Priority()].push_back(&bgs[b]);
+            }
+        }
+        break;
+
+    case 1:
+        for (int b = 0; b < 2; ++b) {
+            if (bgs[b].Enabled()) {
+                bgs[b].DrawRegularScanline();
+            }
+        }
+
+        if (bgs[2].Enabled()) {
+            bgs[2].DrawAffineScanline();
+        }
+
+        for (int b = 2; b >= 0; --b) {
+            if (bgs[b].Enabled()) {
+                priorities[bgs[b].Priority()].push_back(&bgs[b]);
+            }
+        }
+        break;
+
+    case 2:
+        for (int b = 2; b < 4; ++b) {
+            if (bgs[b].Enabled()) {
+                bgs[b].DrawAffineScanline();
+            }
+        }
+
+        for (int b = 3; b >= 2; --b) {
+            if (bgs[b].Enabled()) {
+                priorities[bgs[b].Priority()].push_back(&bgs[b]);
+            }
+        }
+        break;
+
+    case 3:
+    case 4:
+    case 5:
+        // Bitmap modes.
+        if (bgs[2].Enabled()) {
+            bgs[2].DrawBitmapScanline(BgMode(), DisplayFrame1() ? 0xA000 : 0);
+            priorities[bgs[2].Priority()].push_back(&bgs[2]);
+        }
+        break;
+
+    default:
+        // It probably just doesn't draw any background in this case, but if this ever happens I'd like to know.
+        throw std::runtime_error("Invalid BG mode.");
+        break;
+    }
+
+    return priorities;
 }
 
 bool Lcd::IsWithinWindow(int layer_id, int x) const {
@@ -601,6 +619,76 @@ void Lcd::UpdateSpritePixel(const Sprite& sprite, int scanline_index) {
         // The semi-transparent flag must be cleared if a non-semi-transparent sprite is drawn on top
         // of a semi-transparent one.
         sprite_flags[scanline_index] &= ~semi_transparent_flag;
+    }
+}
+
+int Sprite::Height(u32 attr1) {
+    Shape shape = Sprite::GetShape(attr1);
+    int size = Sprite::GetSize(attr1);
+
+    int pixel_height;
+    switch (shape) {
+    case Shape::Square:
+        // 8, 16, 32, 64
+        pixel_height = 8 << size;
+        break;
+    case Shape::Horizontal:
+        // 8, 8, 16, 32
+        if (size > 0) {
+            size -= 1;
+        }
+        pixel_height = 8 << size;
+        break;
+    case Shape::Vertical:
+        // 16, 32, 32, 64
+        if (size > 1) {
+            size -= 1;
+        }
+        pixel_height = 16 << size;
+        break;
+    default:
+        return 0;
+    }
+
+    if (DoubleSize(attr1)) {
+        return pixel_height * 2;
+    } else {
+        return pixel_height;
+    }
+}
+
+int Sprite::Width(u32 attr1) {
+    Shape shape = Sprite::GetShape(attr1);
+    int size = Sprite::GetSize(attr1);
+
+    int pixel_width;
+    switch (shape) {
+    case Shape::Square:
+        // 8, 16, 32, 64
+        pixel_width = 8 << size;
+        break;
+    case Shape::Horizontal:
+        // 16, 32, 32, 64
+        if (size > 1) {
+            size -= 1;
+        }
+        pixel_width = 16 << size;
+        break;
+    case Shape::Vertical:
+        // 8, 8, 16, 32
+        if (size > 0) {
+            size -= 1;
+        }
+        pixel_width = 8 << size;
+        break;
+    default:
+        return 0;
+    }
+
+    if (DoubleSize(attr1)) {
+        return pixel_width * 2;
+    } else {
+        return pixel_width;
     }
 }
 
