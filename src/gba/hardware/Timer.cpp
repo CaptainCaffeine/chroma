@@ -40,11 +40,10 @@ void Timer::Tick(int cycles) {
     }
 
     if (cycles_per_tick == 1) {
-        timer_clock += cycles;
-
         while (cycles > 0) {
             const int remaining_ticks = 0x1'0000 - counter;
             if (remaining_ticks > cycles) {
+                timer_clock += cycles;
                 counter += cycles;
                 return;
             }
@@ -52,6 +51,7 @@ void Timer::Tick(int cycles) {
             // Set the counter so it overflows in CounterTick().
             counter += remaining_ticks - 1;
             cycles -= remaining_ticks;
+            timer_clock += remaining_ticks;
 
             CounterTick();
         }
@@ -86,7 +86,7 @@ void Timer::CounterTick() {
         if (id < 2) {
             for (int f = 0; f < 2; ++f) {
                 if (id == core.audio->FifoTimerSelect(f)) {
-                    core.audio->ConsumeSample(f);
+                    core.audio->ConsumeSample(f, timer_clock);
                 }
             }
         }
@@ -96,7 +96,7 @@ void Timer::CounterTick() {
 void Timer::WriteControl(const u16 data, const u16 mask) {
     Tick(core.timer_cycle_counter[id]);
 
-    bool was_stopped = !TimerEnabled();
+    const bool was_stopped = !TimerEnabled();
     control.Write(data, mask);
 
     if (was_stopped && TimerEnabled()) {
@@ -114,19 +114,18 @@ void Timer::WriteControl(const u16 data, const u16 mask) {
         cycles_per_tick = 16 << (2 * prescaler_select);
     }
 
+    core.timer_cycle_counter[id] = 0;
+    core.next_timer_event_cycles[id] = NextEvent();
+
     if (id < 2) {
         for (int f = 0; f < 2; ++f) {
             if (id == core.audio->FifoTimerSelect(f)) {
-                core.audio->fifos[f].samples_per_frame = (280896 / (cycles_per_tick * (0x1'0000 - reload))) * 5;
-                if (core.audio->fifos[f].samples_per_frame <= 4 * 5) {
-                    core.audio->fifos[f].sample_buffer.clear();
-                }
+                core.audio->Update(core.audio_cycle_counter);
+                core.audio_cycle_counter = 0;
+                core.next_audio_event_cycles = NextEvent();
             }
         }
     }
-
-    core.timer_cycle_counter[id] = 0;
-    core.next_timer_event_cycles[id] = NextEvent();
 }
 
 u16 Timer::ReadCounter() {

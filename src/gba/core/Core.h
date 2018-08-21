@@ -55,6 +55,8 @@ public:
 
     int next_lcd_event_cycles = 0;
     int lcd_cycle_counter = 0;
+    int next_audio_event_cycles = 0;
+    int audio_cycle_counter = 0;
     std::array<int, 4> next_timer_event_cycles{};
     std::array<int, 4> timer_cycle_counter{};
 
@@ -62,6 +64,7 @@ public:
     void UpdateHardware(int cycles);
     int HaltCycles(int remaining_cpu_cycles) const;
     void SwapBuffers(std::vector<u16>& back_buffer) { front_buffer.swap(back_buffer); }
+    void PushBackAudio(const std::array<s16, 1600>& sample_buffer);
     void Screenshot() const;
 
 private:

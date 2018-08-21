@@ -15,7 +15,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
-#include <numeric>
 
 #include "gba/audio/Audio.h"
 #include "gba/core/Core.h"
@@ -25,89 +24,113 @@
 namespace Gba {
 
 Audio::Audio(Core& _core)
-        : core(_core) {
+        : core(_core)
+        , resample_buffer(interpolated_buffer_size) {
 
     Common::Vec2d::SetFlushToZero();
+
+    for (unsigned int i = 0; i < q.size(); ++i) {
+        biquads.emplace_back(interpolated_buffer_size, q[i]);
+    }
 }
 
 // Needed to declare std::vector with forward-declared type in the header file.
 Audio::~Audio() = default;
 
-void Audio::Update() {
+void Audio::Update(int cycles) {
+    const u64 updated_clock = audio_clock + cycles;
+
     if (!AudioEnabled()) {
+        // Queue silence while audio is disabled.
+        sample_count += updated_clock / 8 - audio_clock / 8;
+        if (sample_count >= samples_per_frame) {
+            Resample();
+            sample_count %= samples_per_frame;
+        }
+
+        audio_clock = updated_clock;
         return;
     }
 
-    if (fifos[0].samples_per_frame <= 4 * 5 && fifos[1].samples_per_frame <= 4 * 5) {
-        // Neither fifo has a timer running.
-        return;
-    }
+    // The APU runs at 2MHz, so it only updates every 8 cycles.
+    while (audio_clock / 8 < updated_clock / 8) {
+        audio_clock += 8;
 
-    if (fifos[0].sample_buffer.size() == fifos[0].samples_per_frame
-            || fifos[1].sample_buffer.size() == fifos[1].samples_per_frame) {
+        int left_sample = 0;
+        int right_sample = 0;
 
-        // If only one fifo is in use, the sample rate of the inactive one will be 4 (times 5). If both fifos are in
-        // use, we assume they're using the same sample rate.
-        int samples_per_frame = std::max(fifos[0].samples_per_frame, fifos[1].samples_per_frame);
+        for (int f = 0; f < 2; ++f) {
+            const int fifo_sample = (fifos[f].ReadCurrentSample(audio_clock) << 2) >> FifoVolume(f);
 
-        std::fill(resample_buffer.begin(), resample_buffer.end(), Common::Vec2d{0.0, 0.0});
-
-        if (samples_per_frame != prev_samples_per_frame) {
-            // The sample rate changed, so we need to update the resampling parameters and biquads.
-            interpolated_buffer_size = std::lcm(800, samples_per_frame);
-            interpolation_factor = interpolated_buffer_size / samples_per_frame;
-            decimation_factor = interpolated_buffer_size / 800;
-            resample_buffer.resize(interpolated_buffer_size);
-
-            biquads.clear();
-            for (unsigned int i = 0; i < q.size(); ++i) {
-                biquads.emplace_back(interpolated_buffer_size, q[i]);
+            if (FifoEnabledLeft(f)) {
+                left_sample += fifo_sample;
             }
 
-            prev_samples_per_frame = samples_per_frame;
-        }
-
-        for (int i = 0; i < samples_per_frame; ++i) {
-            int left_sample = 0;
-            int right_sample = 0;
-
-            for (int f = 0; f < 2; ++f) {
-                if (fifos[f].sample_buffer.size() == 0) {
-                    continue;
-                }
-
-                const int fifo_sample = (static_cast<s32>(fifos[f].sample_buffer[i]) << 2) >> FifoVolume(f);
-
-                if (FifoEnabledLeft(f)) {
-                    left_sample += fifo_sample;
-                }
-
-                if (FifoEnabledRight(f)) {
-                    right_sample += fifo_sample;
-                }
+            if (FifoEnabledRight(f)) {
+                right_sample += fifo_sample;
             }
-
-            left_sample = ClampSample(left_sample);
-            right_sample = ClampSample(right_sample);
-
-            resample_buffer[i * interpolation_factor] = Common::Vec2d{left_sample, right_sample};
         }
 
-        fifos[0].sample_buffer.clear();
-        fifos[1].sample_buffer.clear();
+        left_sample = ClampSample(left_sample);
+        right_sample = ClampSample(right_sample);
 
-        Common::Biquad::LowPassFilter(resample_buffer, biquads);
+        resample_buffer[sample_count * interpolation_factor] = Common::Vec2d{left_sample, right_sample};
+        sample_count += 1;
 
-        for (int i = 0; i < 800; ++i) {
-            auto [left_sample, right_sample] = resample_buffer[i * decimation_factor].UnpackSamples();
-
-            output_buffer[i * 2] = left_sample * 2;
-            output_buffer[i * 2 + 1] = right_sample * 2;
+        if (sample_count == samples_per_frame) {
+            Resample();
+            sample_count = 0;
         }
     }
+
+    audio_clock = updated_clock;
+}
+
+void Audio::Resample() {
+    Common::Biquad::LowPassFilter(resample_buffer, biquads);
+
+    for (int i = 0; i < 800; ++i) {
+        auto [left_sample, right_sample] = resample_buffer[i * decimation_factor].UnpackSamples();
+
+        output_buffer[i * 2] = left_sample * 4;
+        output_buffer[i * 2 + 1] = right_sample * 4;
+    }
+
+    core.PushBackAudio(output_buffer);
+    std::fill(resample_buffer.begin(), resample_buffer.end(), Common::Vec2d{0.0, 0.0});
+}
+
+int Audio::NextEvent() {
+    const int remaining_samples = samples_per_frame - sample_count;
+    int next_event_cycles = remaining_samples * 8 - audio_clock % 8;
+
+    for (int f = 0; f < 2; ++f) {
+        const int fifo_timer = FifoTimerSelect(f);
+        const int next_timer_event_cycles = core.next_timer_event_cycles[fifo_timer] - core.timer_cycle_counter[fifo_timer];
+        if (next_timer_event_cycles != 0) {
+            next_event_cycles = std::min(next_event_cycles, next_timer_event_cycles);
+        }
+
+        if (fifo_timer == FifoTimerSelect(1)) {
+            // No need to check both fifos if they're using the same timer.
+            break;
+        }
+    }
+
+    return next_event_cycles;
+}
+
+void Audio::WriteSoundOn(u16 data, u16 mask) {
+    Update(core.audio_cycle_counter);
+    core.audio_cycle_counter = 0;
+    core.next_audio_event_cycles = NextEvent();
+
+    sound_on.Write(data, mask);
 }
 
 void Audio::WriteFifoControl(u16 data, u16 mask) {
+    Update(core.audio_cycle_counter);
+
     fifo_control.Write(data, mask);
 
     for (int f = 0; f < 2; ++f) {
@@ -116,14 +139,17 @@ void Audio::WriteFifoControl(u16 data, u16 mask) {
             ClearReset(f);
         }
     }
+
+    core.audio_cycle_counter = 0;
+    core.next_audio_event_cycles = NextEvent();
 }
 
-void Audio::ConsumeSample(int f) {
+void Audio::ConsumeSample(int f, u64 timer_clock) {
     if (!AudioEnabled()) {
         return;
     }
 
-    fifos[f].ReadSample();
+    fifos[f].PopSample(timer_clock);
 
     if (fifos[f].NeedsMoreSamples()) {
         for (int i = 1; i < 3; ++i) {
@@ -146,59 +172,56 @@ int Audio::ClampSample(int sample) const {
     return sample * 64;
 }
 
-void Fifo::ReadSample() {
-    if (size == 0) {
-        for (int i = 0; i < 5; ++i) {
-            sample_buffer.push_back(0);
-        }
+s32 Fifo::ReadCurrentSample(u64 audio_clock) {
+    // We maintain a queue of samples popped by the timer (play_queue) so the audio doesn't play any samples
+    // too early. Once the emulated time in the audio hardware has surpassed the time a sample was queued,
+    // we start playing that sample.
+    if (play_queue.Size() > 0 && audio_clock >= play_queue.Read().second) {
+        playing_sample = play_queue.PopFront().first;
+    }
+
+    return playing_sample;
+}
+
+void Fifo::PopSample(u64 timer_clock) {
+    if (fifo_buffer.Size() == 0) {
+        // Play silence if the fifo is empty.
+        play_queue.PushBack({0, timer_clock});
         return;
     }
 
-    const s8 sample = ring_buffer[read_index++];
-    read_index %= fifo_length;
-    size -= 1;
-
-    // We duplicate every sample five times so the sample rate is high enough for the resample filter to work.
-    // If the source sample rate is lower than the target (800 samples per channel per frame), then ringing and
-    // noise appears in the final audio.
-    for (int i = 0; i < 5; ++i) {
-        sample_buffer.push_back(sample);
-    }
+    // Pop the next sample from the fifo and add it to the play queue. We record the time the sample was popped so
+    // we know when to start playing it.
+    const s8 sample = fifo_buffer.PopFront();
+    play_queue.PushBack({sample, timer_clock});
 }
 
 void Fifo::Write(u16 data, u16 mask_8bit) {
-    if (size == fifo_length) {
-        // The FIFO is full.
+    if (fifo_buffer.Size() == fifo_length) {
+        // The fifo is full.
         return;
     }
 
     if (mask_8bit == 0xFFFF) {
         // 16-bit write.
-        ring_buffer[write_index++] = data & 0xFF;
-        write_index %= fifo_length;
-        size += 1;
-        if (size != fifo_length) {
-            ring_buffer[write_index++] = data >> 8;
-            write_index %= fifo_length;
-            size += 1;
+        fifo_buffer.PushBack(data & 0xFF);
+        if (fifo_buffer.Size() != fifo_length) {
+            fifo_buffer.PushBack(data >> 8);
         }
     } else {
         // 8-bit write.
         if (mask_8bit == 0x00FF) {
-            ring_buffer[write_index++] = data & 0xFF;
+            fifo_buffer.PushBack(data & 0xFF);
         } else {
-            ring_buffer[write_index++] = data >> 8;
+            fifo_buffer.PushBack(data >> 8);
         }
-        write_index %= fifo_length;
-        size += 1;
     }
 }
 
 void Fifo::Reset() {
-    std::fill(ring_buffer.begin(), ring_buffer.end(), 0);
-    read_index = 0;
-    write_index = 0;
-    size = 0;
+    fifo_buffer.Reset();
+    play_queue.Reset();
+    playing_sample = 0;
 }
 
 } // End namespace Gba

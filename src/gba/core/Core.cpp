@@ -53,7 +53,7 @@ Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::ve
 Core::~Core() = default;
 
 void Core::EmulatorLoop() {
-    constexpr int cycles_per_frame = 280896;
+    constexpr int cycles_per_frame = 279680;
     int overspent_cycles = 0;
 
     using namespace std::chrono;
@@ -92,7 +92,6 @@ void Core::EmulatorLoop() {
             frame_count = 0;
         }
 
-        sdl_context.PushBackAudio(audio->output_buffer);
         sdl_context.RenderFrame(front_buffer.data());
     }
 
@@ -122,7 +121,12 @@ void Core::UpdateHardware(int cycles) {
         }
     }
 
-    audio->Update();
+    audio_cycle_counter += cycles;
+    if (audio_cycle_counter >= next_audio_event_cycles) {
+        audio->Update(audio_cycle_counter);
+        audio_cycle_counter = 0;
+        next_audio_event_cycles = audio->NextEvent();
+    }
 
     mem->DelayedSaveOp(cycles);
 }
@@ -130,14 +134,23 @@ void Core::UpdateHardware(int cycles) {
 int Core::HaltCycles(int remaining_cpu_cycles) const {
     int halt_cycles = next_lcd_event_cycles - lcd_cycle_counter;
 
+    int next_event_cycles = next_audio_event_cycles - audio_cycle_counter;
+    if (next_event_cycles != 0) {
+        halt_cycles = std::min(halt_cycles, next_event_cycles);
+    }
+
     for (int i = 0; i < 4; ++i) {
-        int next_event_cycles = next_timer_event_cycles[i] - timer_cycle_counter[i];
+        next_event_cycles = next_timer_event_cycles[i] - timer_cycle_counter[i];
         if (next_event_cycles != 0) {
             halt_cycles = std::min(halt_cycles, next_event_cycles);
         }
     }
 
     return std::min(halt_cycles, remaining_cpu_cycles);
+}
+
+void Core::PushBackAudio(const std::array<s16, 1600>& sample_buffer) {
+    sdl_context.PushBackAudio(sample_buffer);
 }
 
 void Core::RegisterCallbacks() {

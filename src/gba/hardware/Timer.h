@@ -48,7 +48,7 @@ public:
 private:
     Core& core;
 
-    u32 timer_clock = 0;
+    u64 timer_clock = 0;
     int delay = 0;
     int cycles_per_tick = 0;
 

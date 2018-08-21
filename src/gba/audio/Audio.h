@@ -18,9 +18,11 @@
 
 #include <array>
 #include <vector>
+#include <numeric>
 
 #include "common/CommonTypes.h"
 #include "common/Vec2d.h"
+#include "common/RingBuffer.h"
 #include "gba/memory/IOReg.h"
 
 namespace Common { class Biquad; }
@@ -36,20 +38,20 @@ enum Generator {Square1 = 0x01,
 
 class Fifo {
 public:
-    std::vector<s8> sample_buffer;
-    unsigned int samples_per_frame = 0;
-
-    void ReadSample();
+    s32 ReadCurrentSample(u64 audio_clock);
+    void PopSample(u64 timer_clock);
     void Write(u16 data, u16 mask_8bit);
     void Reset();
-    bool NeedsMoreSamples() const { return size <= 16; }
+    bool NeedsMoreSamples() const { return fifo_buffer.Size() <= 16; }
 
 private:
     static constexpr int fifo_length = 32;
-    std::array<s8, fifo_length> ring_buffer{};
-    int read_index = 0;
-    int write_index = 0;
-    int size = 0;
+    Common::RingBuffer<s8, fifo_length> fifo_buffer;
+
+    // The largest number of samples in the play queue never went higher than 2 in my testing, but I just
+    // went with a size of 4 to be safe.
+    Common::RingBuffer<std::pair<s8, u64>, 4> play_queue;
+    s8 playing_sample = 0;
 };
 
 class Audio {
@@ -65,25 +67,34 @@ public:
     std::array<Fifo, 2> fifos;
     std::array<s16, 1600> output_buffer;
 
-    void Update();
-    void WriteFifoControl(u16 data, u16 mask);
-    void ConsumeSample(int f);
+    void Update(int cycles);
+    void ConsumeSample(int f, u64 timer_clock);
+    int NextEvent();
 
+    void WriteSoundOn(u16 data, u16 mask);
+
+    void WriteFifoControl(u16 data, u16 mask);
     int FifoTimerSelect(int f) const { return (fifo_control >> (10 + 4 * f)) & 0x1; }
 
 private:
     Core& core;
 
+    int sample_count = 0;
+    u64 audio_clock = 0;
+
+    static constexpr int samples_per_frame = 34960;
+    static constexpr int interpolated_buffer_size = std::lcm(800, samples_per_frame);
+    static constexpr int interpolation_factor = interpolated_buffer_size / samples_per_frame;
+    static constexpr int decimation_factor = interpolated_buffer_size / 800;
     std::vector<Common::Vec2d> resample_buffer;
-    int interpolated_buffer_size = 0;
-    int interpolation_factor = 0;
-    int decimation_factor = 0;
-    int prev_samples_per_frame = 0;
 
     // Q values are for an 8th order cascaded Butterworth lowpass filter.
     // Obtained from http://www.earlevel.com/main/2016/09/29/cascading-filters/.
     static constexpr std::array<double, 4> q{0.50979558, 0.60134489, 0.89997622, 2.5629154};
     std::vector<Common::Biquad> biquads;
+
+    void Resample();
+    int ClampSample(int sample) const;
 
     int PsgVolumeRight() const { return psg_control & 0x7; }
     int PsgVolumeLeft() const { return (psg_control >> 4) & 0x7; }
@@ -101,8 +112,6 @@ private:
 
     int BiasLevel() const { return soundbias & 0x02FE; }
     int Resolution() const { return (soundbias >> 14) & 0x3; }
-
-    int ClampSample(int sample) const;
 };
 
 } // End namespace Gba

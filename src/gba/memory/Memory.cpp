@@ -757,7 +757,7 @@ void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
         core.audio->WriteFifoControl(data, mask);
         break;
     case SOUNDCNT_X:
-        core.audio->sound_on.Write(data, mask);
+        core.audio->WriteSoundOn(data, mask);
         break;
     case SOUNDBIAS:
         core.audio->soundbias.Write(data, mask);
