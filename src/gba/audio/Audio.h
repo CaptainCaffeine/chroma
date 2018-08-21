@@ -88,9 +88,9 @@ private:
     static constexpr int decimation_factor = interpolated_buffer_size / 800;
     std::vector<Common::Vec2d> resample_buffer;
 
-    // Q values are for an 8th order cascaded Butterworth lowpass filter.
+    // Q values are for an 6th order cascaded Butterworth lowpass filter.
     // Obtained from http://www.earlevel.com/main/2016/09/29/cascading-filters/.
-    static constexpr std::array<double, 4> q{0.50979558, 0.60134489, 0.89997622, 2.5629154};
+    static constexpr std::array<double, 3> q{0.51763809, 0.70710678, 1.9318517};
     std::vector<Common::Biquad> biquads;
 
     void Resample();
