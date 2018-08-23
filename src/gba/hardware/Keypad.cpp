@@ -26,8 +26,8 @@ Keypad::Keypad(Core& _core)
 
 void Keypad::CheckKeypadInterrupt() {
     bool interrupt_requested = false;
-    if (control & irq_enable) {
-        if (control & irq_condition) {
+    if (InterruptEnabled()) {
+        if (AllButtonsRequired()) {
             // All of the selected buttons must be pressed.
             interrupt_requested = (SelectedIrqButtons() & ~input) == SelectedIrqButtons();
         } else {
@@ -42,6 +42,36 @@ void Keypad::CheckKeypadInterrupt() {
     }
 
     already_requested = interrupt_requested;
+}
+
+void Keypad::Press(Button button, bool pressed) {
+    if (pressed) {
+        // When pressing a directional button, record if the opposite direction was currently pressed and
+        // unpress it.
+        if (button == Button::Up || button == Button::Right) {
+            was_unset |= ~input & (button << 1);
+            input |= button << 1;
+        } else if (button == Button::Down || button == Button::Left) {
+            was_unset |= ~input & (button >> 1);
+            input |= button >> 1;
+        }
+
+        input &= ~button;
+    } else {
+        // When releasing a directional button, re-press the opposite direction if we unpressed it earlier and
+        // the player hasn't unpressed it yet.
+        if (button == Button::Up || button == Button::Right) {
+            was_unset &= ~button;
+            input &= ~(was_unset & (button << 1));
+            was_unset &= ~(button << 1);
+        } else if (button == Button::Down || button == Button::Left) {
+            was_unset &= ~button;
+            input &= ~(was_unset & (button >> 1));
+            was_unset &= ~(button >> 1);
+        }
+
+        input |= button;
+    }
 }
 
 } // End namespace Gba

@@ -42,35 +42,7 @@ public:
                        L      = 0x0200};
 
     void CheckKeypadInterrupt();
-    void Press(Button button, bool pressed) {
-        if (pressed) {
-            // When pressing a directional button, record if the opposite direction was currently pressed and
-            // unpress it.
-            if (button == Button::Up || button == Button::Right) {
-                was_unset |= ~input & (button << 1);
-                input |= button << 1;
-            } else if (button == Button::Down || button == Button::Left) {
-                was_unset |= ~input & (button >> 1);
-                input |= button >> 1;
-            }
-
-            input &= ~button;
-        } else {
-            // When releasing a directional button, re-press the opposite direction if we unpressed it earlier and
-            // the player hasn't unpressed it yet.
-            if (button == Button::Up || button == Button::Right) {
-                was_unset &= ~button;
-                input &= ~(was_unset & (button << 1));
-                was_unset &= ~(button << 1);
-            } else if (button == Button::Down || button == Button::Left) {
-                was_unset &= ~button;
-                input &= ~(was_unset & (button >> 1));
-                was_unset &= ~(button >> 1);
-            }
-
-            input |= button;
-        }
-    }
+    void Press(Button button, bool pressed);
 
 private:
     Core& core;
@@ -79,8 +51,8 @@ private:
     u16 was_unset = 0x00;
 
     // Control flags
-    static constexpr u16 irq_enable = 0x4000;
-    static constexpr u16 irq_condition = 0x8000;
+    bool InterruptEnabled() const { return control & 0x4000; }
+    bool AllButtonsRequired() const { return control & 0x8000; }
     u16 SelectedIrqButtons() const { return control & 0x03FF; }
 };
 
