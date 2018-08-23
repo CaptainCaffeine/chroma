@@ -28,11 +28,10 @@ enum class Generator : u8 {Square1 = 0x01,
                            Wave    = 0x04,
                            Noise   = 0x08};
 
-class Audio;
-
 class Channel {
 public:
-    Channel(Generator gen, std::array<u8, 0x10>& wave_ram_ref, u8 NRx0, u8 NRx1, u8 NRx2, u8 NRx3, u8 NRx4);
+    Channel(Generator gen, std::array<u8, 0x10>& wave_ram_ref, u8 NRx0, u8 NRx1, u8 NRx2, u8 NRx3, u8 NRx4,
+            const Console _console);
 
     u8 sweep;
     u8 sound_length;
@@ -48,8 +47,6 @@ public:
     bool reading_sample = false;
     std::array<u8, 0x10>& wave_ram;
 
-    void LinkToAudio(Audio* _audio) { audio = _audio; }
-
     u8 GenSample() const;
 
     u8 EnabledFlag() const { return (channel_enabled) ? right_enable_mask : 0x00; }
@@ -58,19 +55,20 @@ public:
 
     void PowerOn() { wave_pos = 0x00; current_sample = 0x00; }
 
-    void ExtraLengthClocking(u8 new_frequency_hi);
+    void ExtraLengthClocking(u8 new_frequency_hi, u32 frame_seq_counter);
     void SweepWriteHandler();
 
-    void CheckTrigger(const Console console);
+    void CheckTrigger(u32 frame_seq_counter);
     void TimerTick();
-    void LengthCounterTick();
-    void EnvelopeTick();
-    void SweepTick();
+    void LengthCounterTick(u32 frame_seq_counter);
+    void EnvelopeTick(u32 frame_seq_counter);
+    void SweepTick(u32 frame_seq_counter);
     void ReloadLengthCounter();
     void SetDutyCycle();
-    void ClearRegisters(const Console console);
+    void ClearRegisters();
+
 private:
-    const Audio* audio;
+    const Console console;
 
     const Generator gen_type;
     const u8 left_enable_mask;
@@ -133,7 +131,7 @@ private:
 
     u16 ShiftClock() const { return (frequency_lo & 0xF0) >> 4; }
 
-    bool FrameSeqBitIsLow(unsigned int clock_bit) const;
+    bool FrameSeqBitIsLow(unsigned int clock_bit, u32 frame_seq_counter) const;
 };
 
 } // End namespace Gb

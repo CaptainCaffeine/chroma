@@ -15,20 +15,17 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "gb/audio/Audio.h"
-#include "gb/core/GameBoy.h"
 #include "common/Biquad.h"
 
 namespace Gb {
 
-Audio::Audio(bool enable_filter, const GameBoy& _gameboy)
-        : gameboy(_gameboy)
+Audio::Audio(bool enable_filter, const Console _console)
+        : square1{Generator::Square1, wave_ram, 0x00, 0x80, 0xF3, 0xFF, 0x00, _console}
+        , square2{Generator::Square2, wave_ram, 0x00, 0x00, 0x00, 0xFF, 0x00, _console}
+        , wave{Generator::Wave, wave_ram,       0x00, 0x00, 0x00, 0xFF, 0x00, _console}
+        , noise{Generator::Noise, wave_ram,     0x00, 0x00, 0x00, 0x00, 0x00, _console}
         , enable_iir(enable_filter)
         , resample_buffer(enable_iir ? interpolated_buffer_size : 0) {
-
-    square1.LinkToAudio(this);
-    square2.LinkToAudio(this);
-    wave.LinkToAudio(this);
-    noise.LinkToAudio(this);
 
     for (unsigned int i = 0; i < q.size(); ++i) {
         biquads.emplace_back(interpolated_buffer_size, q[i]);
@@ -50,26 +47,26 @@ void Audio::UpdateAudio() {
         return;
     }
 
-    square1.CheckTrigger(gameboy.console);
-    square2.CheckTrigger(gameboy.console);
-    wave.CheckTrigger(gameboy.console);
-    noise.CheckTrigger(gameboy.console);
+    square1.CheckTrigger(frame_seq_counter);
+    square2.CheckTrigger(frame_seq_counter);
+    wave.CheckTrigger(frame_seq_counter);
+    noise.CheckTrigger(frame_seq_counter);
 
-    square1.SweepTick();
+    square1.SweepTick(frame_seq_counter);
 
     square1.TimerTick();
     square2.TimerTick();
     wave.TimerTick();
     noise.TimerTick();
 
-    square1.LengthCounterTick();
-    square2.LengthCounterTick();
-    wave.LengthCounterTick();
-    noise.LengthCounterTick();
+    square1.LengthCounterTick(frame_seq_counter);
+    square2.LengthCounterTick(frame_seq_counter);
+    wave.LengthCounterTick(frame_seq_counter);
+    noise.LengthCounterTick(frame_seq_counter);
 
-    square1.EnvelopeTick();
-    square2.EnvelopeTick();
-    noise.EnvelopeTick();
+    square1.EnvelopeTick(frame_seq_counter);
+    square2.EnvelopeTick(frame_seq_counter);
+    noise.EnvelopeTick(frame_seq_counter);
 
     int left_sample = 0x00;
     int right_sample = 0x00;
@@ -143,10 +140,10 @@ void Audio::UpdatePowerOnState() {
 }
 
 void Audio::ClearRegisters() {
-    square1.ClearRegisters(gameboy.console);
-    square2.ClearRegisters(gameboy.console);
-    wave.ClearRegisters(gameboy.console);
-    noise.ClearRegisters(gameboy.console);
+    square1.ClearRegisters();
+    square2.ClearRegisters();
+    wave.ClearRegisters();
+    noise.ClearRegisters();
 
     master_volume = 0x00;
     sound_select = 0x00;

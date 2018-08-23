@@ -39,7 +39,7 @@ GameBoy::GameBoy(const Console _console, const CartridgeHeader& header, Emu::SDL
         , serial(std::make_unique<Serial>(*this))
         , lcd(std::make_unique<LCD>(*this))
         , joypad(std::make_unique<Joypad>(*this))
-        , audio(std::make_unique<Audio>(enable_iir, *this))
+        , audio(std::make_unique<Audio>(enable_iir, _console))
         , mem(std::make_unique<Memory>(header, rom, save_path, *this))
         , cpu(std::make_unique<CPU>(*mem, *this))
         , logging(std::make_unique<Logging>(log_level, *this))
