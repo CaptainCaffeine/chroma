@@ -42,7 +42,7 @@ void Lcd::Update(int cycles) {
 
     if (scanline_cycles < 960 && updated_cycles >= 960) {
         // Begin hblank.
-        if (status & hblank_irq) {
+        if (HBlankIrqEnabled()) {
             core.mem->RequestInterrupt(Interrupt::HBlank);
         }
 
@@ -72,7 +72,7 @@ void Lcd::Update(int cycles) {
             // Begin vblank.
             status |= vblank_flag;
 
-            if (status & vblank_irq) {
+            if (VBlankIrqEnabled()) {
                 core.mem->RequestInterrupt(Interrupt::VBlank);
             }
 
@@ -97,7 +97,7 @@ void Lcd::Update(int cycles) {
         if (vcount == VTrigger()) {
             status |= vcount_flag;
 
-            if (status & vcount_irq) {
+            if (VCountIrqEnabled()) {
                 core.mem->RequestInterrupt(Interrupt::VCount);
             }
         } else {

@@ -236,10 +236,9 @@ private:
     static constexpr u16 vblank_flag = 0x01;
     static constexpr u16 hblank_flag = 0x02;
     static constexpr u16 vcount_flag = 0x04;
-    static constexpr u16 vblank_irq  = 0x08;
-    static constexpr u16 hblank_irq  = 0x10;
-    static constexpr u16 vcount_irq  = 0x20;
-
+    bool VBlankIrqEnabled() const { return status & 0x08; }
+    bool HBlankIrqEnabled() const { return status & 0x10; }
+    bool VCountIrqEnabled() const { return status & 0x20; }
     int VTrigger() const { return status >> 8; }
 
     // Mosaic flags
