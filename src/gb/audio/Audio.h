@@ -38,7 +38,7 @@ public:
 
     bool IsPoweredOn() const { return audio_on; }
     u8 ReadNR52() const;
-    u32 GetFrameSequencerCounter() const { return frame_seq_counter; }
+    u32 GetFrameSequencer() const { return audio_clock >> 13; }
 
     std::array<s16, 1600> output_buffer;
 
@@ -133,11 +133,7 @@ public:
 
 private:
     bool audio_on = true;
-
-    // Frame sequencer
-    u32 frame_seq_counter = 0;
-    unsigned int frame_seq_clock = 0;
-    bool prev_frame_seq_inc = false;
+    u32 audio_clock = 0;
 
     // IIR filter
     static constexpr int samples_per_frame = 34960;
@@ -155,7 +151,6 @@ private:
     static constexpr std::array<double, 2> q{0.54119610, 1.3065630};
     std::vector<Common::Biquad> biquads;
 
-    void FrameSequencerTick();
     void UpdatePowerOnState();
     void ClearRegisters();
     void QueueSample(int left_sample, int right_sample);

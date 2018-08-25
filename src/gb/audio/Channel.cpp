@@ -20,14 +20,14 @@ namespace Gb {
 
 Channel::Channel(Generator gen, std::array<u8, 0x10>& wave_ram_ref, u8 NRx0, u8 NRx1, u8 NRx2, u8 NRx3, u8 NRx4,
                  const Console _console)
-        : console(_console)
-        , sweep(NRx0)
+        : sweep(NRx0)
         , sound_length(NRx1)
         , volume_envelope(NRx2)
         , frequency_lo(NRx3)
         , frequency_hi(NRx4)
         , channel_enabled(gen == Generator::Square1)
         , wave_ram(wave_ram_ref)
+        , console(_console)
         , gen_type(gen)
         , left_enable_mask(static_cast<u8>(gen_type) << 4)
         , right_enable_mask(static_cast<u8>(gen_type)) {
@@ -46,7 +46,7 @@ u8 Channel::GenSample() const {
     }
 }
 
-void Channel::CheckTrigger(u32 frame_seq_counter) {
+void Channel::CheckTrigger(u32 frame_seq) {
     if (frequency_hi & 0x80) {
         // Clear reset flag.
         frequency_hi &= 0x7F;
@@ -87,7 +87,7 @@ void Channel::CheckTrigger(u32 frame_seq_counter) {
 
             // If we're in the first half of the length counter period and the length counter is enabled, it gets
             // decremented by one.
-            if (FrameSeqBitIsLow(length_clock_bit, frame_seq_counter) && LengthCounterEnabled()) {
+            if (FrameSeqBitIsLow(length_clock_bit, frame_seq) && LengthCounterEnabled()) {
                 length_counter -= 1;
             }
         }
@@ -148,8 +148,8 @@ void Channel::TimerTick() {
     }
 }
 
-void Channel::LengthCounterTick(u32 frame_seq_counter) {
-    bool length_counter_dec = frame_seq_counter & length_clock_bit;
+void Channel::LengthCounterTick(u32 frame_seq) {
+    bool length_counter_dec = frame_seq & length_clock_bit;
 
     if (LengthCounterEnabled() && length_counter > 0) {
         if (!length_counter_dec && prev_length_counter_dec) {
@@ -164,8 +164,8 @@ void Channel::LengthCounterTick(u32 frame_seq_counter) {
     prev_length_counter_dec = length_counter_dec;
 }
 
-void Channel::EnvelopeTick(u32 frame_seq_counter) {
-    bool envelope_inc = frame_seq_counter & envelope_clock_bit;
+void Channel::EnvelopeTick(u32 frame_seq) {
+    bool envelope_inc = frame_seq & envelope_clock_bit;
 
     if (envelope_enabled) {
         if (!envelope_inc && prev_envelope_inc) {
@@ -192,8 +192,8 @@ void Channel::EnvelopeTick(u32 frame_seq_counter) {
     prev_envelope_inc = envelope_inc;
 }
 
-void Channel::SweepTick(u32 frame_seq_counter) {
-    bool sweep_inc = frame_seq_counter & sweep_clock_bit;
+void Channel::SweepTick(u32 frame_seq) {
+    bool sweep_inc = frame_seq & sweep_clock_bit;
 
     if (sweep_enabled) {
         if (!sweep_inc && prev_sweep_inc) {
@@ -247,8 +247,8 @@ void Channel::ReloadLengthCounter() {
     }
 }
 
-void Channel::ExtraLengthClocking(u8 new_frequency_hi, u32 frame_seq_counter) {
-    if (FrameSeqBitIsLow(length_clock_bit, frame_seq_counter)
+void Channel::ExtraLengthClocking(u8 new_frequency_hi, u32 frame_seq) {
+    if (FrameSeqBitIsLow(length_clock_bit, frame_seq)
             && !LengthCounterEnabled()
             && (new_frequency_hi & 0x40)
             && length_counter > 0) {
@@ -334,8 +334,8 @@ void Channel::CorruptWaveRAM() {
     }
 }
 
-bool Channel::FrameSeqBitIsLow(unsigned int clock_bit, u32 frame_seq_counter) const {
-    return (frame_seq_counter & clock_bit) == 0;
+bool Channel::FrameSeqBitIsLow(unsigned int clock_bit, u32 frame_seq) const {
+    return (frame_seq & clock_bit) == 0;
 }
 
 void Channel::SetDutyCycle() {

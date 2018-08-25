@@ -55,14 +55,14 @@ public:
 
     void PowerOn() { wave_pos = 0x00; current_sample = 0x00; }
 
-    void ExtraLengthClocking(u8 new_frequency_hi, u32 frame_seq_counter);
+    void ExtraLengthClocking(u8 new_frequency_hi, u32 frame_seq);
     void SweepWriteHandler();
 
-    void CheckTrigger(u32 frame_seq_counter);
+    void CheckTrigger(u32 frame_seq);
     void TimerTick();
-    void LengthCounterTick(u32 frame_seq_counter);
-    void EnvelopeTick(u32 frame_seq_counter);
-    void SweepTick(u32 frame_seq_counter);
+    void LengthCounterTick(u32 frame_seq);
+    void EnvelopeTick(u32 frame_seq);
+    void SweepTick(u32 frame_seq);
     void ReloadLengthCounter();
     void SetDutyCycle();
     void ClearRegisters();
@@ -131,7 +131,7 @@ private:
 
     u16 ShiftClock() const { return (frequency_lo & 0xF0) >> 4; }
 
-    bool FrameSeqBitIsLow(unsigned int clock_bit, u32 frame_seq_counter) const;
+    bool FrameSeqBitIsLow(unsigned int clock_bit, u32 frame_seq) const;
 };
 
 } // End namespace Gb

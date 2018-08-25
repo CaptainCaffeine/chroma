@@ -20,10 +20,10 @@
 namespace Gb {
 
 Audio::Audio(bool enable_filter, const Console _console)
-        : square1{Generator::Square1, wave_ram, 0x00, 0x80, 0xF3, 0xFF, 0x00, _console}
-        , square2{Generator::Square2, wave_ram, 0x00, 0x00, 0x00, 0xFF, 0x00, _console}
-        , wave{Generator::Wave, wave_ram,       0x00, 0x00, 0x00, 0xFF, 0x00, _console}
-        , noise{Generator::Noise, wave_ram,     0x00, 0x00, 0x00, 0x00, 0x00, _console}
+        : square1(Generator::Square1, wave_ram, 0x00, 0x80, 0xF3, 0xFF, 0x00, _console)
+        , square2(Generator::Square2, wave_ram, 0x00, 0x00, 0x00, 0xFF, 0x00, _console)
+        , wave(Generator::Wave, wave_ram,       0x00, 0x00, 0x00, 0xFF, 0x00, _console)
+        , noise(Generator::Noise, wave_ram,     0x00, 0x00, 0x00, 0x00, 0x00, _console)
         , enable_iir(enable_filter)
         , resample_buffer(enable_iir ? interpolated_buffer_size : 0) {
 
@@ -38,7 +38,7 @@ Audio::Audio(bool enable_filter, const Console _console)
 Audio::~Audio() = default;
 
 void Audio::UpdateAudio() {
-    FrameSequencerTick();
+    audio_clock += 2;
 
     UpdatePowerOnState();
     if (!audio_on) {
@@ -47,26 +47,28 @@ void Audio::UpdateAudio() {
         return;
     }
 
-    square1.CheckTrigger(frame_seq_counter);
-    square2.CheckTrigger(frame_seq_counter);
-    wave.CheckTrigger(frame_seq_counter);
-    noise.CheckTrigger(frame_seq_counter);
+    const u32 frame_seq = GetFrameSequencer();
 
-    square1.SweepTick(frame_seq_counter);
+    square1.CheckTrigger(frame_seq);
+    square2.CheckTrigger(frame_seq);
+    wave.CheckTrigger(frame_seq);
+    noise.CheckTrigger(frame_seq);
+
+    square1.SweepTick(frame_seq);
 
     square1.TimerTick();
     square2.TimerTick();
     wave.TimerTick();
     noise.TimerTick();
 
-    square1.LengthCounterTick(frame_seq_counter);
-    square2.LengthCounterTick(frame_seq_counter);
-    wave.LengthCounterTick(frame_seq_counter);
-    noise.LengthCounterTick(frame_seq_counter);
+    square1.LengthCounterTick(frame_seq);
+    square2.LengthCounterTick(frame_seq);
+    wave.LengthCounterTick(frame_seq);
+    noise.LengthCounterTick(frame_seq);
 
-    square1.EnvelopeTick(frame_seq_counter);
-    square2.EnvelopeTick(frame_seq_counter);
-    noise.EnvelopeTick(frame_seq_counter);
+    square1.EnvelopeTick(frame_seq);
+    square2.EnvelopeTick(frame_seq);
+    noise.EnvelopeTick(frame_seq);
 
     int left_sample = 0x00;
     int right_sample = 0x00;
@@ -111,17 +113,6 @@ void Audio::UpdateAudio() {
     QueueSample(left_sample, right_sample);
 }
 
-void Audio::FrameSequencerTick() {
-    frame_seq_clock += 2;
-
-    bool frame_seq_inc = frame_seq_clock & 0x1000;
-    if (!frame_seq_inc && prev_frame_seq_inc) {
-        frame_seq_counter += 1;
-    }
-
-    prev_frame_seq_inc = frame_seq_inc;
-}
-
 void Audio::UpdatePowerOnState() {
     bool audio_power_on = sound_on & 0x80;
     if (audio_power_on != audio_on) {
@@ -133,8 +124,6 @@ void Audio::UpdatePowerOnState() {
             square1.PowerOn();
             square2.PowerOn();
             wave.PowerOn();
-
-            frame_seq_counter = 0x00;
         }
     }
 }
