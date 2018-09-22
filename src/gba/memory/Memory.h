@@ -253,7 +253,7 @@ private:
     void CheckHardwareOverrides();
     void InitSRam();
     void InitFlash();
-    u16 ParseEepromAddr(int stream_size, int non_addr_bits);
+    u16 ParseEepromAddr(int stream_size, bool read_request);
     void InitEeprom(int stream_size, int non_addr_bits);
 
     // IO registers

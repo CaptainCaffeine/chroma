@@ -137,7 +137,7 @@ T Memory::ReadMem(const u32 addr, bool dma) {
                     static constexpr std::array<u16, 4> eeprom_read_warmup{{0, 1, 1, 1}};
                     return eeprom_read_warmup[eeprom_read_pos++];
                 } else if (eeprom_read_pos < 68) {
-                    return (eeprom_read_buffer >> (eeprom_read_pos++ - 4)) & 0x1;
+                    return (eeprom_read_buffer >> (63 - (eeprom_read_pos++ - 4))) & 0x1;
                 } else {
                     return 0;
                 }

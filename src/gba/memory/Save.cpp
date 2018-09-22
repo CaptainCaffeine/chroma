@@ -120,6 +120,19 @@ void Memory::DelayedSaveOp(int cycles) {
     }
 }
 
+static constexpr u64 ByteSwap64(u64 value) noexcept {
+    u64 swapped_value =   ((value & 0x0000'0000'0000'00FF) << 56)
+                        | ((value & 0x0000'0000'0000'FF00) << 40)
+                        | ((value & 0x0000'0000'00FF'0000) << 24)
+                        | ((value & 0x0000'0000'FF00'0000) <<  8)
+                        | ((value & 0x0000'00FF'0000'0000) >>  8)
+                        | ((value & 0x0000'FF00'0000'0000) >> 24)
+                        | ((value & 0x00FF'0000'0000'0000) >> 40)
+                        | ((value & 0xFF00'0000'0000'0000) >> 56);
+
+    return swapped_value;
+}
+
 void Memory::ParseEepromCommand() {
     if (save_type != SaveType::Eeprom) {
         return;
@@ -144,7 +157,7 @@ void Memory::ParseEepromCommand() {
     }
 
     const bool read_request = eeprom_bitstream[1] == 1;
-    u16 eeprom_addr = ParseEepromAddr(stream_size, read_request ? 3 : 67);
+    u16 eeprom_addr = ParseEepromAddr(stream_size, read_request);
     if (eeprom_addr == 0xFFFF) {
         eeprom_bitstream.clear();
         return;
@@ -152,7 +165,7 @@ void Memory::ParseEepromCommand() {
 
     if (read_request) {
         if (eeprom_addr <= 0x3FF) {
-            eeprom_read_buffer = eeprom[eeprom_addr];
+            eeprom_read_buffer = ByteSwap64(eeprom[eeprom_addr]);
         } else {
             // OOB EEPROM reads return all 1s.
             eeprom_read_buffer = -1;
@@ -162,10 +175,12 @@ void Memory::ParseEepromCommand() {
         // OOB EEPROM writes are ignored.
         u64 value = 0;
         for (int i = 0; i < 64; ++i) {
-            value |= static_cast<u64>(eeprom_bitstream[i + 2 + eeprom_addr_len]) << i;
+            // Values are written MSBit first.
+            value |= static_cast<u64>(eeprom_bitstream[i + 2 + eeprom_addr_len]) << (63 - i);
         }
 
-        eeprom[eeprom_addr] = value;
+        // We store the EEPROM data as big-endian for compatibility with mGBA.
+        eeprom[eeprom_addr] = ByteSwap64(value);
         eeprom_ready = 0;
         delayed_op = {108368, [this]() {
             eeprom_ready = 1;
@@ -175,7 +190,9 @@ void Memory::ParseEepromCommand() {
     eeprom_bitstream.clear();
 }
 
-u16 Memory::ParseEepromAddr(int stream_size, int non_addr_bits) {
+u16 Memory::ParseEepromAddr(int stream_size, bool read_request) {
+    const int non_addr_bits = read_request ?  3 : 67;
+
     if (eeprom_addr_len == 0) {
         InitEeprom(stream_size, non_addr_bits);
     }
