@@ -64,6 +64,7 @@ set(HEADERS
     gba/core/Core.h
     gba/core/Enums.h
     gba/memory/Memory.h
+    gba/memory/IOReg.h
     gba/cpu/Cpu.h
     gba/cpu/Instruction.h
     gba/cpu/Disassembler.h
@@ -79,7 +80,10 @@ set(HEADERS
     common/CommonFuncs.h
     common/CommonEnums.h
     common/Screenshot.h
+    common/RingBuffer.h
     common/Biquad.h
+    common/Vec2d.h
+    common/Vec4f.h
 
     emu/SDLContext.h
     emu/ParseOptions.h
