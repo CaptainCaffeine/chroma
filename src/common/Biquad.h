@@ -21,6 +21,7 @@
 #include <emmintrin.h>
 
 #include "common/Vec2d.h"
+#include "common/Vec4f.h"
 
 namespace Common {
 
@@ -62,6 +63,22 @@ public:
                 sample = biquad.Filter(sample);
             }
             resample_buffer[i] = sample;
+        }
+    }
+
+    static void LowPassFilter(std::vector<Vec4f>& resample_buffer, std::vector<Biquad>& biquads) {
+        // Butterworth lowpass IIR filter.
+        for (unsigned int i = 0; i < resample_buffer.size(); ++i) {
+            Vec4f sample = resample_buffer[i];
+            Vec2d sample_lo{_mm_cvtps_pd(sample.vec)};
+            Vec2d sample_hi{_mm_cvtps_pd(_mm_movehl_ps(sample.vec, sample.vec))};
+            for (auto& biquad : biquads) {
+                sample_lo = biquad.Filter(sample_lo);
+                sample_hi = biquad.Filter(sample_hi);
+            }
+
+            Vec4f filtered_sample{_mm_movelh_ps(_mm_cvtpd_ps(sample_lo.vec), _mm_cvtpd_ps(sample_hi.vec))};
+            resample_buffer[i] = filtered_sample;
         }
     }
 

@@ -25,9 +25,9 @@ namespace Gba {
 
 Audio::Audio(Core& _core)
         : core(_core)
-        , resample_buffer(interpolated_buffer_size) {
+        , resample_buffer(interpolated_buffer_size / 2) {
 
-    Common::Vec2d::SetFlushToZero();
+    Common::Vec4f::SetFlushToZero();
 
     for (unsigned int i = 0; i < q.size(); ++i) {
         biquads.emplace_back(interpolated_buffer_size, q[i]);
@@ -74,7 +74,7 @@ void Audio::Update(int cycles) {
         left_sample = ClampSample(left_sample);
         right_sample = ClampSample(right_sample);
 
-        resample_buffer[sample_count * interpolation_factor] = Common::Vec2d{left_sample, right_sample};
+        resample_buffer[sample_count * interpolation_factor / 2] = Common::Vec4f{left_sample, right_sample};
         sample_count += 1;
 
         if (sample_count == samples_per_frame) {
@@ -90,14 +90,15 @@ void Audio::Resample() {
     Common::Biquad::LowPassFilter(resample_buffer, biquads);
 
     for (int i = 0; i < 800; ++i) {
-        auto [left_sample, right_sample] = resample_buffer[i * decimation_factor].UnpackSamples();
+        const bool index_is_even = (i * decimation_factor) % 2 == 0;
+        auto [left_sample, right_sample] = resample_buffer[i * decimation_factor / 2].UnpackSamples(index_is_even);
 
         output_buffer[i * 2] = left_sample * 4;
         output_buffer[i * 2 + 1] = right_sample * 4;
     }
 
     core.PushBackAudio(output_buffer);
-    std::fill(resample_buffer.begin(), resample_buffer.end(), Common::Vec2d{0.0, 0.0});
+    std::fill(resample_buffer.begin(), resample_buffer.end(), Common::Vec4f{0.0f, 0.0f});
 }
 
 int Audio::NextEvent() {
