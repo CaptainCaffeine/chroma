@@ -21,7 +21,7 @@
 #include <numeric>
 
 #include "common/CommonTypes.h"
-#include "common/Vec2d.h"
+#include "common/Vec4f.h"
 #include "gb/core/Enums.h"
 #include "gb/audio/Channel.h"
 
@@ -144,7 +144,7 @@ private:
     int sample_counter = 0;
 
     std::vector<s16> sample_buffer;
-    std::vector<Common::Vec2d> resample_buffer;
+    std::vector<Common::Vec4f> resample_buffer;
 
     // Q values are for a 4th order cascaded Butterworth lowpass filter.
     // Obtained from http://www.earlevel.com/main/2016/09/29/cascading-filters/.

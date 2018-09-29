@@ -25,13 +25,13 @@ Audio::Audio(bool enable_filter, const Console _console)
         , wave(Generator::Wave, wave_ram,       0x00, 0x00, 0x00, 0xFF, 0x00, _console)
         , noise(Generator::Noise, wave_ram,     0x00, 0x00, 0x00, 0x00, 0x00, _console)
         , enable_iir(enable_filter)
-        , resample_buffer(enable_iir ? interpolated_buffer_size : 0) {
+        , resample_buffer(enable_iir ? (interpolated_buffer_size / 2) : 0) {
 
     for (unsigned int i = 0; i < q.size(); ++i) {
         biquads.emplace_back(interpolated_buffer_size, q[i]);
     }
 
-    Common::Vec2d::SetFlushToZero();
+    Common::Vec4f::SetFlushToZero();
 }
 
 // Needed to declare std::vector with forward-declared type in the header file.
@@ -154,7 +154,7 @@ void Audio::QueueSample(int left_sample, int right_sample) {
     right_sample *= 64;
 
     if (enable_iir) {
-        resample_buffer[sample_counter * interpolation_factor] = Common::Vec2d{left_sample, right_sample};
+        resample_buffer[sample_counter * interpolation_factor / 2] = Common::Vec4f{left_sample, right_sample};
         sample_counter += 1;
 
         if (sample_counter == samples_per_frame) {
@@ -185,13 +185,14 @@ void Audio::Resample() {
     Common::Biquad::LowPassFilter(resample_buffer, biquads);
 
     for (std::size_t i = 0; i < output_buffer.size() / 2; ++i) {
-        auto [left_sample, right_sample] = resample_buffer[i * decimation_factor].UnpackSamples();
+        const bool index_is_even = (i * decimation_factor) % 2 == 0;
+        auto [left_sample, right_sample] = resample_buffer[i * decimation_factor / 2].UnpackSamples(index_is_even);
 
         output_buffer[i * 2] = left_sample * 8;
         output_buffer[i * 2 + 1] = right_sample * 8;
     }
 
-    std::fill(resample_buffer.begin(), resample_buffer.end(), Common::Vec2d{0.0, 0.0});
+    std::fill(resample_buffer.begin(), resample_buffer.end(), Common::Vec4f{0.0f, 0.0f});
 }
 
 } // End namespace Gb
