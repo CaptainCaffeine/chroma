@@ -90,7 +90,7 @@ private:
 
     // Q values are for an 6th order cascaded Butterworth lowpass filter.
     // Obtained from http://www.earlevel.com/main/2016/09/29/cascading-filters/.
-    static constexpr std::array<double, 3> q{0.51763809, 0.70710678, 1.9318517};
+    static constexpr std::array<float, 3> q{0.51763809f, 0.70710678f, 1.9318517f};
     std::vector<Common::Biquad> biquads;
 
     void Resample();
