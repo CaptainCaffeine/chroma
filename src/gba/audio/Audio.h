@@ -23,9 +23,8 @@
 #include "common/CommonTypes.h"
 #include "common/Vec4f.h"
 #include "common/RingBuffer.h"
+#include "common/Biquad.h"
 #include "gba/memory/IOReg.h"
-
-namespace Common { class Biquad; }
 
 namespace Gba {
 
@@ -88,10 +87,10 @@ private:
     static constexpr int decimation_factor = interpolated_buffer_size / 800;
     std::vector<Common::Vec4f> resample_buffer;
 
-    // Q values are for an 6th order cascaded Butterworth lowpass filter.
+    // Q values are for a 4th order cascaded Butterworth lowpass filter.
     // Obtained from http://www.earlevel.com/main/2016/09/29/cascading-filters/.
-    static constexpr std::array<float, 3> q{0.51763809f, 0.70710678f, 1.9318517f};
-    std::vector<Common::Biquad> biquads;
+    static constexpr std::array<float, 2> q{0.54119610f, 1.3065630f};
+    Common::Biquad biquad{interpolated_buffer_size, q[0], q[1]};
 
     void Resample();
     int ClampSample(int sample) const;

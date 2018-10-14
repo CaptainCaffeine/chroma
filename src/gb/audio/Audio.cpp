@@ -15,7 +15,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "gb/audio/Audio.h"
-#include "common/Biquad.h"
 
 namespace Gb {
 
@@ -26,10 +25,6 @@ Audio::Audio(bool enable_filter, const Console _console)
         , noise(Generator::Noise, wave_ram,     0x00, 0x00, 0x00, 0x00, 0x00, _console)
         , enable_iir(enable_filter)
         , resample_buffer(enable_iir ? (interpolated_buffer_size / 2) : 0) {
-
-    for (unsigned int i = 0; i < q.size(); ++i) {
-        biquads.emplace_back(interpolated_buffer_size, q[i]);
-    }
 
     Common::Vec4f::SetFlushToZero();
 }
@@ -182,7 +177,7 @@ void Audio::QueueSample(int left_sample, int right_sample) {
 }
 
 void Audio::Resample() {
-    Common::Biquad::LowPassFilter(resample_buffer, biquads);
+    Common::Biquad::LowPassFilter(resample_buffer, biquad);
 
     for (std::size_t i = 0; i < output_buffer.size() / 2; ++i) {
         const bool index_is_even = (i * decimation_factor) % 2 == 0;

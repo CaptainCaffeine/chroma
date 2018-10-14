@@ -22,10 +22,9 @@
 
 #include "common/CommonTypes.h"
 #include "common/Vec4f.h"
+#include "common/Biquad.h"
 #include "gb/core/Enums.h"
 #include "gb/audio/Channel.h"
-
-namespace Common { class Biquad; }
 
 namespace Gb {
 
@@ -149,7 +148,7 @@ private:
     // Q values are for a 4th order cascaded Butterworth lowpass filter.
     // Obtained from http://www.earlevel.com/main/2016/09/29/cascading-filters/.
     static constexpr std::array<float, 2> q{0.54119610f, 1.3065630f};
-    std::vector<Common::Biquad> biquads;
+    Common::Biquad biquad{interpolated_buffer_size, q[0], q[1]};
 
     void UpdatePowerOnState();
     void ClearRegisters();

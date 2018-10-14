@@ -19,7 +19,6 @@
 #include "gba/audio/Audio.h"
 #include "gba/core/Core.h"
 #include "gba/hardware/Dma.h"
-#include "common/Biquad.h"
 
 namespace Gba {
 
@@ -28,10 +27,6 @@ Audio::Audio(Core& _core)
         , resample_buffer(interpolated_buffer_size / 2) {
 
     Common::Vec4f::SetFlushToZero();
-
-    for (unsigned int i = 0; i < q.size(); ++i) {
-        biquads.emplace_back(interpolated_buffer_size, q[i]);
-    }
 }
 
 // Needed to declare std::vector with forward-declared type in the header file.
@@ -87,7 +82,7 @@ void Audio::Update(int cycles) {
 }
 
 void Audio::Resample() {
-    Common::Biquad::LowPassFilter(resample_buffer, biquads);
+    Common::Biquad::LowPassFilter(resample_buffer, biquad);
 
     for (int i = 0; i < 800; ++i) {
         const bool index_is_even = (i * decimation_factor) % 2 == 0;

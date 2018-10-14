@@ -25,7 +25,7 @@ namespace Common {
 
 class alignas(16) Vec4f {
 public:
-    Vec4f() = default;
+    constexpr Vec4f() = default;
     constexpr Vec4f(__m128 a)
             : vec(a) {}
 
@@ -35,7 +35,7 @@ public:
     constexpr Vec4f(int a, int b, int c = 0, int d = 0)
             : vec{static_cast<float>(a), static_cast<float>(b), static_cast<float>(c), static_cast<float>(d)} {}
 
-    __m128 vec;
+    __m128 vec{0};
 
     std::tuple<int, int> UnpackSamples(bool low_samples) const {
         // Convert the packed floats to packed 32-bit integers with rounding instead of truncation.
@@ -54,6 +54,23 @@ public:
         const int right_sample = (packed_samples >> 32);
 
         return {left_sample, right_sample};
+    }
+
+    static Vec4f Combine(Vec4f low_source, Vec4f high_source) {
+        // Copy the low half of low_source to the low half of the destination,
+        // and the high half of high_source into the high half of the destination.
+        return {_mm_shuffle_ps(low_source.vec, high_source.vec, (0 << 0) | (1 << 2) | (2 << 4) | (3 << 6))};
+    }
+
+    static Vec4f CombineAndSwap(Vec4f low_source, Vec4f high_source) {
+        // Copy the low half of low_source to the high half of the destination,
+        // and the high half of high_source into the low half of the destination.
+        return {_mm_shuffle_ps(high_source.vec, low_source.vec, (2 << 0) | (3 << 2) | (0 << 4) | (1 << 6))};
+    }
+
+    static Vec4f Swap(Vec4f source) {
+        // Swap the low and high halves of the Vec4f.
+        return {_mm_shuffle_ps(source.vec, source.vec, (2 << 0) | (3 << 2) | (0 << 4) | (1 << 6))};
     }
 
     // Binary arithmetic operators.

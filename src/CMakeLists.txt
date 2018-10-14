@@ -82,7 +82,6 @@ set(HEADERS
     common/Screenshot.h
     common/RingBuffer.h
     common/Biquad.h
-    common/Vec2d.h
     common/Vec4f.h
 
     emu/SDLContext.h
