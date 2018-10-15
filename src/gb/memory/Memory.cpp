@@ -296,101 +296,71 @@ void Memory::WriteMem(const u16 addr, const u8 data) {
 
 u8 Memory::ReadIORegisters(const u16 addr) const {
     switch (addr) {
-    // P1 -- Joypad
-    case 0xFF00:
+    case P1:
         return gameboy.joypad->p1 | 0xC0;
-    // SB -- Serial Data Transfer
-    case 0xFF01:
+    case SB:
         return gameboy.serial->serial_data;
-    // SC -- Serial control
-    case 0xFF02:
+    case SC:
         return gameboy.serial->serial_control | ((gameboy.GameModeCgb()) ? 0x7C : 0x7E);
-    // DIV -- Divider Register
-    case 0xFF04:
+    case DIV:
         return static_cast<u8>(gameboy.timer->divider >> 8);
-    // TIMA -- Timer Counter
-    case 0xFF05:
+    case TIMA:
         return gameboy.timer->tima;
-    // TMA -- Timer Modulo
-    case 0xFF06:
+    case TMA:
         return gameboy.timer->tma;
-    // TAC -- Timer Control
-    case 0xFF07:
+    case TAC:
         return gameboy.timer->tac | 0xF8;
-    // IF -- Interrupt Flags
-    case 0xFF0F:
+    case IF:
         return interrupt_flags | 0xE0;
-    // NR10 -- Channel 1 Sweep
-    case 0xFF10:
+    case NR10:
         return gameboy.audio->square1.sweep | 0x80;
-    // NR11 -- Channel 1 Wave Duty & Sound Length
-    case 0xFF11:
+    case NR11:
         return gameboy.audio->square1.sound_length | 0x3F;
-    // NR12 -- Channel 1 Volume Envelope
-    case 0xFF12:
+    case NR12:
         return gameboy.audio->square1.volume_envelope;
-    // NR13 -- Channel 1 Low Frequency
-    case 0xFF13:
+    case NR13:
         // This register is write-only.
         return 0xFF;
-    // NR14 -- Channel 1 Trigger & High Frequency
-    case 0xFF14:
+    case NR14:
         return gameboy.audio->square1.frequency_hi | 0xBF;
-    // NR21 --  Channel 2 Wave Duty & Sound Length
-    case 0xFF16:
+    case NR21:
         return gameboy.audio->square2.sound_length | 0x3F;
-    // NR22 --  Channel 2 Volume Envelope
-    case 0xFF17:
+    case NR22:
         return gameboy.audio->square2.volume_envelope;
-    // NR23 -- Channel 2 Low Frequency
-    case 0xFF18:
+    case NR23:
         // This register is write-only.
         return 0xFF;
-    // NR24 -- Channel 2 Trigger & High Frequency
-    case 0xFF19:
+    case NR24:
         return gameboy.audio->square2.frequency_hi | 0xBF;
-    // NR30 -- Channel 3 On/Off
-    case 0xFF1A:
+    case NR30:
         return gameboy.audio->wave.channel_on | 0x7F;
-    // NR31 -- Channel 3 Sound Length
-    case 0xFF1B:
+    case NR31:
         // This register is write-only.
         return 0xFF;
-    // NR32 -- Channel 3 Volume Shift
-    case 0xFF1C:
+    case NR32:
         return gameboy.audio->wave.volume_envelope | 0x9F;
-    // NR33 -- Channel 3 Low Frequency
-    case 0xFF1D:
+    case NR33:
         // This register is write-only.
         return 0xFF;
-    // NR34 -- Channel 3 Trigger & High Frequency
-    case 0xFF1E:
+    case NR34:
         return gameboy.audio->wave.frequency_hi | 0xBF;
-    // NR41 -- Channel 4 Sound Length
-    case 0xFF20:
+    case NR41:
         // This register is write-only.
         return 0xFF;
-    // NR42 -- Channel 4 Volume Envelope
-    case 0xFF21:
+    case NR42:
         return gameboy.audio->noise.volume_envelope;
-    // NR43 -- Channel 4 Polynomial Counter
-    case 0xFF22:
+    case NR43:
         return gameboy.audio->noise.frequency_lo;
-    // NR44 -- Channel 4 Trigger
-    case 0xFF23:
+    case NR44:
         return gameboy.audio->noise.frequency_hi | 0xBF;
-    // NR50 -- Master Volume
-    case 0xFF24:
+    case NR50:
         return gameboy.audio->master_volume;
-    // NR51 -- Sound Output Terminal Selection
-    case 0xFF25:
+    case NR51:
         return gameboy.audio->sound_select;
-    // NR52 -- Sound On/Off
-    case 0xFF26:
+    case NR52:
         return gameboy.audio->ReadSoundOn();
-    // Wave Pattern RAM
-    case 0xFF30: case 0xFF31: case 0xFF32: case 0xFF33: case 0xFF34: case 0xFF35: case 0xFF36: case 0xFF37:
-    case 0xFF38: case 0xFF39: case 0xFF3A: case 0xFF3B: case 0xFF3C: case 0xFF3D: case 0xFF3E: case 0xFF3F:
+    case WAVE_0: case WAVE_1: case WAVE_2: case WAVE_3: case WAVE_4: case WAVE_5: case WAVE_6: case WAVE_7:
+    case WAVE_8: case WAVE_9: case WAVE_A: case WAVE_B: case WAVE_C: case WAVE_D: case WAVE_E: case WAVE_F:
         if (gameboy.audio->wave.channel_on) {
             // While the wave channel is enabled, reads to wave RAM return the byte containing the sample
             // currently being played.
@@ -404,105 +374,95 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         } else {
             return gameboy.audio->wave_ram[addr - 0xFF30];
         }
-    // LCDC -- LCD control
-    case 0xFF40:
+    case LCDC:
         return gameboy.lcd->lcdc;
-    // STAT -- LCD status
-    case 0xFF41:
+    case STAT:
         return gameboy.lcd->stat | 0x80;
-    // SCY -- BG Scroll Y
-    case 0xFF42:
+    case SCY:
         return gameboy.lcd->scroll_y;
-    // SCX -- BG Scroll X
-    case 0xFF43:
+    case SCX:
         return gameboy.lcd->scroll_x;
-    // LY -- LCD Current Scanline
-    case 0xFF44:
+    case LY:
         return gameboy.lcd->ly;
-    // LYC -- LY Compare
-    case 0xFF45:
+    case LYC:
         return gameboy.lcd->ly_compare;
-    // DMA -- OAM DMA Transfer
-    case 0xFF46:
+    case DMA:
         return oam_dma_start;
-    // BGP -- BG Palette Data
-    case 0xFF47:
+    case BGP:
         return gameboy.lcd->bg_palette_dmg;
-    // OBP0 -- Sprite Palette 0 Data
-    case 0xFF48:
+    case OBP0:
         return gameboy.lcd->obj_palette_dmg0;
-    // OBP1 -- Sprite Palette 1 Data
-    case 0xFF49:
+    case OBP1:
         return gameboy.lcd->obj_palette_dmg1;
-    // WY -- Window Y Position
-    case 0xFF4A:
+    case WY:
         return gameboy.lcd->window_y;
-    // WX -- Window X Position
-    case 0xFF4B:
+    case WX:
         return gameboy.lcd->window_x;
-    // KEY1 -- Speed Switch
-    case 0xFF4D:
+    case KEY1:
         return speed_switch | ((gameboy.GameModeCgb()) ? 0x7E : 0xFF);
-    // VBK -- VRAM bank number
-    case 0xFF4F:
+    case VBK:
         if (gameboy.ConsoleCgb()) {
             // CGB in DMG mode always has bank 0 selected.
             return ((gameboy.GameModeCgb()) ? (static_cast<u8>(vram_bank_num) | 0xFE) : 0xFE);
         } else {
             return 0xFF;
         }
-    // HDMA5 -- HDMA Length, Mode, and Start
-    case 0xFF55:
+    case HDMA1:
+        // This register is write-only.
+        return 0xFF;
+    case HDMA2:
+        // This register is write-only.
+        return 0xFF;
+    case HDMA3:
+        // This register is write-only.
+        return 0xFF;
+    case HDMA4:
+        // This register is write-only.
+        return 0xFF;
+    case HDMA5:
         return ((gameboy.GameModeCgb()) ? hdma_control : 0xFF);
-    // RP -- Infrared Communications
-    case 0xFF56:
+    case RP:
         return ((gameboy.GameModeCgb()) ? (infrared | 0x3C) : 0xFF);
-    // BGPI -- BG Palette Index (CGB only)
-    case 0xFF68:
+    case BGPI:
         if (gameboy.ConsoleCgb()) {
             return gameboy.lcd->bg_palette_index | 0x40;
         } else {
             return 0xFF;
         }
-    // BGPD -- BG Palette Data (CGB mode only)
-    case 0xFF69:
+    case BGPD:
         // Palette RAM is not accessible during mode 3.
         if (gameboy.GameModeCgb() && (gameboy.lcd->stat & 0x03) != 3) {
             return gameboy.lcd->bg_palette_data[gameboy.lcd->bg_palette_index & 0x3F];
         } else {
             return 0xFF;
         }
-    // OBPI -- Sprite Palette Index (CGB only)
-    case 0xFF6A:
+    case OBPI:
         if (gameboy.ConsoleCgb()) {
             return gameboy.lcd->obj_palette_index | 0x40;
         } else {
             return 0xFF;
         }
-    // OBPD -- Sprite Palette Data (CGB mode only)
-    case 0xFF6B:
+    case OBPD:
         // Palette RAM is not accessible during mode 3.
         if (gameboy.GameModeCgb() && (gameboy.lcd->stat & 0x03) != 3) {
             return gameboy.lcd->obj_palette_data[gameboy.lcd->obj_palette_index & 0x3F];
         } else {
             return 0xFF;
         }
-    // SVBK -- WRAM bank number
-    case 0xFF70:
+    case SVBK:
         return ((gameboy.GameModeCgb()) ? (static_cast<u8>(wram_bank_num) | 0xF8) : 0xFF);
-    // Undocumented
-    case 0xFF6C:
-        return ((gameboy.GameModeCgb()) ? (undocumented[1] | 0xFE) : 0xFF);
-    case 0xFF72:
+    case UNDOC0:
+        return ((gameboy.GameModeCgb()) ? (undocumented[0] | 0xFE) : 0xFF);
+    case UNDOC1:
+        return ((gameboy.ConsoleCgb()) ? undocumented[1] : 0xFF);
+    case UNDOC2:
         return ((gameboy.ConsoleCgb()) ? undocumented[2] : 0xFF);
-    case 0xFF73:
-        return ((gameboy.ConsoleCgb()) ? undocumented[3] : 0xFF);
-    case 0xFF74:
-        return ((gameboy.GameModeCgb()) ? undocumented[4] : 0xFF);
-    case 0xFF75:
-        return ((gameboy.ConsoleCgb()) ? (undocumented[5] | 0x8F) : 0xFF);
-    case 0xFF76:
-    case 0xFF77:
+    case UNDOC3:
+        return ((gameboy.GameModeCgb()) ? undocumented[3] : 0xFF);
+    case UNDOC4:
+        return ((gameboy.ConsoleCgb()) ? (undocumented[4] | 0x8F) : 0xFF);
+    case UNDOC5:
+    case UNDOC6:
         return ((gameboy.ConsoleCgb()) ? 0x00 : 0xFF);
 
     // Unused/unusable I/O registers all return 0xFF when read.
@@ -513,60 +473,49 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
 
 void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     switch (addr) {
-    // P1 -- Joypad
-    case 0xFF00:
+    case P1:
         gameboy.joypad->p1 = (gameboy.joypad->p1 & 0x0F) | (data & 0x30);
         gameboy.joypad->UpdateJoypad();
         break;
-    // SB -- Serial Data Transfer
-    case 0xFF01:
+    case SB:
         gameboy.serial->serial_data = data;
         break;
-    // SC -- Serial control
-    case 0xFF02:
+    case SC:
         gameboy.serial->serial_control = data & ((gameboy.GameModeCgb()) ? 0x83 : 0x81);
         break;
-    // DIV -- Divider Register
-    case 0xFF04:
+    case DIV:
         // DIV is set to zero on any write.
         gameboy.timer->divider = 0x0000;
         break;
-    // TIMA -- Timer Counter
-    case 0xFF05:
+    case TIMA:
         gameboy.timer->tima = data;
         break;
-    // TMA -- Timer Modulo
-    case 0xFF06:
+    case TMA:
         gameboy.timer->tma = data;
         break;
-    // TAC -- Timer Control
-    case 0xFF07:
+    case TAC:
         gameboy.timer->tac = data & 0x07;
         break;
-    // IF -- Interrupt Flags
-    case 0xFF0F:
+    case IF:
         // If an instruction writes to IF on the same machine cycle an interrupt would have been triggered, the
         // written value remains in IF.
         interrupt_flags = data & 0x1F;
         IF_written_this_cycle = true;
         break;
-    // NR10 -- Channel 1 Sweep
-    case 0xFF10:
+    case NR10:
         if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->square1.sweep = data & 0x7F;
             gameboy.audio->square1.SweepWriteHandler();
         }
         break;
-    // NR11 -- Channel 1 Wave Pattern & Sound Length
-    case 0xFF11:
+    case NR11:
         if (gameboy.audio->AudioEnabled() || gameboy.ConsoleDmg()) {
             gameboy.audio->square1.sound_length = data;
             gameboy.audio->square1.ReloadLengthCounter();
             gameboy.audio->square1.SetDutyCycle();
         }
         break;
-    // NR12 -- Channel 1 Volume Envelope
-    case 0xFF12:
+    case NR12:
         if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->square1.volume_envelope = data;
             if ((gameboy.audio->square1.volume_envelope & 0xF0) == 0) {
@@ -574,29 +523,25 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
             }
         }
         break;
-    // NR13 -- Channel 1 Low Frequency
-    case 0xFF13:
+    case NR13:
         if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->square1.frequency_lo = data;
         }
         break;
-    // NR14 -- Channel 1 Trigger & High Frequency
-    case 0xFF14:
+    case NR14:
         if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->square1.ExtraLengthClocking(data & 0xC7, gameboy.audio->GetFrameSequencer());
             gameboy.audio->square1.frequency_hi = data & 0xC7;
         }
         break;
-    // NR21 --  Channel 2 Wave Pattern & Sound Length
-    case 0xFF16:
+    case NR21:
         if (gameboy.audio->AudioEnabled() || gameboy.ConsoleDmg()) {
             gameboy.audio->square2.sound_length = data;
             gameboy.audio->square2.ReloadLengthCounter();
             gameboy.audio->square2.SetDutyCycle();
         }
         break;
-    // NR22 --  Channel 2 Volume Envelope
-    case 0xFF17:
+    case NR22:
         if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->square2.volume_envelope = data;
             if ((gameboy.audio->square2.volume_envelope & 0xF0) == 0) {
@@ -604,21 +549,18 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
             }
         }
         break;
-    // NR23 -- Channel 2 Low Frequency
-    case 0xFF18:
+    case NR23:
         if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->square2.frequency_lo = data;
         }
         break;
-    // NR24 -- Channel 2 Trigger & High Frequency
-    case 0xFF19:
+    case NR24:
         if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->square2.ExtraLengthClocking(data & 0xC7, gameboy.audio->GetFrameSequencer());
             gameboy.audio->square2.frequency_hi = data & 0xC7;
         }
         break;
-    // NR30 -- Channel 3 On/Off
-    case 0xFF1A:
+    case NR30:
         if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->wave.channel_on = data & 0x80;
             if ((gameboy.audio->wave.channel_on & 0x80) == 0) {
@@ -626,41 +568,35 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
             }
         }
         break;
-    // NR31 -- Channel 3 Sound Length
-    case 0xFF1B:
+    case NR31:
         if (gameboy.audio->AudioEnabled() || gameboy.ConsoleDmg()) {
             gameboy.audio->wave.sound_length = data;
             gameboy.audio->wave.ReloadLengthCounter();
         }
         break;
-    // NR32 -- Channel 3 Volume Shift
-    case 0xFF1C:
+    case NR32:
         if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->wave.volume_envelope = data & 0x60;
         }
         break;
-    // NR33 -- Channel 3 Low Frequency
-    case 0xFF1D:
+    case NR33:
         if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->wave.frequency_lo = data;
         }
         break;
-    // NR34 -- Channel 3 Trigger & High Frequency
-    case 0xFF1E:
+    case NR34:
         if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->wave.ExtraLengthClocking(data & 0xC7, gameboy.audio->GetFrameSequencer());
             gameboy.audio->wave.frequency_hi = data & 0xC7;
         }
         break;
-    // NR41 -- Channel 4 Sound Length
-    case 0xFF20:
+    case NR41:
         if (gameboy.audio->AudioEnabled() || gameboy.ConsoleDmg()) {
             gameboy.audio->noise.sound_length = data & 0x3F;
             gameboy.audio->noise.ReloadLengthCounter();
         }
         break;
-    // NR42 -- Channel 4 Volume Envelope
-    case 0xFF21:
+    case NR42:
         if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->noise.volume_envelope = data;
             if ((gameboy.audio->noise.volume_envelope & 0xF0) == 0) {
@@ -668,38 +604,32 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
             }
         }
         break;
-    // NR43 -- Channel 4 Polynomial Counter
-    case 0xFF22:
+    case NR43:
         if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->noise.frequency_lo = data;
         }
         break;
-    // NR44 -- Channel 4 Trigger
-    case 0xFF23:
+    case NR44:
         if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->noise.ExtraLengthClocking(data & 0xC0, gameboy.audio->GetFrameSequencer());
             gameboy.audio->noise.frequency_hi = data & 0xC0;
         }
         break;
-    // NR50 -- Master Volume
-    case 0xFF24:
+    case NR50:
         if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->master_volume = data;
         }
         break;
-    // NR51 -- Sound Output Terminal Selection
-    case 0xFF25:
+    case NR51:
         if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->sound_select = data;
         }
         break;
-    // NR52 -- Sound On/Off
-    case 0xFF26:
+    case NR52:
         gameboy.audio->WriteSoundOn(data);
         break;
-    // Wave Pattern RAM
-    case 0xFF30: case 0xFF31: case 0xFF32: case 0xFF33: case 0xFF34: case 0xFF35: case 0xFF36: case 0xFF37:
-    case 0xFF38: case 0xFF39: case 0xFF3A: case 0xFF3B: case 0xFF3C: case 0xFF3D: case 0xFF3E: case 0xFF3F:
+    case WAVE_0: case WAVE_1: case WAVE_2: case WAVE_3: case WAVE_4: case WAVE_5: case WAVE_6: case WAVE_7:
+    case WAVE_8: case WAVE_9: case WAVE_A: case WAVE_B: case WAVE_C: case WAVE_D: case WAVE_E: case WAVE_F:
         if (gameboy.audio->wave.channel_on) {
             // While the wave channel is enabled, writes to wave RAM write the byte containing the sample
             // currently being played.
@@ -712,15 +642,13 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
             gameboy.audio->wave_ram[addr - 0xFF30] = data;
         }
         break;
-    // LCDC -- LCD control
-    case 0xFF40: {
+    case LCDC: {
         bool window_enabled = gameboy.lcd->WindowEnabled();
         gameboy.lcd->lcdc = data;
         gameboy.lcd->UpdateWindowPosition(window_enabled);
         }
         break;
-    // STAT -- LCD status
-    case 0xFF41:
+    case STAT:
         gameboy.lcd->stat = (data & 0x78) | (gameboy.lcd->stat & 0x07);
         // On DMG, if the STAT register is written during mode 1 or 0 while the LCD is on, bit 1 of the IF register
         // is set. This causes a STAT interrupt if it's enabled in IE.
@@ -728,100 +656,80 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
             gameboy.lcd->SetSTATSignal();
         }
         break;
-    // SCY -- BG Scroll Y
-    case 0xFF42:
+    case SCY:
         gameboy.lcd->scroll_y = data;
         break;
-    // SCX -- BG Scroll X
-    case 0xFF43:
+    case SCX:
         gameboy.lcd->scroll_x = data;
         break;
-    // LY -- LCD Current Scanline
-    case 0xFF44:
+    case LY:
         // This register is read only.
         break;
-    // LYC -- LY Compare
-    case 0xFF45:
+    case LYC:
         gameboy.lcd->ly_compare = data;
         break;
-    // DMA -- OAM DMA Transfer
-    case 0xFF46:
+    case DMA:
         oam_dma_start = data;
         oam_dma_state = DMAState::Starting;
         break;
-    // BGP -- BG Palette Data
-    case 0xFF47:
+    case BGP:
         gameboy.lcd->bg_palette_dmg = data;
         break;
-    // OBP0 -- Sprite Palette 0 Data
-    case 0xFF48:
+    case OBP0:
         gameboy.lcd->obj_palette_dmg0 = data;
         break;
-    // OBP1 -- Sprite Palette 1 Data
-    case 0xFF49:
+    case OBP1:
         gameboy.lcd->obj_palette_dmg1 = data;
         break;
-    // WY -- Window Y Position
-    case 0xFF4A: {
+    case WY: {
         bool window_enabled = gameboy.lcd->WindowEnabled();
         gameboy.lcd->window_y = data;
         gameboy.lcd->UpdateWindowPosition(window_enabled);
         }
         break;
-    // WX -- Window X Position
-    case 0xFF4B: {
+    case WX: {
         bool window_enabled = gameboy.lcd->WindowEnabled();
         gameboy.lcd->window_x = data;
         gameboy.lcd->UpdateWindowPosition(window_enabled);
         }
         break;
-    // KEY1 -- Speed Switch
-    case 0xFF4D:
+    case KEY1:
         speed_switch = (speed_switch & 0x80) | (data & 0x01);
         break;
-    // VBK -- VRAM bank number
-    case 0xFF4F:
+    case VBK:
         if (gameboy.GameModeCgb()) {
             vram_bank_num = data & 0x01;
         }
         break;
-    // HDMA1 -- HDMA Source High Byte
-    case 0xFF51:
+    case HDMA1:
         hdma_source_hi = data;
         break;
-    // HDMA2 -- HDMA Source Low Byte
-    case 0xFF52:
+    case HDMA2:
         hdma_source_lo = data & 0xF0;
         break;
-    // HDMA3 -- HDMA Destination High Byte
-    case 0xFF53:
+    case HDMA3:
         hdma_dest_hi = data & 0x1F;
         break;
-    // HDMA4 -- HDMA Destination Low Byte
-    case 0xFF54:
+    case HDMA4:
         hdma_dest_lo = data & 0xF0;
         break;
-    // HDMA5 -- HDMA Length, Mode, and Start
-    case 0xFF55:
+    case HDMA5:
         hdma_control = data;
         if (gameboy.GameModeCgb()) {
             hdma_reg_written = true;
         }
         break;
-    // RP -- Infrared Communications
-    case 0xFF56:
+    case RP:
         if (gameboy.GameModeCgb()) {
             infrared = (infrared & 0x02) | (data & 0xC1);
         }
         break;
-    // BGPI -- BG Palette Index (CGB mode only)
-    case 0xFF68:
+    case BGPI:
         if (gameboy.GameModeCgb()) {
             gameboy.lcd->bg_palette_index = data & 0xBF;
         }
         break;
-    // BGPD -- BG Palette Data (CGB mode only)
-    case 0xFF69:
+    case BGPD:
         // Palette RAM is not accessible during mode 3.
         if (gameboy.GameModeCgb() && (gameboy.lcd->stat & 0x03) != 3) {
             gameboy.lcd->bg_palette_data[gameboy.lcd->bg_palette_index & 0x3F] = data;
@@ -831,14 +739,12 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
             }
         }
         break;
-    // OBPI -- Sprite Palette Index (CGB mode only)
-    case 0xFF6A:
+    case OBPI:
         if (gameboy.GameModeCgb()) {
             gameboy.lcd->obj_palette_index = data & 0xBF;
         }
         break;
-    // OBPD -- Sprite Palette Data (CGB mode only)
-    case 0xFF6B:
+    case OBPD:
         // Palette RAM is not accessible during mode 3.
         if (gameboy.GameModeCgb() && (gameboy.lcd->stat & 0x03) != 3) {
             gameboy.lcd->obj_palette_data[gameboy.lcd->obj_palette_index & 0x3F] = data;
@@ -848,37 +754,41 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
             }
         }
         break;
-    // SVBK -- WRAM bank number
-    case 0xFF70:
+    case SVBK:
         if (gameboy.GameModeCgb()) {
             wram_bank_num = data & 0x07;
         }
         break;
-    // Undocumented
-    case 0xFF6C:
+    case UNDOC0:
         if (gameboy.GameModeCgb()) {
-            undocumented[1] = data & 0x01;
+            undocumented[0] = data & 0x01;
         }
         break;
-    case 0xFF72:
+    case UNDOC1:
+        if (gameboy.ConsoleCgb()) {
+            undocumented[1] = data;
+        }
+        break;
+    case UNDOC2:
         if (gameboy.ConsoleCgb()) {
             undocumented[2] = data;
         }
         break;
-    case 0xFF73:
-        if (gameboy.ConsoleCgb()) {
+    case UNDOC3:
+        if (gameboy.GameModeCgb()) {
             undocumented[3] = data;
         }
         break;
-    case 0xFF74:
-        if (gameboy.GameModeCgb()) {
-            undocumented[4] = data;
+    case UNDOC4:
+        if (gameboy.ConsoleCgb()) {
+            undocumented[4] = data & 0x70;
         }
         break;
-    case 0xFF75:
-        if (gameboy.ConsoleCgb()) {
-            undocumented[5] = data & 0x70;
-        }
+    case UNDOC5:
+        // This register is read only.
+        break;
+    case UNDOC6:
+        // This register is read only.
         break;
 
     default:
