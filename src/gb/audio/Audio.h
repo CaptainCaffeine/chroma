@@ -35,9 +35,11 @@ public:
 
     void UpdateAudio();
 
-    bool IsPoweredOn() const { return audio_on; }
-    u8 ReadNR52() const;
     u32 GetFrameSequencer() const { return audio_clock >> 13; }
+
+    bool AudioEnabled() const { return sound_on & 0x80; }
+    u8 ReadSoundOn() const;
+    void WriteSoundOn(u8 data);
 
     std::array<s16, 1600> output_buffer;
 
@@ -131,7 +133,6 @@ public:
                                    0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF}};
 
 private:
-    bool audio_on = true;
     u32 audio_clock = 0;
 
     // IIR filter
@@ -154,6 +155,9 @@ private:
     void ClearRegisters();
     void QueueSample(int left_sample, int right_sample);
     void Resample();
+
+    int MasterVolumeRight() const { return master_volume & 0x7; }
+    int MasterVolumeLeft() const { return (master_volume >> 4) & 0x7; }
 };
 
 } // End namespace Gb

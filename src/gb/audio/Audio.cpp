@@ -35,8 +35,7 @@ Audio::~Audio() = default;
 void Audio::UpdateAudio() {
     audio_clock += 2;
 
-    UpdatePowerOnState();
-    if (!audio_on) {
+    if (!AudioEnabled()) {
         // Queue silence when audio is off.
         QueueSample(0x00, 0x00);
         return;
@@ -108,21 +107,6 @@ void Audio::UpdateAudio() {
     QueueSample(left_sample, right_sample);
 }
 
-void Audio::UpdatePowerOnState() {
-    bool audio_power_on = sound_on & 0x80;
-    if (audio_power_on != audio_on) {
-        audio_on = audio_power_on;
-
-        if (!audio_on) {
-            ClearRegisters();
-        } else {
-            square1.PowerOn();
-            square2.PowerOn();
-            wave.PowerOn();
-        }
-    }
-}
-
 void Audio::ClearRegisters() {
     square1.ClearRegisters();
     square2.ClearRegisters();
@@ -134,15 +118,28 @@ void Audio::ClearRegisters() {
     sound_on = 0x00;
 }
 
-u8 Audio::ReadNR52() const {
+u8 Audio::ReadSoundOn() const {
     return sound_on | 0x70 | square1.EnabledFlag() | square2.EnabledFlag() | wave.EnabledFlag() | noise.EnabledFlag();
+}
+
+void Audio::WriteSoundOn(u8 data) {
+    bool was_enabled = AudioEnabled();
+    sound_on = data & 0x80;
+
+    if (was_enabled && !AudioEnabled()) {
+        ClearRegisters();
+    } else if (!was_enabled && AudioEnabled()) {
+        square1.PowerOn();
+        square2.PowerOn();
+        wave.PowerOn();
+    }
 }
 
 void Audio::QueueSample(int left_sample, int right_sample) {
     // Multiply the samples by the master volume. This is done after the DAC and after the channels have been
     // mixed, and so the final sample value can be greater than 0x0F.
-    left_sample *= ((master_volume & 0x70) >> 4) + 1;
-    right_sample *= (master_volume & 0x07) + 1;
+    left_sample *= MasterVolumeLeft() + 1;
+    right_sample *= MasterVolumeRight() + 1;
 
     // Multiply by 64 to scale the volume for s16 samples.
     left_sample *= 64;

@@ -387,7 +387,7 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         return gameboy.audio->sound_select;
     // NR52 -- Sound On/Off
     case 0xFF26:
-        return gameboy.audio->ReadNR52();
+        return gameboy.audio->ReadSoundOn();
     // Wave Pattern RAM
     case 0xFF30: case 0xFF31: case 0xFF32: case 0xFF33: case 0xFF34: case 0xFF35: case 0xFF36: case 0xFF37:
     case 0xFF38: case 0xFF39: case 0xFF3A: case 0xFF3B: case 0xFF3C: case 0xFF3D: case 0xFF3E: case 0xFF3F:
@@ -552,14 +552,14 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // NR10 -- Channel 1 Sweep
     case 0xFF10:
-        if (gameboy.audio->IsPoweredOn()) {
+        if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->square1.sweep = data & 0x7F;
             gameboy.audio->square1.SweepWriteHandler();
         }
         break;
     // NR11 -- Channel 1 Wave Pattern & Sound Length
     case 0xFF11:
-        if (gameboy.audio->IsPoweredOn() || gameboy.ConsoleDmg()) {
+        if (gameboy.audio->AudioEnabled() || gameboy.ConsoleDmg()) {
             gameboy.audio->square1.sound_length = data;
             gameboy.audio->square1.ReloadLengthCounter();
             gameboy.audio->square1.SetDutyCycle();
@@ -567,7 +567,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // NR12 -- Channel 1 Volume Envelope
     case 0xFF12:
-        if (gameboy.audio->IsPoweredOn()) {
+        if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->square1.volume_envelope = data;
             if ((gameboy.audio->square1.volume_envelope & 0xF0) == 0) {
                 gameboy.audio->square1.channel_enabled = false;
@@ -576,20 +576,20 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // NR13 -- Channel 1 Low Frequency
     case 0xFF13:
-        if (gameboy.audio->IsPoweredOn()) {
+        if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->square1.frequency_lo = data;
         }
         break;
     // NR14 -- Channel 1 Trigger & High Frequency
     case 0xFF14:
-        if (gameboy.audio->IsPoweredOn()) {
+        if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->square1.ExtraLengthClocking(data & 0xC7, gameboy.audio->GetFrameSequencer());
             gameboy.audio->square1.frequency_hi = data & 0xC7;
         }
         break;
     // NR21 --  Channel 2 Wave Pattern & Sound Length
     case 0xFF16:
-        if (gameboy.audio->IsPoweredOn() || gameboy.ConsoleDmg()) {
+        if (gameboy.audio->AudioEnabled() || gameboy.ConsoleDmg()) {
             gameboy.audio->square2.sound_length = data;
             gameboy.audio->square2.ReloadLengthCounter();
             gameboy.audio->square2.SetDutyCycle();
@@ -597,7 +597,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // NR22 --  Channel 2 Volume Envelope
     case 0xFF17:
-        if (gameboy.audio->IsPoweredOn()) {
+        if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->square2.volume_envelope = data;
             if ((gameboy.audio->square2.volume_envelope & 0xF0) == 0) {
                 gameboy.audio->square2.channel_enabled = false;
@@ -606,20 +606,20 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // NR23 -- Channel 2 Low Frequency
     case 0xFF18:
-        if (gameboy.audio->IsPoweredOn()) {
+        if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->square2.frequency_lo = data;
         }
         break;
     // NR24 -- Channel 2 Trigger & High Frequency
     case 0xFF19:
-        if (gameboy.audio->IsPoweredOn()) {
+        if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->square2.ExtraLengthClocking(data & 0xC7, gameboy.audio->GetFrameSequencer());
             gameboy.audio->square2.frequency_hi = data & 0xC7;
         }
         break;
     // NR30 -- Channel 3 On/Off
     case 0xFF1A:
-        if (gameboy.audio->IsPoweredOn()) {
+        if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->wave.channel_on = data & 0x80;
             if ((gameboy.audio->wave.channel_on & 0x80) == 0) {
                 gameboy.audio->wave.channel_enabled = false;
@@ -628,40 +628,40 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // NR31 -- Channel 3 Sound Length
     case 0xFF1B:
-        if (gameboy.audio->IsPoweredOn() || gameboy.ConsoleDmg()) {
+        if (gameboy.audio->AudioEnabled() || gameboy.ConsoleDmg()) {
             gameboy.audio->wave.sound_length = data;
             gameboy.audio->wave.ReloadLengthCounter();
         }
         break;
     // NR32 -- Channel 3 Volume Shift
     case 0xFF1C:
-        if (gameboy.audio->IsPoweredOn()) {
+        if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->wave.volume_envelope = data & 0x60;
         }
         break;
     // NR33 -- Channel 3 Low Frequency
     case 0xFF1D:
-        if (gameboy.audio->IsPoweredOn()) {
+        if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->wave.frequency_lo = data;
         }
         break;
     // NR34 -- Channel 3 Trigger & High Frequency
     case 0xFF1E:
-        if (gameboy.audio->IsPoweredOn()) {
+        if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->wave.ExtraLengthClocking(data & 0xC7, gameboy.audio->GetFrameSequencer());
             gameboy.audio->wave.frequency_hi = data & 0xC7;
         }
         break;
     // NR41 -- Channel 4 Sound Length
     case 0xFF20:
-        if (gameboy.audio->IsPoweredOn() || gameboy.ConsoleDmg()) {
+        if (gameboy.audio->AudioEnabled() || gameboy.ConsoleDmg()) {
             gameboy.audio->noise.sound_length = data & 0x3F;
             gameboy.audio->noise.ReloadLengthCounter();
         }
         break;
     // NR42 -- Channel 4 Volume Envelope
     case 0xFF21:
-        if (gameboy.audio->IsPoweredOn()) {
+        if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->noise.volume_envelope = data;
             if ((gameboy.audio->noise.volume_envelope & 0xF0) == 0) {
                 gameboy.audio->noise.channel_enabled = false;
@@ -670,32 +670,32 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     // NR43 -- Channel 4 Polynomial Counter
     case 0xFF22:
-        if (gameboy.audio->IsPoweredOn()) {
+        if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->noise.frequency_lo = data;
         }
         break;
     // NR44 -- Channel 4 Trigger
     case 0xFF23:
-        if (gameboy.audio->IsPoweredOn()) {
+        if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->noise.ExtraLengthClocking(data & 0xC0, gameboy.audio->GetFrameSequencer());
             gameboy.audio->noise.frequency_hi = data & 0xC0;
         }
         break;
     // NR50 -- Master Volume
     case 0xFF24:
-        if (gameboy.audio->IsPoweredOn()) {
+        if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->master_volume = data;
         }
         break;
     // NR51 -- Sound Output Terminal Selection
     case 0xFF25:
-        if (gameboy.audio->IsPoweredOn()) {
+        if (gameboy.audio->AudioEnabled()) {
             gameboy.audio->sound_select = data;
         }
         break;
     // NR52 -- Sound On/Off
     case 0xFF26:
-        gameboy.audio->sound_on = (gameboy.audio->sound_on & 0x0F) | (data & 0x80);
+        gameboy.audio->WriteSoundOn(data);
         break;
     // Wave Pattern RAM
     case 0xFF30: case 0xFF31: case 0xFF32: case 0xFF33: case 0xFF34: case 0xFF35: case 0xFF36: case 0xFF37:
