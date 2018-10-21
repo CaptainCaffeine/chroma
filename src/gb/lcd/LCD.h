@@ -54,12 +54,10 @@ public:
 
     void UpdateLCD();
 
+    void WriteLCDC(u8 data);
+    void WriteWY(u8 data);
+    void WriteWX(u8 data);
     void SetSTATSignal() { stat_interrupt_signal = true; }
-
-    void UpdateWindowPosition(bool was_enabled);
-    bool WindowEnabled() const { return (lcdc & 0x20)
-                                        && (window_x < 167)
-                                        && (ly >= window_y); }
 
     void DumpEverything();
 
@@ -150,9 +148,6 @@ public:
 private:
     GameBoy& gameboy;
 
-    bool lcd_on = true;
-    void UpdatePowerOnState();
-
     int scanline_cycles = 452;
     u8 current_scanline = 0;
     void UpdateLY();
@@ -183,6 +178,9 @@ private:
 
     u8 window_progress = 0x00;
     bool window_was_disabled = false;
+
+    void UpdatePowerOnState(bool was_enabled);
+    void UpdateWindowPosition(bool was_enabled);
 
     void RenderScanline();
     void RenderBackground(std::size_t num_bg_pixels);
@@ -220,12 +218,14 @@ private:
     bool Mode0CheckEnabled() const { return stat & 0x08; }
 
     // LCDC functions
-    u16 TileDataStartAddr() const { return (lcdc & 0x10) ? 0x8000 : 0x9000; }
     bool BGEnabled() const { return lcdc & 0x01; }
-    u16 BGTileMapStartAddr() const { return (lcdc & 0x08) ? 0x9C00 : 0x9800; }
-    u16 WindowTileMapStartAddr() const { return (lcdc & 0x40) ? 0x9C00 : 0x9800; }
     bool SpritesEnabled() const { return lcdc & 0x02; }
     int SpriteSize() const { return (lcdc & 0x04) ? 16 : 8; }
+    u16 BGTileMapStartAddr() const { return (lcdc & 0x08) ? 0x9C00 : 0x9800; }
+    u16 TileDataStartAddr() const { return (lcdc & 0x10) ? 0x8000 : 0x9000; }
+    bool WindowEnabled() const { return (lcdc & 0x20) && (window_x < 167) && (ly >= window_y); }
+    u16 WindowTileMapStartAddr() const { return (lcdc & 0x40) ? 0x9C00 : 0x9800; }
+    bool LCDEnabled() const { return lcdc & 0x80; }
 
     // Graphics data debug functions
     void DumpBackBuffer() const;

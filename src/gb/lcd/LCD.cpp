@@ -54,10 +54,7 @@ LCD::LCD(GameBoy& _gameboy)
         , back_buffer(160 * 144) {}
 
 void LCD::UpdateLCD() {
-    // Check if the LCD has been set on or off.
-    UpdatePowerOnState();
-
-    if (!lcd_on) {
+    if (!LCDEnabled()) {
         return;
     }
 
@@ -97,32 +94,37 @@ void LCD::UpdateLCD() {
     CheckSTATInterruptSignal();
 }
 
-void LCD::UpdatePowerOnState() {
-    bool lcdc_power_on = lcdc & 0x80;
-    if (lcdc_power_on != lcd_on) {
-        lcd_on = lcdc_power_on;
+void LCD::WriteLCDC(u8 data) {
+    const bool lcd_was_enabled = LCDEnabled();
+    const bool window_was_enabled = WindowEnabled();
 
-        if (lcd_on) {
-            // Initialize scanline cycle count (to 452/908 instead of 0, so it ticks over to 0 in UpdateLY()).
-            if (gameboy.mem->double_speed) {
-                scanline_cycles = 908;
-            } else {
-                scanline_cycles = 452;
-            }
-            current_scanline = 153;
+    lcdc = data;
+
+    UpdateWindowPosition(window_was_enabled);
+    UpdatePowerOnState(lcd_was_enabled);
+}
+
+void LCD::UpdatePowerOnState(bool was_enabled) {
+    if (!was_enabled && LCDEnabled()) {
+        // Initialize scanline cycle count to 452/908 instead of 0, so it ticks over to 0 in UpdateLY().
+        if (gameboy.mem->double_speed) {
+            scanline_cycles = 908;
         } else {
-            ly = 0;
-            SetSTATMode(0);
-            stat_interrupt_signal = 0;
-            prev_interrupt_signal = 0;
-
-            // Clear the framebuffer.
-            std::fill_n(back_buffer.begin(), 160*144, 0x7FFF);
-            gameboy.SwapBuffers(back_buffer);
-
-            // An in-progress HDMA will transfer one block after the LCD switches off.
-            gameboy.mem->SignalHDMA();
+            scanline_cycles = 452;
         }
+        current_scanline = 153;
+    } else if (was_enabled && !LCDEnabled()) {
+        ly = 0;
+        SetSTATMode(0);
+        stat_interrupt_signal = 0;
+        prev_interrupt_signal = 0;
+
+        // Clear the framebuffer.
+        std::fill_n(back_buffer.begin(), 160 * 144, 0x7FFF);
+        gameboy.SwapBuffers(back_buffer);
+
+        // An in-progress HDMA will transfer one block after the LCD switches off.
+        gameboy.mem->SignalHDMA();
     }
 }
 
@@ -264,6 +266,18 @@ void LCD::CheckSTATInterruptSignal() {
     }
     prev_interrupt_signal = stat_interrupt_signal;
     stat_interrupt_signal = false;
+}
+
+void LCD::WriteWY(u8 data) {
+    const bool window_was_enabled = WindowEnabled();
+    window_y = data;
+    UpdateWindowPosition(window_was_enabled);
+}
+
+void LCD::WriteWX(u8 data) {
+    const bool window_was_enabled = WindowEnabled();
+    window_x = data;
+    UpdateWindowPosition(window_was_enabled);
 }
 
 void LCD::UpdateWindowPosition(bool was_enabled) {

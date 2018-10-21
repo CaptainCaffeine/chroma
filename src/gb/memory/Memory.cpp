@@ -642,11 +642,8 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
             gameboy.audio->wave_ram[addr - 0xFF30] = data;
         }
         break;
-    case LCDC: {
-        bool window_enabled = gameboy.lcd->WindowEnabled();
-        gameboy.lcd->lcdc = data;
-        gameboy.lcd->UpdateWindowPosition(window_enabled);
-        }
+    case LCDC:
+        gameboy.lcd->WriteLCDC(data);
         break;
     case STAT:
         gameboy.lcd->stat = (data & 0x78) | (gameboy.lcd->stat & 0x07);
@@ -681,17 +678,11 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
     case OBP1:
         gameboy.lcd->obj_palette_dmg1 = data;
         break;
-    case WY: {
-        bool window_enabled = gameboy.lcd->WindowEnabled();
-        gameboy.lcd->window_y = data;
-        gameboy.lcd->UpdateWindowPosition(window_enabled);
-        }
+    case WY:
+        gameboy.lcd->WriteWY(data);
         break;
-    case WX: {
-        bool window_enabled = gameboy.lcd->WindowEnabled();
-        gameboy.lcd->window_x = data;
-        gameboy.lcd->UpdateWindowPosition(window_enabled);
-        }
+    case WX:
+        gameboy.lcd->WriteWX(data);
         break;
     case KEY1:
         speed_switch = (speed_switch & 0x80) | (data & 0x01);
