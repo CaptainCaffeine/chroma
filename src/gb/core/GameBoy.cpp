@@ -37,7 +37,7 @@ GameBoy::GameBoy(const Console _console, const CartridgeHeader& header, Emu::SDL
         , game_mode(header.game_mode)
         , timer(std::make_unique<Timer>(*this))
         , serial(std::make_unique<Serial>(*this))
-        , lcd(std::make_unique<LCD>(*this))
+        , lcd(std::make_unique<Lcd>(*this))
         , joypad(std::make_unique<Joypad>(*this))
         , audio(std::make_unique<Audio>(enable_iir, _console))
         , mem(std::make_unique<Memory>(header, rom, save_path, *this))
@@ -147,7 +147,7 @@ void GameBoy::HardwareTick(unsigned int cycles) {
         mem->UpdateHDMA();
         timer->UpdateTimer();
         serial->UpdateSerial();
-        lcd->UpdateLCD();
+        lcd->UpdateLcd();
 
         // The APU always updates at 2MHz, regardless of double speed mode. So we need to update it twice an M-cycle
         // in single-speed mode.
@@ -164,7 +164,7 @@ void GameBoy::HaltedTick(unsigned int cycles) {
         // Update the rest of the system hardware.
         timer->UpdateTimer();
         serial->UpdateSerial();
-        lcd->UpdateLCD();
+        lcd->UpdateLcd();
 
         // The APU always updates at 2MHz, regardless of double speed mode. So we need to update it twice an M-cycle
         // in single-speed mode.
@@ -178,7 +178,7 @@ bool GameBoy::JoypadPress() const {
     return joypad->JoypadPress();
 }
 
-void GameBoy::StopLCD() {
+void GameBoy::StopLcd() {
     // Record the current LCD power state for when we exit stop mode.
     lcd_on_when_stopped = lcd->lcdc & 0x80;
 

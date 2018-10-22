@@ -69,9 +69,9 @@ void Logging::LogInterrupt() {
     }
 
     auto InterruptString = [this]() {
-        if (gameboy.mem->IsPending(Interrupt::VBLANK)) {
-            return "VBLANK";
-        } else if (gameboy.mem->IsPending(Interrupt::STAT)) {
+        if (gameboy.mem->IsPending(Interrupt::VBlank)) {
+            return "VBlank";
+        } else if (gameboy.mem->IsPending(Interrupt::Stat)) {
             return "STAT";
         } else if (gameboy.mem->IsPending(Interrupt::Timer)) {
             return "Timer";

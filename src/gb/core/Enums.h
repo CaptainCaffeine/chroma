@@ -22,6 +22,6 @@ enum class Console {DMG, CGB, AGB, Default};
 enum class GameMode {DMG, CGB};
 enum class MBC {None, MBC1, MBC1M, MBC2, MBC3, MBC5};
 
-enum class Interrupt : unsigned int {VBLANK=0x01, STAT=0x02, Timer=0x04, Serial=0x08, Joypad=0x10};
+enum class Interrupt : unsigned int {VBlank=0x01, Stat=0x02, Timer=0x04, Serial=0x08, Joypad=0x10};
 
 } // End namespace Gb

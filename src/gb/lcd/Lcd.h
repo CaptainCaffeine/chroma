@@ -27,9 +27,9 @@ namespace Gb {
 
 class GameBoy;
 
-struct BGAttrs {
-    BGAttrs(u8 tile_index);
-    BGAttrs(u8 tile_index, u8 attrs);
+struct BgAttrs {
+    BgAttrs(u8 tile_index);
+    BgAttrs(u8 tile_index, u8 attrs);
 
     const u8 index = 0, above_sprites = 0;
     const bool y_flip = false, x_flip = false;
@@ -48,16 +48,16 @@ struct SpriteAttrs {
     std::array<u8, 32> sprite_tiles;
 };
 
-class LCD {
+class Lcd {
 public:
-    LCD(GameBoy& _gameboy);
+    Lcd(GameBoy& _gameboy);
 
-    void UpdateLCD();
+    void UpdateLcd();
 
-    void WriteLCDC(u8 data);
-    void WriteWY(u8 data);
-    void WriteWX(u8 data);
-    void SetSTATSignal() { stat_interrupt_signal = true; }
+    void WriteLcdc(u8 data);
+    void WriteWy(u8 data);
+    void WriteWx(u8 data);
+    void SetStatSignal() { stat_interrupt_signal = true; }
 
     void DumpEverything();
 
@@ -150,25 +150,25 @@ private:
 
     int scanline_cycles = 452;
     u8 current_scanline = 0;
-    void UpdateLY();
+    void UpdateLy();
     int Line153Cycles() const;
     int Mode3Cycles() const;
-    void StrangeLY();
+    void StrangeLy();
 
     bool stat_interrupt_signal = false, prev_interrupt_signal = false;
-    void CheckSTATInterruptSignal();
+    void CheckStatInterruptSignal();
 
     // LY=LYC interrupt
     u8 ly_last_cycle = 0xFF;
     bool ly_compare_equal_forced_zero = false;
-    void UpdateLYCompareSignal();
+    void UpdateLyCompareSignal();
 
     // Drawing
     static constexpr std::size_t tile_map_row_len = 32;
     static constexpr std::size_t tile_bytes = 16;
     const std::array<u16, 4> shades{{0x7FFF, 0x56B5, 0x294A, 0x0000}};
 
-    std::vector<BGAttrs> tile_data;
+    std::vector<BgAttrs> tile_data;
     std::deque<SpriteAttrs> oam_sprites;
 
     std::array<u16, 8> pixel_colours;
@@ -188,12 +188,12 @@ private:
     std::size_t RenderFirstTile(std::size_t start_pixel, std::size_t start_tile, std::size_t tile_row,
                                 std::size_t throwaway);
     void RenderSprites();
-    void SearchOAM();
+    void SearchOam();
     void InitTileMap(u16 tile_map_addr);
     void FetchTiles();
     void FetchSpriteTiles();
-    void GetPixelColoursFromPaletteDMG(u8 palette, bool sprite);
-    void GetPixelColoursFromPaletteCGB(int palette_num, bool sprite);
+    void GetPixelColoursFromPaletteDmg(u8 palette, bool sprite);
+    void GetPixelColoursFromPaletteCgb(int palette_num, bool sprite);
     template<std::size_t N>
     void DecodePaletteIndices(const std::array<u8, N>& tile, const std::size_t tile_row) {
         // Get the two bytes containing the row of the tile.
@@ -208,28 +208,28 @@ private:
     }
 
     // STAT functions
-    void SetSTATMode(unsigned int mode) { stat = (stat & 0xFC) | mode; }
-    unsigned int STATMode() const { return stat & 0x03; }
-    void SetLYCompare(bool eq) { if (eq) { stat |= 0x04; } else { stat &= ~0x04; } }
-    bool LYCompareEqual() const { return stat & 0x04; }
-    bool LYCompareCheckEnabled() const { return stat & 0x40; }
+    void SetStatMode(unsigned int mode) { stat = (stat & 0xFC) | mode; }
+    unsigned int StatMode() const { return stat & 0x03; }
+    void SetLyCompare(bool eq) { if (eq) { stat |= 0x04; } else { stat &= ~0x04; } }
+    bool LyCompareEqual() const { return stat & 0x04; }
+    bool LyCompareCheckEnabled() const { return stat & 0x40; }
     bool Mode2CheckEnabled() const { return stat & 0x20; }
     bool Mode1CheckEnabled() const { return stat & 0x10; }
     bool Mode0CheckEnabled() const { return stat & 0x08; }
 
     // LCDC functions
-    bool BGEnabled() const { return lcdc & 0x01; }
+    bool BgEnabled() const { return lcdc & 0x01; }
     bool SpritesEnabled() const { return lcdc & 0x02; }
     int SpriteSize() const { return (lcdc & 0x04) ? 16 : 8; }
-    u16 BGTileMapStartAddr() const { return (lcdc & 0x08) ? 0x9C00 : 0x9800; }
+    u16 BgTileMapStartAddr() const { return (lcdc & 0x08) ? 0x9C00 : 0x9800; }
     u16 TileDataStartAddr() const { return (lcdc & 0x10) ? 0x8000 : 0x9000; }
     bool WindowEnabled() const { return (lcdc & 0x20) && (window_x < 167) && (ly >= window_y); }
     u16 WindowTileMapStartAddr() const { return (lcdc & 0x40) ? 0x9C00 : 0x9800; }
-    bool LCDEnabled() const { return lcdc & 0x80; }
+    bool LcdEnabled() const { return lcdc & 0x80; }
 
     // Graphics data debug functions
     void DumpBackBuffer() const;
-    void DumpBGWin(u16 start_addr, const std::string& filename);
+    void DumpBgWin(u16 start_addr, const std::string& filename);
     void DumpTileSet(int bank);
 };
 

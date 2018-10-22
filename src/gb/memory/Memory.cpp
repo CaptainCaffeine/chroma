@@ -643,14 +643,14 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         }
         break;
     case LCDC:
-        gameboy.lcd->WriteLCDC(data);
+        gameboy.lcd->WriteLcdc(data);
         break;
     case STAT:
         gameboy.lcd->stat = (data & 0x78) | (gameboy.lcd->stat & 0x07);
         // On DMG, if the STAT register is written during mode 1 or 0 while the LCD is on, bit 1 of the IF register
         // is set. This causes a STAT interrupt if it's enabled in IE.
         if (gameboy.ConsoleDmg() && (gameboy.lcd->lcdc & 0x80) && !(gameboy.lcd->stat & 0x02)) {
-            gameboy.lcd->SetSTATSignal();
+            gameboy.lcd->SetStatSignal();
         }
         break;
     case SCY:
@@ -679,10 +679,10 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         gameboy.lcd->obj_palette_dmg1 = data;
         break;
     case WY:
-        gameboy.lcd->WriteWY(data);
+        gameboy.lcd->WriteWy(data);
         break;
     case WX:
-        gameboy.lcd->WriteWX(data);
+        gameboy.lcd->WriteWx(data);
         break;
     case KEY1:
         speed_switch = (speed_switch & 0x80) | (data & 0x01);

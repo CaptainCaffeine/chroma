@@ -22,9 +22,9 @@
 
 namespace Gb {
 
-BGAttrs::BGAttrs(u8 tile_index) : index(tile_index) {}
+BgAttrs::BgAttrs(u8 tile_index) : index(tile_index) {}
 
-BGAttrs::BGAttrs(u8 tile_index, u8 attrs)
+BgAttrs::BgAttrs(u8 tile_index, u8 attrs)
         : index(tile_index)
         , above_sprites((attrs & 0x80) >> 7)
         , y_flip(attrs & 0x40)
@@ -49,38 +49,38 @@ SpriteAttrs::SpriteAttrs(u8 y, u8 x, u8 index, u8 attrs, GameMode game_mode)
     }
 };
 
-LCD::LCD(GameBoy& _gameboy)
+Lcd::Lcd(GameBoy& _gameboy)
         : gameboy(_gameboy)
         , back_buffer(160 * 144) {}
 
-void LCD::UpdateLCD() {
-    if (!LCDEnabled()) {
+void Lcd::UpdateLcd() {
+    if (!LcdEnabled()) {
         return;
     }
 
     scanline_cycles += 4;
 
-    UpdateLY();
-    UpdateLYCompareSignal();
+    UpdateLy();
+    UpdateLyCompareSignal();
 
     if (current_scanline <= 143) {
         // AntonioND claims that except for scanline 0, the Mode 2 STAT interrupt happens the cycle before Mode 2
         // is entered. However, doing this causes most of Mooneye-GB's STAT timing tests to fail.
         if (scanline_cycles == ((gameboy.GameModeDmg() || gameboy.mem->double_speed) ? 4 : 0)) {
-            SetSTATMode(2);
+            SetStatMode(2);
         } else if (scanline_cycles == ((gameboy.GameModeDmg()) ? 84 : (80 << gameboy.mem->double_speed))) {
-            SetSTATMode(3);
+            SetStatMode(3);
             RenderScanline();
         } else if (scanline_cycles == Mode3Cycles()) {
-            SetSTATMode(0);
+            SetStatMode(0);
             gameboy.mem->SignalHDMA();
         }
     } else if (current_scanline == 144) {
         if (scanline_cycles == 0 && gameboy.ConsoleCgb()) {
             stat_interrupt_signal |= Mode2CheckEnabled();
         } else if (scanline_cycles == 4 << gameboy.mem->double_speed) {
-            gameboy.mem->RequestInterrupt(Interrupt::VBLANK);
-            SetSTATMode(1);
+            gameboy.mem->RequestInterrupt(Interrupt::VBlank);
+            SetStatMode(1);
             if (gameboy.ConsoleDmg()) {
                 // The OAM STAT interrupt is also triggered on entering Mode 1.
                 stat_interrupt_signal |= Mode2CheckEnabled();
@@ -91,11 +91,11 @@ void LCD::UpdateLCD() {
         }
     }
 
-    CheckSTATInterruptSignal();
+    CheckStatInterruptSignal();
 }
 
-void LCD::WriteLCDC(u8 data) {
-    const bool lcd_was_enabled = LCDEnabled();
+void Lcd::WriteLcdc(u8 data) {
+    const bool lcd_was_enabled = LcdEnabled();
     const bool window_was_enabled = WindowEnabled();
 
     lcdc = data;
@@ -104,18 +104,18 @@ void LCD::WriteLCDC(u8 data) {
     UpdatePowerOnState(lcd_was_enabled);
 }
 
-void LCD::UpdatePowerOnState(bool was_enabled) {
-    if (!was_enabled && LCDEnabled()) {
-        // Initialize scanline cycle count to 452/908 instead of 0, so it ticks over to 0 in UpdateLY().
+void Lcd::UpdatePowerOnState(bool was_enabled) {
+    if (!was_enabled && LcdEnabled()) {
+        // Initialize scanline cycle count to 452/908 instead of 0, so it ticks over to 0 in UpdateLy().
         if (gameboy.mem->double_speed) {
             scanline_cycles = 908;
         } else {
             scanline_cycles = 452;
         }
         current_scanline = 153;
-    } else if (was_enabled && !LCDEnabled()) {
+    } else if (was_enabled && !LcdEnabled()) {
         ly = 0;
-        SetSTATMode(0);
+        SetStatMode(0);
         stat_interrupt_signal = 0;
         prev_interrupt_signal = 0;
 
@@ -128,14 +128,14 @@ void LCD::UpdatePowerOnState(bool was_enabled) {
     }
 }
 
-void LCD::UpdateLY() {
+void Lcd::UpdateLy() {
     if (current_scanline == 153 && scanline_cycles == Line153Cycles()) {
         // LY is 153 only for a few machine cycle at the beginning of scanline 153, then wraps back to 0.
         ly = 0;
     }
 
     if (gameboy.GameModeCgb() && !gameboy.mem->double_speed && scanline_cycles == 452) {
-        StrangeLY();
+        StrangeLy();
     }
 
     if (scanline_cycles == (456 << gameboy.mem->double_speed)) {
@@ -150,7 +150,7 @@ void LCD::UpdateLY() {
         // Otherwise, increment LY.
         if (current_scanline == 153) {
             if (gameboy.ConsoleDmg()) {
-                SetSTATMode(0); // Does this actually happen? Or does DMG spend the first cycle in mode 1?
+                SetStatMode(0); // Does this actually happen? Or does DMG spend the first cycle in mode 1?
             }
 
             current_scanline = 0;
@@ -163,7 +163,7 @@ void LCD::UpdateLY() {
     }
 }
 
-int LCD::Line153Cycles() const {
+int Lcd::Line153Cycles() const {
     // The number of cycles where LY=153 depending on device configuration.
     if (gameboy.ConsoleDmg()) {
         return 4;
@@ -176,7 +176,7 @@ int LCD::Line153Cycles() const {
     }
 }
 
-int LCD::Mode3Cycles() const {
+int Lcd::Mode3Cycles() const {
     // The cycles taken by mode 3 increase by a number of factors.
     int cycles = 256 << gameboy.mem->double_speed;
 
@@ -197,7 +197,7 @@ int LCD::Mode3Cycles() const {
     return cycles;
 }
 
-void LCD::StrangeLY() {
+void Lcd::StrangeLy() {
     // LY takes on strange values on the last m-cycle of a scanline in CGB single speed mode.
     if (current_scanline == 153) {
         return;
@@ -215,74 +215,74 @@ void LCD::StrangeLY() {
 // set to zero that machine cycle, then on the next machine cycle, LY=LYC is set using the new LY value and the STAT
 // interrupt can be fired. This will not be interrupted even if LY changes again on the second cycle (which happens 
 // on scanline 153). In that case, the two events caused by an LY change begin on the following cycle.
-void LCD::UpdateLYCompareSignal() {
+void Lcd::UpdateLyCompareSignal() {
     if (gameboy.ConsoleDmg()) {
         if (ly_compare_equal_forced_zero) {
-            SetLYCompare(ly_compare == ly_last_cycle);
+            SetLyCompare(ly_compare == ly_last_cycle);
 
-            // Don't update LY_last_cycle.
+            // Don't update ly_last_cycle.
             ly_compare_equal_forced_zero = false;
         } else if (ly != ly_last_cycle) {
-            SetLYCompare(false);
+            SetLyCompare(false);
             ly_compare_equal_forced_zero = true;
             ly_last_cycle = ly;
         } else {
-            SetLYCompare(ly_compare == ly);
+            SetLyCompare(ly_compare == ly);
             ly_last_cycle = ly;
         }
     } else if (gameboy.mem->double_speed) {
         if (current_scanline == 153 && scanline_cycles == 12) {
-            SetLYCompare(ly_compare == ly_last_cycle);
-            // Don't update LY_last_cycle.
+            SetLyCompare(ly_compare == ly_last_cycle);
+            // Don't update ly_last_cycle.
         } else {
-            SetLYCompare(ly_compare == ly_last_cycle);
+            SetLyCompare(ly_compare == ly_last_cycle);
             ly_last_cycle = ly;
         }
     } else {
         if (scanline_cycles == 452) {
-            SetLYCompare(ly_compare == ly_last_cycle);
-            // Don't update LY_last_cycle.
+            SetLyCompare(ly_compare == ly_last_cycle);
+            // Don't update ly_last_cycle.
         } else if (ly_last_cycle == 153) {
-            SetLYCompare(ly_compare == ly_last_cycle);
+            SetLyCompare(ly_compare == ly_last_cycle);
             ly_last_cycle = ly;
         } else {
-            SetLYCompare(ly_compare == ly);
+            SetLyCompare(ly_compare == ly);
             ly_last_cycle = ly;
         }
     }
 }
 
-void LCD::CheckSTATInterruptSignal() {
-    stat_interrupt_signal |= (Mode0CheckEnabled() && STATMode() == 0);
-    stat_interrupt_signal |= (Mode1CheckEnabled() && STATMode() == 1);
-    stat_interrupt_signal |= (Mode2CheckEnabled() && STATMode() == 2);
-    stat_interrupt_signal |= (LYCompareCheckEnabled() && LYCompareEqual());
+void Lcd::CheckStatInterruptSignal() {
+    stat_interrupt_signal |= (Mode0CheckEnabled() && StatMode() == 0);
+    stat_interrupt_signal |= (Mode1CheckEnabled() && StatMode() == 1);
+    stat_interrupt_signal |= (Mode2CheckEnabled() && StatMode() == 2);
+    stat_interrupt_signal |= (LyCompareCheckEnabled() && LyCompareEqual());
 
     // The STAT interrupt is triggered on a rising edge of the STAT interrupt signal, which is a 4 way logical OR
     // between each STAT check. As a result, if two events which would have triggered a STAT interrupt happen on
     // consecutive machine cycles, the second one will not cause an interrupt to be requested.
     if (stat_interrupt_signal && !prev_interrupt_signal) {
-        gameboy.mem->RequestInterrupt(Interrupt::STAT);
+        gameboy.mem->RequestInterrupt(Interrupt::Stat);
     }
     prev_interrupt_signal = stat_interrupt_signal;
     stat_interrupt_signal = false;
 }
 
-void LCD::WriteWY(u8 data) {
+void Lcd::WriteWy(u8 data) {
     const bool window_was_enabled = WindowEnabled();
     window_y = data;
     UpdateWindowPosition(window_was_enabled);
 }
 
-void LCD::WriteWX(u8 data) {
+void Lcd::WriteWx(u8 data) {
     const bool window_was_enabled = WindowEnabled();
     window_x = data;
     UpdateWindowPosition(window_was_enabled);
 }
 
-void LCD::UpdateWindowPosition(bool was_enabled) {
+void Lcd::UpdateWindowPosition(bool was_enabled) {
     const bool is_enabled = WindowEnabled();
-    const int wonky_ly = (STATMode() == 2) ? (ly - 1) : ly;
+    const int wonky_ly = (StatMode() == 2) ? (ly - 1) : ly;
     if (wonky_ly >= 144 || window_y > wonky_ly) {
         return;
     }
@@ -295,7 +295,7 @@ void LCD::UpdateWindowPosition(bool was_enabled) {
     }
 }
 
-void LCD::RenderScanline() {
+void Lcd::RenderScanline() {
     std::size_t num_bg_pixels;
     if (WindowEnabled()) {
         num_bg_pixels = (window_x < 7) ? 0 : window_x - 7;
@@ -304,7 +304,7 @@ void LCD::RenderScanline() {
     }
 
     if (gameboy.GameModeDmg()) {
-        if (BGEnabled()) {
+        if (BgEnabled()) {
             RenderBackground(num_bg_pixels);
         } else {
             // If disabled, we need to blank what isn't covered by the window.
@@ -316,7 +316,7 @@ void LCD::RenderScanline() {
 
     // On CGB in DMG mode, disabling the background will also disable the window.
     if (gameboy.ConsoleCgb() && gameboy.GameModeDmg()) {
-        if (BGEnabled() && WindowEnabled()) {
+        if (BgEnabled() && WindowEnabled()) {
             RenderWindow(num_bg_pixels);
         }
     } else {
@@ -334,13 +334,13 @@ void LCD::RenderScanline() {
     std::copy(row_buffer.begin(), row_buffer.end() - 8, back_buffer.begin() + ly * 160);
 }
 
-void LCD::RenderBackground(std::size_t num_bg_pixels) {
+void Lcd::RenderBackground(std::size_t num_bg_pixels) {
     // The background is composed of 32x32 tiles. The scroll registers (SCY and SCX) allow the top-left corner of
     // the screen to be positioned anywhere on the background, and the background wraps around when it hits the edge.
 
     // Determine which row we need to fetch from the current values of SCY and LY.
     unsigned int row_num = ((scroll_y + ly) / 8) % tile_map_row_len;
-    InitTileMap(BGTileMapStartAddr() + row_num * tile_map_row_len);
+    InitTileMap(BgTileMapStartAddr() + row_num * tile_map_row_len);
 
     FetchTiles();
 
@@ -373,9 +373,9 @@ void LCD::RenderBackground(std::size_t num_bg_pixels) {
         row_pixel -= 8;
 
         if (gameboy.GameModeDmg()) {
-            GetPixelColoursFromPaletteDMG(bg_palette_dmg, false);
+            GetPixelColoursFromPaletteDmg(bg_palette_dmg, false);
         } else {
-            GetPixelColoursFromPaletteCGB(tile_iter->palette_num, false);
+            GetPixelColoursFromPaletteCgb(tile_iter->palette_num, false);
         }
 
         // Copy the pixels to the row buffer.
@@ -389,7 +389,7 @@ void LCD::RenderBackground(std::size_t num_bg_pixels) {
     }
 }
 
-void LCD::RenderWindow(std::size_t num_bg_pixels) {
+void Lcd::RenderWindow(std::size_t num_bg_pixels) {
     // The window is composed of 32x32 tiles (of which only 21x18 tiles can be seen). Unlike the background, the
     // window cannot be scrolled; it is always displayed from its top-left corner and does not wrap around.
     // Instead, the position of its top-left corner can be set with the WY and WX registers.
@@ -427,9 +427,9 @@ void LCD::RenderWindow(std::size_t num_bg_pixels) {
         row_pixel -= 8;
 
         if (gameboy.GameModeDmg()) {
-            GetPixelColoursFromPaletteDMG(bg_palette_dmg, false);
+            GetPixelColoursFromPaletteDmg(bg_palette_dmg, false);
         } else {
-            GetPixelColoursFromPaletteCGB(tile_iter->palette_num, false);
+            GetPixelColoursFromPaletteCgb(tile_iter->palette_num, false);
         }
 
         // Copy the pixels to the row buffer.
@@ -444,7 +444,7 @@ void LCD::RenderWindow(std::size_t num_bg_pixels) {
     ++window_progress;
 }
 
-std::size_t LCD::RenderFirstTile(std::size_t start_pixel, std::size_t start_tile, std::size_t tile_row,
+std::size_t Lcd::RenderFirstTile(std::size_t start_pixel, std::size_t start_tile, std::size_t tile_row,
                                  std::size_t throwaway) {
     auto& bg_tile = tile_data[start_tile];
 
@@ -463,9 +463,9 @@ std::size_t LCD::RenderFirstTile(std::size_t start_pixel, std::size_t start_tile
     start_pixel -= 8 - throwaway;
 
     if (gameboy.GameModeDmg()) {
-        GetPixelColoursFromPaletteDMG(bg_palette_dmg, false);
+        GetPixelColoursFromPaletteDmg(bg_palette_dmg, false);
     } else {
-        GetPixelColoursFromPaletteCGB(bg_tile.palette_num, false);
+        GetPixelColoursFromPaletteCgb(bg_tile.palette_num, false);
     }
 
     // Throw away the first pixels of the tile.
@@ -477,8 +477,8 @@ std::size_t LCD::RenderFirstTile(std::size_t start_pixel, std::size_t start_tile
     return start_pixel;
 }
 
-void LCD::RenderSprites() {
-    SearchOAM();
+void Lcd::RenderSprites() {
+    SearchOam();
 
     FetchSpriteTiles();
 
@@ -499,9 +499,9 @@ void LCD::RenderSprites() {
         DecodePaletteIndices(sa.sprite_tiles, tile_row);
 
         if (gameboy.GameModeDmg()) {
-            GetPixelColoursFromPaletteDMG((sa.palette_num) ? obj_palette_dmg1 : obj_palette_dmg0, true);
+            GetPixelColoursFromPaletteDmg((sa.palette_num) ? obj_palette_dmg1 : obj_palette_dmg0, true);
         } else {
-            GetPixelColoursFromPaletteCGB(sa.palette_num, true);
+            GetPixelColoursFromPaletteCgb(sa.palette_num, true);
         }
 
         // If this sprite has the X flip flag set, reverse the pixels.
@@ -526,7 +526,7 @@ void LCD::RenderSprites() {
         if (gameboy.GameModeCgb()) {
             // If the BG is "disabled" on CGB, both BG and OAM priority flags are ignored and the sprite is drawn
             // above the background.
-            if (BGEnabled()) {
+            if (BgEnabled()) {
                 if (sa.behind_bg) {
                     bg_colour_mask = 0x0006;
                 } else {
@@ -551,7 +551,7 @@ void LCD::RenderSprites() {
     }
 }
 
-void LCD::SearchOAM() {
+void Lcd::SearchOam() {
     // The sprite_gap is the distance between the bottom of the sprite and its Y position (8 for 8x8, 0 for 8x16).
     unsigned int sprite_gap = SpriteSize() % 16;
     // The tile index mask is 0xFF for 8x8, 0xFE for 8x16.
@@ -589,7 +589,7 @@ void LCD::SearchOAM() {
     }
 }
 
-void LCD::InitTileMap(u16 tile_map_addr) {
+void Lcd::InitTileMap(u16 tile_map_addr) {
     // The tile maps are located at 0x9800-0x9BFF and 0x9C00-0x9FFF. They consist of 32 rows of 32 bytes each
     // which index the tileset.
 
@@ -614,7 +614,7 @@ void LCD::InitTileMap(u16 tile_map_addr) {
     }
 }
 
-void LCD::FetchTiles() {
+void Lcd::FetchTiles() {
     // The background tiles are located at either 0x8000-0x8FFF or 0x8800-0x97FF. For the first region, the
     // tile map indices are unsigned offsets from 0x8000; for the second region, the indices are signed
     // offsets from 0x9000.
@@ -635,7 +635,7 @@ void LCD::FetchTiles() {
     }
 }
 
-void LCD::FetchSpriteTiles() {
+void Lcd::FetchSpriteTiles() {
     std::size_t tile_size = tile_bytes;
     if (SpriteSize() == 16) {
         tile_size *= 2;
@@ -648,7 +648,7 @@ void LCD::FetchSpriteTiles() {
     }
 }
 
-void LCD::GetPixelColoursFromPaletteDMG(u8 palette, bool sprite) {
+void Lcd::GetPixelColoursFromPaletteDmg(u8 palette, bool sprite) {
     for (auto& colour : pixel_colours) {
         if (sprite && colour == 0) {
             // Palette index 0 is transparent for sprites. Set the alpha bit.
@@ -659,7 +659,7 @@ void LCD::GetPixelColoursFromPaletteDMG(u8 palette, bool sprite) {
     }
 }
 
-void LCD::GetPixelColoursFromPaletteCGB(int palette_num, bool sprite) {
+void Lcd::GetPixelColoursFromPaletteCgb(int palette_num, bool sprite) {
     if (sprite) {
         for (auto& colour : pixel_colours) {
             if (colour == 0) {

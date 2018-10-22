@@ -31,7 +31,7 @@ namespace Gb {
 class CartridgeHeader;
 class Timer;
 class Serial;
-class LCD;
+class Lcd;
 class Joypad;
 class Audio;
 class Memory;
@@ -49,7 +49,7 @@ public:
 
     std::unique_ptr<Timer> timer;
     std::unique_ptr<Serial> serial;
-    std::unique_ptr<LCD> lcd;
+    std::unique_ptr<Lcd> lcd;
     std::unique_ptr<Joypad> joypad;
     std::unique_ptr<Audio> audio;
     std::unique_ptr<Memory> mem;
@@ -70,7 +70,7 @@ public:
 
     // Speed Switch and STOP mode functions.
     bool JoypadPress() const;
-    void StopLCD();
+    void StopLcd();
     void SpeedSwitch();
 
 private:

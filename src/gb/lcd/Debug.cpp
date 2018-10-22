@@ -21,11 +21,11 @@
 
 namespace Gb {
 
-void LCD::DumpBackBuffer() const {
+void Lcd::DumpBackBuffer() const {
     Common::WritePPMFile(Common::BGR5ToRGB8(back_buffer), "screenshot.ppm", 160, 144);
 }
 
-void LCD::DumpBGWin(u16 start_addr, const std::string& filename) {
+void Lcd::DumpBgWin(u16 start_addr, const std::string& filename) {
     tile_data.clear();
     // Get BG/Window tile map.
     std::size_t tile_map_len = tile_map_row_len * tile_map_row_len;
@@ -66,9 +66,9 @@ void LCD::DumpBGWin(u16 start_addr, const std::string& filename) {
                 }
 
                 if (gameboy.GameModeDmg()) {
-                    GetPixelColoursFromPaletteDMG(bg_palette_dmg, false);
+                    GetPixelColoursFromPaletteDmg(bg_palette_dmg, false);
                 } else {
-                    GetPixelColoursFromPaletteCGB(tile_iter->palette_num, false);
+                    GetPixelColoursFromPaletteCgb(tile_iter->palette_num, false);
                 }
 
                 // Copy the pixels to the row buffer.
@@ -84,7 +84,7 @@ void LCD::DumpBGWin(u16 start_addr, const std::string& filename) {
     Common::WritePPMFile(Common::BGR5ToRGB8(bg_buffer), filename, 256, 256);
 }
 
-void LCD::DumpTileSet(int bank) {
+void Lcd::DumpTileSet(int bank) {
     std::vector<u8> tileset(0x17FF);
     gameboy.mem->CopyFromVRAM(0x8000, 0x1800, bank, tileset.begin());
 
@@ -122,10 +122,10 @@ void LCD::DumpTileSet(int bank) {
     Common::WritePPMFile(Common::BGR5ToRGB8(buffer), std::string("tileset") + std::to_string(bank) + ".ppm", 128, 192);
 }
 
-void LCD::DumpEverything() {
+void Lcd::DumpEverything() {
     DumpBackBuffer();
-    DumpBGWin(0x9800, "first_tilemap.ppm");
-    DumpBGWin(0x9C00, "second_tilemap.ppm");
+    DumpBgWin(0x9800, "first_tilemap.ppm");
+    DumpBgWin(0x9C00, "second_tilemap.ppm");
     DumpTileSet(0);
     if (gameboy.GameModeCgb()) {
         DumpTileSet(1);

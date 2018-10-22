@@ -134,11 +134,11 @@ int CPU::HandleInterrupts() {
             gameboy.HardwareTick(4);
 
             u16 interrupt_vector = 0x0000;
-            if (mem.IsPending(Interrupt::VBLANK)) {
-                mem.ClearInterrupt(Interrupt::VBLANK);
+            if (mem.IsPending(Interrupt::VBlank)) {
+                mem.ClearInterrupt(Interrupt::VBlank);
                 interrupt_vector = 0x0040;
-            } else if (mem.IsPending(Interrupt::STAT)) {
-                mem.ClearInterrupt(Interrupt::STAT);
+            } else if (mem.IsPending(Interrupt::Stat)) {
+                mem.ClearInterrupt(Interrupt::Stat);
                 interrupt_vector = 0x0048;
             } else if (mem.IsPending(Interrupt::Timer)) {
                 mem.ClearInterrupt(Interrupt::Timer);

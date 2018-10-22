@@ -628,7 +628,7 @@ void CPU::Stop() {
     gameboy.HaltedTick(4);
 
     // Turn off the LCD.
-    gameboy.StopLCD();
+    gameboy.StopLcd();
 
     // During STOP mode, the clock increases as usual, but normal interrupts are not serviced or checked. Regardless
     // if the joypad interrupt is enabled in the IE register, a stopped Game Boy will intercept any joypad presses
