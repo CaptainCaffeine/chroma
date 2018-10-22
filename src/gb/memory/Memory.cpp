@@ -16,9 +16,9 @@
 
 #include "gb/memory/Memory.h"
 #include "gb/memory/CartridgeHeader.h"
-#include "gb/memory/RTC.h"
+#include "gb/memory/Rtc.h"
 #include "gb/core/GameBoy.h"
-#include "gb/lcd/LCD.h"
+#include "gb/lcd/Lcd.h"
 #include "gb/audio/Audio.h"
 #include "gb/hardware/Timer.h"
 #include "gb/hardware/Serial.h"

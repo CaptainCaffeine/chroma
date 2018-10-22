@@ -16,7 +16,7 @@
 
 #include <algorithm>
 
-#include "gb/lcd/LCD.h"
+#include "gb/lcd/Lcd.h"
 #include "gb/core/GameBoy.h"
 #include "gb/memory/Memory.h"
 

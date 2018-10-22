@@ -16,7 +16,7 @@
 
 #include <stdexcept>
 
-#include "gb/cpu/CPU.h"
+#include "gb/cpu/Cpu.h"
 #include "gb/memory/Memory.h"
 #include "gb/core/GameBoy.h"
 #include "gb/logging/Logging.h"

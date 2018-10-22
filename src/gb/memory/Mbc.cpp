@@ -20,7 +20,7 @@
 
 #include "gb/memory/Memory.h"
 #include "gb/memory/CartridgeHeader.h"
-#include "gb/memory/RTC.h"
+#include "gb/memory/Rtc.h"
 #include "emu/ParseOptions.h"
 
 namespace Gb {

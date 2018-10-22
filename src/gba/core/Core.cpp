@@ -27,7 +27,7 @@
 #include "gba/hardware/Dma.h"
 #include "gba/hardware/Keypad.h"
 #include "gba/hardware/Serial.h"
-#include "emu/SDLContext.h"
+#include "emu/SdlContext.h"
 #include "common/Screenshot.h"
 
 namespace Gba {

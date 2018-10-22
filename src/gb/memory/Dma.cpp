@@ -18,7 +18,7 @@
 
 #include "gb/memory/Memory.h"
 #include "gb/core/GameBoy.h"
-#include "gb/lcd/LCD.h"
+#include "gb/lcd/Lcd.h"
 
 namespace Gb {
 

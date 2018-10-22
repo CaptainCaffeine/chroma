@@ -17,7 +17,7 @@
 #include <stdexcept>
 #include <fmt/format.h>
 
-#include "emu/SDLContext.h"
+#include "emu/SdlContext.h"
 
 namespace Emu {
 

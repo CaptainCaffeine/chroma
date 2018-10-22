@@ -16,7 +16,7 @@
 
 #include <fmt/format.h>
 
-#include "gb/memory/RTC.h"
+#include "gb/memory/Rtc.h"
 
 namespace Gb {
 

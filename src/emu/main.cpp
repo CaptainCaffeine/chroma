@@ -27,7 +27,7 @@
 #include "gba/core/Core.h"
 #include "gba/memory/Memory.h"
 #include "emu/ParseOptions.h"
-#include "emu/SDLContext.h"
+#include "emu/SdlContext.h"
 
 int main(int argc, char** argv) {
     std::vector<std::string> tokens = Emu::GetTokens(argv, argv + argc);

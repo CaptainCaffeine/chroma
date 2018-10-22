@@ -20,7 +20,7 @@
 #include "gb/logging/Logging.h"
 #include "gb/core/GameBoy.h"
 #include "gb/memory/Memory.h"
-#include "gb/cpu/CPU.h"
+#include "gb/cpu/Cpu.h"
 
 namespace Gb {
 

@@ -17,16 +17,16 @@
 #include <chrono>
 
 #include "gb/core/GameBoy.h"
-#include "gb/cpu/CPU.h"
+#include "gb/cpu/Cpu.h"
 #include "gb/memory/Memory.h"
 #include "gb/memory/CartridgeHeader.h"
-#include "gb/lcd/LCD.h"
+#include "gb/lcd/Lcd.h"
 #include "gb/audio/Audio.h"
 #include "gb/hardware/Timer.h"
 #include "gb/hardware/Serial.h"
 #include "gb/hardware/Joypad.h"
 #include "gb/logging/Logging.h"
-#include "emu/SDLContext.h"
+#include "emu/SdlContext.h"
 #include "common/Screenshot.h"
 
 namespace Gb {
