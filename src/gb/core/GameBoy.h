@@ -35,7 +35,7 @@ class Lcd;
 class Joypad;
 class Audio;
 class Memory;
-class CPU;
+class Cpu;
 class Logging;
 
 class GameBoy {
@@ -53,7 +53,7 @@ public:
     std::unique_ptr<Joypad> joypad;
     std::unique_ptr<Audio> audio;
     std::unique_ptr<Memory> mem;
-    std::unique_ptr<CPU> cpu;
+    std::unique_ptr<Cpu> cpu;
     std::unique_ptr<Logging> logging;
 
     void EmulatorLoop();

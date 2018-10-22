@@ -30,9 +30,9 @@ union Registers {
     u16 reg16[5];
 };
 
-class CPU {
+class Cpu {
 public:
-    CPU(Memory& _mem, GameBoy& _gameboy);
+    Cpu(Memory& _mem, GameBoy& _gameboy);
 
     int RunFor(int cycles);
     void EnableInterruptsDelayed();
@@ -53,8 +53,8 @@ private:
     static constexpr Reg8Addr ToReg8AddrHi(Reg16Addr r) { return r * 2 + 1; }
 
     // Interpreter execution
-    enum class CPUMode {Running, Halted, HaltBug, Stopped};
-    CPUMode cpu_mode = CPUMode::Running;
+    enum class CpuMode {Running, Halted, HaltBug, Stopped};
+    CpuMode cpu_mode = CpuMode::Running;
     unsigned int speed_switch_cycles = 0;
     unsigned int ExecuteNext(const u8 opcode);
     void StoppedTick();

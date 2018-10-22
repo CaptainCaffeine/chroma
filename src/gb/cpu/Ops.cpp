@@ -23,37 +23,37 @@
 namespace Gb {
 
 // 8-bit Load operations
-void CPU::Load8Immediate(Reg8Addr r, u8 val) {
+void Cpu::Load8Immediate(Reg8Addr r, u8 val) {
     regs.reg8[r] = val;
 }
 
-void CPU::Load8(Reg8Addr r1, Reg8Addr r2) {
+void Cpu::Load8(Reg8Addr r1, Reg8Addr r2) {
     regs.reg8[r1] = regs.reg8[r2];
 }
 
-void CPU::Load8FromMem(Reg8Addr r, u16 addr) {
+void Cpu::Load8FromMem(Reg8Addr r, u16 addr) {
     regs.reg8[r] = ReadMemAndTick(addr);
 }
 
-void CPU::Load8IntoMemImmediate(u16 addr, u8 val) {
+void Cpu::Load8IntoMemImmediate(u16 addr, u8 val) {
     WriteMemAndTick(addr, val);
 }
 
-void CPU::Load8IntoMem(u16 addr, Reg8Addr r) {
+void Cpu::Load8IntoMem(u16 addr, Reg8Addr r) {
     WriteMemAndTick(addr, regs.reg8[r]);
 }
 
 // 16-bit Load operations
-void CPU::Load16Immediate(Reg16Addr r, u16 val) {
+void Cpu::Load16Immediate(Reg16Addr r, u16 val) {
     regs.reg16[r] = val;
 }
 
-void CPU::LoadHLIntoSP() {
+void Cpu::LoadHLIntoSP() {
     regs.reg16[SP] = regs.reg16[HL];
     gameboy.HardwareTick(4);
 }
 
-void CPU::LoadSPnIntoHL(s8 val) {
+void Cpu::LoadSPnIntoHL(s8 val) {
     // The half carry & carry flags for this instruction are set by adding the value as an *unsigned* byte to the
     // lower byte of sp. The addition itself is done with the value as a signed byte.
     SetZero(false);
@@ -68,12 +68,12 @@ void CPU::LoadSPnIntoHL(s8 val) {
     gameboy.HardwareTick(4);
 }
 
-void CPU::LoadSPIntoMem(u16 addr) {
+void Cpu::LoadSPIntoMem(u16 addr) {
     WriteMemAndTick(addr, regs.reg8[ToReg8AddrLo(SP)]);
     WriteMemAndTick(addr + 1, regs.reg8[ToReg8AddrHi(SP)]);
 }
 
-void CPU::Push(Reg16Addr r) {
+void Cpu::Push(Reg16Addr r) {
     // Internal delay
     gameboy.HardwareTick(4);
 
@@ -81,7 +81,7 @@ void CPU::Push(Reg16Addr r) {
     WriteMemAndTick(--regs.reg16[SP], regs.reg8[ToReg8AddrLo(r)]);
 }
 
-void CPU::Pop(Reg16Addr r) {
+void Cpu::Pop(Reg16Addr r) {
     regs.reg8[ToReg8AddrLo(r)] = ReadMemAndTick(regs.reg16[SP]++);
     regs.reg8[ToReg8AddrHi(r)] = ReadMemAndTick(regs.reg16[SP]++);
 
@@ -92,7 +92,7 @@ void CPU::Pop(Reg16Addr r) {
 }
 
 // 8-bit Add operations
-void CPU::AddImmediate(u8 val) {
+void Cpu::AddImmediate(u8 val) {
     u16 tmp16 = regs.reg8[A] + val;
     SetHalf(((regs.reg8[A] & 0x0F) + (val & 0x0F)) & 0x10);
     SetCarry(tmp16 & 0x0100);
@@ -102,15 +102,15 @@ void CPU::AddImmediate(u8 val) {
     regs.reg8[A] = static_cast<u8>(tmp16);
 }
 
-void CPU::Add(Reg8Addr r) {
+void Cpu::Add(Reg8Addr r) {
     AddImmediate(regs.reg8[r]);
 }
 
-void CPU::AddFromMemAtHL() {
+void Cpu::AddFromMemAtHL() {
     AddImmediate(ReadMemAndTick(regs.reg16[HL]));
 }
 
-void CPU::AddImmediateWithCarry(u8 val) {
+void Cpu::AddImmediateWithCarry(u8 val) {
     u16 tmp16 = regs.reg8[A] + val + Carry();
     SetHalf(((regs.reg8[A] & 0x0F) + (val & 0x0F) + Carry()) & 0x10);
     SetCarry(tmp16 & 0x0100);
@@ -120,16 +120,16 @@ void CPU::AddImmediateWithCarry(u8 val) {
     regs.reg8[A] = static_cast<u8>(tmp16);
 }
 
-void CPU::AddWithCarry(Reg8Addr r) {
+void Cpu::AddWithCarry(Reg8Addr r) {
     AddImmediateWithCarry(regs.reg8[r]);
 }
 
-void CPU::AddFromMemAtHLWithCarry() {
+void Cpu::AddFromMemAtHLWithCarry() {
     AddImmediateWithCarry(ReadMemAndTick(regs.reg16[HL]));
 }
 
 // 8-bit Subtract operations
-void CPU::SubImmediate(u8 val) {
+void Cpu::SubImmediate(u8 val) {
     SetHalf((regs.reg8[A] & 0x0F) < (val & 0x0F));
     SetCarry(regs.reg8[A] < val);
     SetSub(true);
@@ -138,15 +138,15 @@ void CPU::SubImmediate(u8 val) {
     SetZero(!regs.reg8[A]);
 }
 
-void CPU::Sub(Reg8Addr r) {
+void Cpu::Sub(Reg8Addr r) {
     SubImmediate(regs.reg8[r]);
 }
 
-void CPU::SubFromMemAtHL() {
+void Cpu::SubFromMemAtHL() {
     SubImmediate(ReadMemAndTick(regs.reg16[HL]));
 }
 
-void CPU::SubImmediateWithCarry(u8 val) {
+void Cpu::SubImmediateWithCarry(u8 val) {
     u8 carry_val = Carry();
     SetHalf((regs.reg8[A] & 0x0F) < (val & 0x0F) + carry_val);
     SetCarry(regs.reg8[A] < val + carry_val);
@@ -156,22 +156,22 @@ void CPU::SubImmediateWithCarry(u8 val) {
     SetZero(!regs.reg8[A]);
 }
 
-void CPU::SubWithCarry(Reg8Addr r) {
+void Cpu::SubWithCarry(Reg8Addr r) {
     SubImmediateWithCarry(regs.reg8[r]);
 }
 
-void CPU::SubFromMemAtHLWithCarry() {
+void Cpu::SubFromMemAtHLWithCarry() {
     SubImmediateWithCarry(ReadMemAndTick(regs.reg16[HL]));
 }
 
-void CPU::IncReg8(Reg8Addr r) {
+void Cpu::IncReg8(Reg8Addr r) {
     SetHalf((regs.reg8[r] & 0x0F) == 0x0F);
     ++regs.reg8[r];
     SetZero(!regs.reg8[r]);
     SetSub(false);
 }
 
-void CPU::IncMemAtHL() {
+void Cpu::IncMemAtHL() {
     u8 val = ReadMemAndTick(regs.reg16[HL]);
 
     SetHalf((val & 0x0F) == 0x0F);
@@ -182,14 +182,14 @@ void CPU::IncMemAtHL() {
     WriteMemAndTick(regs.reg16[HL], val);
 }
 
-void CPU::DecReg8(Reg8Addr r) {
+void Cpu::DecReg8(Reg8Addr r) {
     SetHalf((regs.reg8[r] & 0x0F) == 0x00);
     --regs.reg8[r];
     SetZero(!regs.reg8[r]);
     SetSub(true);
 }
 
-void CPU::DecMemAtHL() {
+void Cpu::DecMemAtHL() {
     u8 val = ReadMemAndTick(regs.reg16[HL]);
 
     SetHalf((val & 0x0F) == 0x00);
@@ -201,7 +201,7 @@ void CPU::DecMemAtHL() {
 }
 
 // Logical operations
-void CPU::AndImmediate(u8 val) {
+void Cpu::AndImmediate(u8 val) {
     regs.reg8[A] &= val;
 
     SetZero(!regs.reg8[A]);
@@ -210,16 +210,16 @@ void CPU::AndImmediate(u8 val) {
     SetCarry(false);
 }
 
-void CPU::And(Reg8Addr r) {
+void Cpu::And(Reg8Addr r) {
     AndImmediate(regs.reg8[r]);
 }
 
-void CPU::AndFromMemAtHL() {
+void Cpu::AndFromMemAtHL() {
     AndImmediate(ReadMemAndTick(regs.reg16[HL]));
 }
 
 // Bitwise Or operations
-void CPU::OrImmediate(u8 val) {
+void Cpu::OrImmediate(u8 val) {
     regs.reg8[A] |= val;
 
     SetZero(!regs.reg8[A]);
@@ -228,16 +228,16 @@ void CPU::OrImmediate(u8 val) {
     SetCarry(false);
 }
 
-void CPU::Or(Reg8Addr r) {
+void Cpu::Or(Reg8Addr r) {
     OrImmediate(regs.reg8[r]);
 }
 
-void CPU::OrFromMemAtHL() {
+void Cpu::OrFromMemAtHL() {
     OrImmediate(ReadMemAndTick(regs.reg16[HL]));
 }
 
 // Bitwise Xor operations
-void CPU::XorImmediate(u8 val) {
+void Cpu::XorImmediate(u8 val) {
     regs.reg8[A] ^= val;
 
     SetZero(!regs.reg8[A]);
@@ -246,32 +246,32 @@ void CPU::XorImmediate(u8 val) {
     SetCarry(false);
 }
 
-void CPU::Xor(Reg8Addr r) {
+void Cpu::Xor(Reg8Addr r) {
     XorImmediate(regs.reg8[r]);
 }
 
-void CPU::XorFromMemAtHL() {
+void Cpu::XorFromMemAtHL() {
     XorImmediate(ReadMemAndTick(regs.reg16[HL]));
 }
 
 // Compare operations
-void CPU::CompareImmediate(u8 val) {
+void Cpu::CompareImmediate(u8 val) {
     SetZero(!(regs.reg8[A] - val));
     SetSub(true);
     SetHalf((regs.reg8[A] & 0x0F) < (val & 0x0F));
     SetCarry(regs.reg8[A] < val);
 }
 
-void CPU::Compare(Reg8Addr r) {
+void Cpu::Compare(Reg8Addr r) {
     CompareImmediate(regs.reg8[r]);
 }
 
-void CPU::CompareFromMemAtHL() {
+void Cpu::CompareFromMemAtHL() {
     CompareImmediate(ReadMemAndTick(regs.reg16[HL]));
 }
 
 // 16-bit Arithmetic operations
-void CPU::AddHL(Reg16Addr r) {
+void Cpu::AddHL(Reg16Addr r) {
     SetSub(false);
     SetHalf(((regs.reg16[HL] & 0x0FFF) + (regs.reg16[r] & 0x0FFF)) & 0x1000);
     SetCarry((regs.reg16[HL] + regs.reg16[r]) & 0x10000);
@@ -280,7 +280,7 @@ void CPU::AddHL(Reg16Addr r) {
     gameboy.HardwareTick(4);
 }
 
-void CPU::AddSP(s8 val) {
+void Cpu::AddSP(s8 val) {
     // The half carry & carry flags for this instruction are set by adding the value as an *unsigned* byte to the
     // lower byte of sp. The addition itself is done with the value as a signed byte.
     SetZero(false);
@@ -295,18 +295,18 @@ void CPU::AddSP(s8 val) {
     gameboy.HardwareTick(8);
 }
 
-void CPU::IncReg16(Reg16Addr r) {
+void Cpu::IncReg16(Reg16Addr r) {
     ++regs.reg16[r];
     gameboy.HardwareTick(4);
 }
 
-void CPU::DecReg16(Reg16Addr r) {
+void Cpu::DecReg16(Reg16Addr r) {
     --regs.reg16[r];
     gameboy.HardwareTick(4);
 }
 
 // Miscellaneous arithmetic
-void CPU::DecimalAdjustA() {
+void Cpu::DecimalAdjustA() {
     if (Sub()) {
         if (Carry()) {
             regs.reg8[A] -= 0x60;
@@ -327,26 +327,26 @@ void CPU::DecimalAdjustA() {
     SetHalf(false);
 }
 
-void CPU::ComplementA() {
+void Cpu::ComplementA() {
     regs.reg8[A] = ~regs.reg8[A];
     SetSub(true);
     SetHalf(true);
 }
 
-void CPU::SetCarry() {
+void Cpu::SetCarry() {
     SetCarry(true);
     SetSub(false);
     SetHalf(false);
 }
 
-void CPU::ComplementCarry() {
+void Cpu::ComplementCarry() {
     SetCarry(!Carry());
     SetSub(false);
     SetHalf(false);
 }
 
 // Rotates and Shifts
-void CPU::RotateLeft(Reg8Addr r) {
+void Cpu::RotateLeft(Reg8Addr r) {
     SetCarry(regs.reg8[r] & 0x80);
 
     regs.reg8[r] = (regs.reg8[r] << 1) | (regs.reg8[r] >> 7);
@@ -356,7 +356,7 @@ void CPU::RotateLeft(Reg8Addr r) {
     SetHalf(false);
 }
 
-void CPU::RotateLeftMemAtHL() {
+void Cpu::RotateLeftMemAtHL() {
     u8 val = ReadMemAndTick(regs.reg16[HL]);
     SetCarry(val & 0x80);
 
@@ -369,7 +369,7 @@ void CPU::RotateLeftMemAtHL() {
     WriteMemAndTick(regs.reg16[HL], val);
 }
 
-void CPU::RotateLeftThroughCarry(Reg8Addr r) {
+void Cpu::RotateLeftThroughCarry(Reg8Addr r) {
     u8 carry_val = regs.reg8[r] & 0x80;
     regs.reg8[r] = (regs.reg8[r] << 1) | Carry();
 
@@ -379,7 +379,7 @@ void CPU::RotateLeftThroughCarry(Reg8Addr r) {
     SetCarry(carry_val);
 }
 
-void CPU::RotateLeftMemAtHLThroughCarry() {
+void Cpu::RotateLeftMemAtHLThroughCarry() {
     u8 val = ReadMemAndTick(regs.reg16[HL]);
     u8 carry_val = val & 0x80;
 
@@ -393,7 +393,7 @@ void CPU::RotateLeftMemAtHLThroughCarry() {
     WriteMemAndTick(regs.reg16[HL], val);
 }
 
-void CPU::RotateRight(Reg8Addr r) {
+void Cpu::RotateRight(Reg8Addr r) {
     SetCarry(regs.reg8[r] & 0x01);
 
     regs.reg8[r] = (regs.reg8[r] >> 1) | (regs.reg8[r] << 7);
@@ -403,7 +403,7 @@ void CPU::RotateRight(Reg8Addr r) {
     SetHalf(false);
 }
 
-void CPU::RotateRightMemAtHL() {
+void Cpu::RotateRightMemAtHL() {
     u8 val = ReadMemAndTick(regs.reg16[HL]);
     SetCarry(val & 0x01);
 
@@ -416,7 +416,7 @@ void CPU::RotateRightMemAtHL() {
     WriteMemAndTick(regs.reg16[HL], val);
 }
 
-void CPU::RotateRightThroughCarry(Reg8Addr r) {
+void Cpu::RotateRightThroughCarry(Reg8Addr r) {
     u8 carry_val = regs.reg8[r] & 0x01;
     regs.reg8[r] = (regs.reg8[r] >> 1) | (Carry() << 7);
 
@@ -426,7 +426,7 @@ void CPU::RotateRightThroughCarry(Reg8Addr r) {
     SetCarry(carry_val);
 }
 
-void CPU::RotateRightMemAtHLThroughCarry() {
+void Cpu::RotateRightMemAtHLThroughCarry() {
     u8 val = ReadMemAndTick(regs.reg16[HL]);
     u8 carry_val = val & 0x01;
 
@@ -440,7 +440,7 @@ void CPU::RotateRightMemAtHLThroughCarry() {
     WriteMemAndTick(regs.reg16[HL], val);
 }
 
-void CPU::ShiftLeft(Reg8Addr r) {
+void Cpu::ShiftLeft(Reg8Addr r) {
     SetCarry(regs.reg8[r] & 0x80);
 
     regs.reg8[r] <<= 1;
@@ -450,7 +450,7 @@ void CPU::ShiftLeft(Reg8Addr r) {
     SetHalf(false);
 }
 
-void CPU::ShiftLeftMemAtHL() {
+void Cpu::ShiftLeftMemAtHL() {
     u8 val = ReadMemAndTick(regs.reg16[HL]);
     SetCarry(val & 0x80);
 
@@ -463,7 +463,7 @@ void CPU::ShiftLeftMemAtHL() {
     WriteMemAndTick(regs.reg16[HL], val);
 }
 
-void CPU::ShiftRightArithmetic(Reg8Addr r) {
+void Cpu::ShiftRightArithmetic(Reg8Addr r) {
     SetCarry(regs.reg8[r] & 0x01);
 
     regs.reg8[r] >>= 1;
@@ -474,7 +474,7 @@ void CPU::ShiftRightArithmetic(Reg8Addr r) {
     SetHalf(false);
 }
 
-void CPU::ShiftRightArithmeticMemAtHL() {
+void Cpu::ShiftRightArithmeticMemAtHL() {
     u8 val = ReadMemAndTick(regs.reg16[HL]);
     SetCarry(val & 0x01);
 
@@ -488,7 +488,7 @@ void CPU::ShiftRightArithmeticMemAtHL() {
     WriteMemAndTick(regs.reg16[HL], val);
 }
 
-void CPU::ShiftRightLogical(Reg8Addr r) {
+void Cpu::ShiftRightLogical(Reg8Addr r) {
     SetCarry(regs.reg8[r] & 0x01);
 
     regs.reg8[r] >>= 1;
@@ -498,7 +498,7 @@ void CPU::ShiftRightLogical(Reg8Addr r) {
     SetHalf(false);
 }
 
-void CPU::ShiftRightLogicalMemAtHL() {
+void Cpu::ShiftRightLogicalMemAtHL() {
     u8 val = ReadMemAndTick(regs.reg16[HL]);
     SetCarry(val & 0x01);
 
@@ -511,7 +511,7 @@ void CPU::ShiftRightLogicalMemAtHL() {
     WriteMemAndTick(regs.reg16[HL], val);
 }
 
-void CPU::SwapNybbles(Reg8Addr r) {
+void Cpu::SwapNybbles(Reg8Addr r) {
     regs.reg8[r] = (regs.reg8[r] << 4) | (regs.reg8[r] >> 4);
 
     SetZero(!regs.reg8[r]);
@@ -520,7 +520,7 @@ void CPU::SwapNybbles(Reg8Addr r) {
     SetCarry(false);
 }
 
-void CPU::SwapMemAtHL() {
+void Cpu::SwapMemAtHL() {
     u8 val = ReadMemAndTick(regs.reg16[HL]);
 
     val = (val << 4) | (val >> 4);
@@ -534,23 +534,23 @@ void CPU::SwapMemAtHL() {
 }
 
 // Bit manipulation
-void CPU::TestBit(unsigned int bit, Reg8Addr r) {
+void Cpu::TestBit(unsigned int bit, Reg8Addr r) {
     SetZero(!(regs.reg8[r] & (0x01 << bit)));
     SetSub(false);
     SetHalf(true);
 }
 
-void CPU::TestBitOfMemAtHL(unsigned int bit) {
+void Cpu::TestBitOfMemAtHL(unsigned int bit) {
     SetZero(!(ReadMemAndTick(regs.reg16[HL]) & (0x01 << bit)));
     SetSub(false);
     SetHalf(true);
 }
 
-void CPU::ResetBit(unsigned int bit, Reg8Addr r) {
+void Cpu::ResetBit(unsigned int bit, Reg8Addr r) {
     regs.reg8[r] &= ~(0x01 << bit);
 }
 
-void CPU::ResetBitOfMemAtHL(unsigned int bit) {
+void Cpu::ResetBitOfMemAtHL(unsigned int bit) {
     u8 val = ReadMemAndTick(regs.reg16[HL]);
 
     val &= ~(0x01 << bit);
@@ -558,11 +558,11 @@ void CPU::ResetBitOfMemAtHL(unsigned int bit) {
     WriteMemAndTick(regs.reg16[HL], val);
 }
 
-void CPU::SetBit(unsigned int bit, Reg8Addr r) {
+void Cpu::SetBit(unsigned int bit, Reg8Addr r) {
     regs.reg8[r] |= (0x01 << bit);
 }
 
-void CPU::SetBitOfMemAtHL(unsigned int bit) {
+void Cpu::SetBitOfMemAtHL(unsigned int bit) {
     u8 val = ReadMemAndTick(regs.reg16[HL]);
 
     val |= (0x01 << bit);
@@ -571,18 +571,18 @@ void CPU::SetBitOfMemAtHL(unsigned int bit) {
 }
 
 // Jumps
-void CPU::Jump(u16 addr) {
+void Cpu::Jump(u16 addr) {
     // Internal delay
     gameboy.HardwareTick(4);
 
     pc = addr;
 }
 
-void CPU::JumpToHL() {
+void Cpu::JumpToHL() {
     pc = regs.reg16[HL];
 }
 
-void CPU::RelativeJump(s8 val) {
+void Cpu::RelativeJump(s8 val) {
     // Internal delay
     gameboy.HardwareTick(4);
 
@@ -590,7 +590,7 @@ void CPU::RelativeJump(s8 val) {
 }
 
 // Calls and Returns
-void CPU::Call(u16 addr) {
+void Cpu::Call(u16 addr) {
     // Internal delay
     gameboy.HardwareTick(4);
 
@@ -600,7 +600,7 @@ void CPU::Call(u16 addr) {
     pc = addr;
 }
 
-void CPU::Return() {
+void Cpu::Return() {
     u8 byte_lo = ReadMemAndTick(regs.reg16[SP]++);
     u8 byte_hi = ReadMemAndTick(regs.reg16[SP]++);
 
@@ -611,18 +611,18 @@ void CPU::Return() {
 }
 
 // System Control
-void CPU::Halt() {
+void Cpu::Halt() {
     if (!interrupt_master_enable && mem.RequestedEnabledInterrupts()) {
         // If interrupts are disabled and there are requested, enabled interrupts pending when HALT is executed,
         // the GB will not enter halt mode. Instead, the GB will fail to increase the PC when executing the next 
         // instruction, thus executing it twice.
-        cpu_mode = CPUMode::HaltBug;
+        cpu_mode = CpuMode::HaltBug;
     } else {
-        cpu_mode = CPUMode::Halted;
+        cpu_mode = CpuMode::Halted;
     }
 }
 
-void CPU::Stop() {
+void Cpu::Stop() {
     // STOP is a two-byte long opcode. If the opcode following STOP is not 0x00, the LCD supposedly turns on?
     ++pc;
     gameboy.HaltedTick(4);
@@ -642,7 +642,7 @@ void CPU::Stop() {
         throw std::runtime_error("The CPU has hung. Reason: STOP mode was entered with all joypad inputs disabled.");
     }
 
-    cpu_mode = CPUMode::Stopped;
+    cpu_mode = CpuMode::Stopped;
 }
 
 } // End namespace Gb

@@ -23,7 +23,7 @@
 
 namespace Gb {
 
-CPU::CPU(Memory& _mem, GameBoy& _gameboy)
+Cpu::Cpu(Memory& _mem, GameBoy& _gameboy)
         : mem(_mem)
         , gameboy(_gameboy) {
     // Initial register values
@@ -61,36 +61,36 @@ CPU::CPU(Memory& _mem, GameBoy& _gameboy)
     regs.reg16[SP] = 0xFFFE;
 }
 
-u8 CPU::ReadMemAndTick(const u16 addr) {
+u8 Cpu::ReadMemAndTick(const u16 addr) {
     const u8 data = mem.ReadMem(addr);
     gameboy.HardwareTick(4);
     return data;
 }
 
-void CPU::WriteMemAndTick(const u16 addr, const u8 val) {
+void Cpu::WriteMemAndTick(const u16 addr, const u8 val) {
     mem.WriteMem(addr, val);
     gameboy.HardwareTick(4);
 }
 
-u8 CPU::GetImmediateByte() {
+u8 Cpu::GetImmediateByte() {
     return ReadMemAndTick(pc++);
 }
 
-u16 CPU::GetImmediateWord() {
+u16 Cpu::GetImmediateWord() {
     const u8 byte_lo = ReadMemAndTick(pc++);
     const u8 byte_hi = ReadMemAndTick(pc++);
 
     return (static_cast<u16>(byte_hi) << 8) | static_cast<u16>(byte_lo);
 }
 
-int CPU::RunFor(int cycles) {
+int Cpu::RunFor(int cycles) {
     // Execute instructions until the specified number of cycles has passed.
     while (cycles > 0) {
-        if (cpu_mode == CPUMode::Stopped) {
+        if (cpu_mode == CpuMode::Stopped) {
             StoppedTick();
             cycles -= 4;
             continue;
-        } else if (mem.HDMAInProgress() && cpu_mode != CPUMode::Halted) {
+        } else if (mem.HDMAInProgress() && cpu_mode != CpuMode::Halted) {
             mem.UpdateHDMA();
             gameboy.HaltedTick(4);
             cycles -= 4;
@@ -99,14 +99,14 @@ int CPU::RunFor(int cycles) {
 
         cycles -= HandleInterrupts();
 
-        if (cpu_mode == CPUMode::Running) {
+        if (cpu_mode == CpuMode::Running) {
             gameboy.logging->LogInstruction(regs, pc);
             cycles -= ExecuteNext(mem.ReadMem(pc++));
-        } else if (cpu_mode == CPUMode::HaltBug) {
+        } else if (cpu_mode == CpuMode::HaltBug) {
             gameboy.logging->LogInstruction(regs, pc);
             cycles -= ExecuteNext(mem.ReadMem(pc));
-            cpu_mode = CPUMode::Running;
-        } else if (cpu_mode == CPUMode::Halted) {
+            cpu_mode = CpuMode::Running;
+        } else if (cpu_mode == CpuMode::Halted) {
             gameboy.HaltedTick(4);
             gameboy.logging->IncHaltCycles(4);
             cycles -= 4;
@@ -117,7 +117,7 @@ int CPU::RunFor(int cycles) {
     return cycles;
 }
 
-int CPU::HandleInterrupts() {
+int Cpu::HandleInterrupts() {
     if (interrupt_master_enable) {
         if (mem.RequestedEnabledInterrupts()) {
             gameboy.logging->LogInterrupt();
@@ -154,19 +154,19 @@ int CPU::HandleInterrupts() {
             WriteMemAndTick(--regs.reg16[SP], static_cast<u8>(pc));
             pc = interrupt_vector;
 
-            if (cpu_mode == CPUMode::Halted) {
+            if (cpu_mode == CpuMode::Halted) {
                 // Exit halt mode.
-                cpu_mode = CPUMode::Running;
+                cpu_mode = CpuMode::Running;
                 gameboy.logging->LogHalt();
             }
 
             return 20;
         }
-    } else if (cpu_mode == CPUMode::Halted) {
+    } else if (cpu_mode == CpuMode::Halted) {
         if (mem.RequestedEnabledInterrupts()) {
             // If halt mode is entered when IME is zero, then the next time an interrupt is triggered the CPU does 
             // not jump to the interrupt routine or clear the IF flag. It just exits halt mode and continues execution.
-            cpu_mode = CPUMode::Running;
+            cpu_mode = CpuMode::Running;
             gameboy.logging->LogHalt();
         }
     }
@@ -174,12 +174,12 @@ int CPU::HandleInterrupts() {
     return 0;
 }
 
-void CPU::EnableInterruptsDelayed() {
+void Cpu::EnableInterruptsDelayed() {
     interrupt_master_enable = interrupt_master_enable || enable_interrupts_delayed;
     enable_interrupts_delayed = false;
 }
 
-void CPU::StoppedTick() {
+void Cpu::StoppedTick() {
     gameboy.HaltedTick(4);
 
     if (gameboy.JoypadPress()) {
@@ -188,7 +188,7 @@ void CPU::StoppedTick() {
             throw std::runtime_error("The CPU has hung. Reason: enabled joypad press during a speed switch.");
         } else {
             // Exit STOP mode.
-            cpu_mode = CPUMode::Running;
+            cpu_mode = CpuMode::Running;
         }
     }
 
@@ -199,14 +199,14 @@ void CPU::StoppedTick() {
             gameboy.SpeedSwitch();
 
             // Exit STOP mode.
-            cpu_mode = CPUMode::Running;
+            cpu_mode = CpuMode::Running;
         }
 
         speed_switch_cycles -= 4;
     }
 }
 
-unsigned int CPU::ExecuteNext(const u8 opcode) {
+unsigned int Cpu::ExecuteNext(const u8 opcode) {
     gameboy.HardwareTick(4);
 
     switch (opcode) {

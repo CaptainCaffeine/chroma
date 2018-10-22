@@ -41,7 +41,7 @@ GameBoy::GameBoy(const Console _console, const CartridgeHeader& header, Emu::SDL
         , joypad(std::make_unique<Joypad>(*this))
         , audio(std::make_unique<Audio>(enable_iir, _console))
         , mem(std::make_unique<Memory>(header, rom, save_path, *this))
-        , cpu(std::make_unique<CPU>(*mem, *this))
+        , cpu(std::make_unique<Cpu>(*mem, *this))
         , logging(std::make_unique<Logging>(log_level, *this))
         , sdl_context(context)
         , front_buffer(160 * 144) {
@@ -187,7 +187,7 @@ void GameBoy::StopLcd() {
 }
 
 void GameBoy::SpeedSwitch() {
-    mem->ToggleCPUSpeed();
+    mem->ToggleCpuSpeed();
 
     // If the LCD was on when we entered STOP mode, turn it back on.
     lcd->lcdc |= lcd_on_when_stopped;

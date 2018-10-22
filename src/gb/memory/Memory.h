@@ -46,7 +46,7 @@ public:
     u8 ReadMem(const u16 addr) const;
     void WriteMem(const u16 addr, const u8 data);
 
-    void ToggleCPUSpeed() {
+    void ToggleCpuSpeed() {
         speed_switch = (speed_switch ^ 0x80) & 0x80;
         double_speed ^= 1;
     };
