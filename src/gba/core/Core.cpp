@@ -32,7 +32,7 @@
 
 namespace Gba {
 
-Core::Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom,
+Core::Core(Emu::SdlContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom,
            const std::string& save_path, LogLevel level)
         : mem(std::make_unique<Memory>(bios, rom, save_path, *this))
         , cpu(std::make_unique<Cpu>(*mem, *this))

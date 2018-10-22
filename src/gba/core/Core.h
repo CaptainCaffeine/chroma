@@ -23,7 +23,7 @@
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
 
-namespace Emu { class SDLContext; }
+namespace Emu { class SdlContext; }
 
 namespace Gba {
 
@@ -39,7 +39,7 @@ class Serial;
 
 class Core {
 public:
-    Core(Emu::SDLContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom,
+    Core(Emu::SdlContext& context, const std::vector<u32>& bios, const std::vector<u16>& rom,
          const std::string& save_path, LogLevel level);
     ~Core();
 
@@ -68,7 +68,7 @@ public:
     void Screenshot() const;
 
 private:
-    Emu::SDLContext& sdl_context;
+    Emu::SdlContext& sdl_context;
     std::vector<u16> front_buffer;
 
     bool quit = false;

@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
 
             const std::string save_path{Emu::SaveGamePath(rom_path)};
 
-            Emu::SDLContext sdl_context{240, 160, pixel_scale, fullscreen};
+            Emu::SdlContext sdl_context{240, 160, pixel_scale, fullscreen};
             Gba::Core gba_core{sdl_context, bios, rom, save_path, log_level};
 
             gba_core.EmulatorLoop();
@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
 
             const std::string save_path{Emu::SaveGamePath(rom_path)};
 
-            Emu::SDLContext sdl_context{160, 144, pixel_scale, fullscreen};
+            Emu::SdlContext sdl_context{160, 144, pixel_scale, fullscreen};
             Gb::GameBoy gameboy_core{gameboy_type, cart_header, sdl_context, save_path, rom, enable_iir, log_level};
 
             gameboy_core.EmulatorLoop();

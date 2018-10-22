@@ -127,7 +127,7 @@ private:
         u8 sample_byte = wave_ram[(wave_pos & 0x1E) >> 1];
         return (wave_pos & 0x01) ? (sample_byte & 0x0F) : ((sample_byte & 0xF0) >> 4);
     }
-    void CorruptWaveRAM();
+    void CorruptWaveRam();
 
     u16 ShiftClock() const { return (frequency_lo & 0xF0) >> 4; }
 

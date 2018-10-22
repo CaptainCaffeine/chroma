@@ -21,12 +21,12 @@
 
 namespace Emu {
 
-SDLContext::SDLContext(int _width, int _height, unsigned int scale, bool fullscreen)
+SdlContext::SdlContext(int _width, int _height, unsigned int scale, bool fullscreen)
         : width(_width)
         , height(_height) {
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
-        throw std::runtime_error(GetSDLErrorString("Init"));
+        throw std::runtime_error(GetSdlErrorString("Init"));
     }
 
     window = SDL_CreateWindow("Chroma",
@@ -37,14 +37,14 @@ SDLContext::SDLContext(int _width, int _height, unsigned int scale, bool fullscr
                               SDL_WINDOW_OPENGL);
     if (window == nullptr) {
         SDL_Quit();
-        throw std::runtime_error(GetSDLErrorString("CreateWindow"));
+        throw std::runtime_error(GetSdlErrorString("CreateWindow"));
     }
 
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (renderer == nullptr) {
         SDL_DestroyWindow(window);
         SDL_Quit();
-        throw std::runtime_error(GetSDLErrorString("CreateRenderer"));
+        throw std::runtime_error(GetSdlErrorString("CreateRenderer"));
     }
 
     SDL_RenderSetLogicalSize(renderer, width, height);
@@ -59,7 +59,7 @@ SDLContext::SDLContext(int _width, int _height, unsigned int scale, bool fullscr
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
-        throw std::runtime_error(GetSDLErrorString("CreateTexture"));
+        throw std::runtime_error(GetSdlErrorString("CreateTexture"));
     }
 
     SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_NONE);
@@ -83,11 +83,11 @@ SDLContext::SDLContext(int _width, int _height, unsigned int scale, bool fullscr
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
-        throw std::runtime_error(GetSDLErrorString("OpenAudioDevice"));
+        throw std::runtime_error(GetSdlErrorString("OpenAudioDevice"));
     }
 }
 
-SDLContext::~SDLContext() {
+SdlContext::~SdlContext() {
     if (FullscreenEnabled()) {
         // We disable fullscreen to prevent the mouse from being moved on shutdown.
         ToggleFullscreen();
@@ -100,7 +100,7 @@ SDLContext::~SDLContext() {
     SDL_Quit();
 }
 
-void SDLContext::RenderFrame(const u16* fb_ptr) noexcept {
+void SdlContext::RenderFrame(const u16* fb_ptr) noexcept {
     SDL_LockTexture(texture, nullptr, &texture_pixels, &texture_pitch);
     memcpy(texture_pixels, fb_ptr, width * height * sizeof(u16));
     SDL_UnlockTexture(texture);
@@ -110,7 +110,7 @@ void SDLContext::RenderFrame(const u16* fb_ptr) noexcept {
     SDL_RenderPresent(renderer);
 }
 
-void SDLContext::ToggleFullscreen() noexcept {
+void SdlContext::ToggleFullscreen() noexcept {
     // SDL moves the mouse around when transitioning in and out of fullscreen, so we record the mouse position before
     // the transition and restore it afterwards.
     int x, y;
@@ -127,28 +127,28 @@ void SDLContext::ToggleFullscreen() noexcept {
     SDL_WarpMouseGlobal(x, y);
 }
 
-void SDLContext::PushBackAudio(const std::array<s16, 1600>& sample_buffer) noexcept {
+void SdlContext::PushBackAudio(const std::array<s16, 1600>& sample_buffer) noexcept {
     SDL_QueueAudio(audio_device, sample_buffer.data(), sample_buffer.size() * sizeof(s16));
 }
 
-void SDLContext::UnpauseAudio() noexcept {
+void SdlContext::UnpauseAudio() noexcept {
     SDL_PauseAudioDevice(audio_device, 0);
 }
 
-void SDLContext::PauseAudio() noexcept {
+void SdlContext::PauseAudio() noexcept {
     SDL_PauseAudioDevice(audio_device, 1);
 }
 
-void SDLContext::RegisterCallback(InputEvent event, std::function<void(bool)> callback) {
+void SdlContext::RegisterCallback(InputEvent event, std::function<void(bool)> callback) {
     input_callbacks.insert({event, callback});
 }
 
-void SDLContext::UpdateFrameTimes(float avg_time_us, float max_time_us) {
+void SdlContext::UpdateFrameTimes(float avg_time_us, float max_time_us) {
     SDL_SetWindowTitle(window, fmt::format("Chroma - avg {:0>4.1f}ms - max {:0>4.1f}ms",
                                            avg_time_us / 1000, max_time_us / 1000).data());
 }
 
-void SDLContext::PollEvents() {
+void SdlContext::PollEvents() {
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         if (e.type == SDL_QUIT) {

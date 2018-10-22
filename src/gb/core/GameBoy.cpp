@@ -31,7 +31,7 @@
 
 namespace Gb {
 
-GameBoy::GameBoy(const Console _console, const CartridgeHeader& header, Emu::SDLContext& context,
+GameBoy::GameBoy(const Console _console, const CartridgeHeader& header, Emu::SdlContext& context,
                  const std::string& save_path, const std::vector<u8>& rom, bool enable_iir, LogLevel log_level)
         : console(_console)
         , game_mode(header.game_mode)

@@ -46,10 +46,10 @@ enum class InputEvent {Quit,
                        Start,
                        Select};
 
-class SDLContext {
+class SdlContext {
 public:
-    SDLContext(int _width, int _height, unsigned int scale, bool fullscreen);
-    ~SDLContext();
+    SdlContext(int _width, int _height, unsigned int scale, bool fullscreen);
+    ~SdlContext();
 
     void RenderFrame(const u16* fb_ptr) noexcept;
     void ToggleFullscreen() noexcept;
@@ -78,7 +78,7 @@ private:
     std::unordered_map<InputEvent, std::function<void(bool)>> input_callbacks;
 
     bool FullscreenEnabled() const noexcept { return SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN_DESKTOP; }
-    static const std::string GetSDLErrorString(const std::string& error_function) {
+    static const std::string GetSdlErrorString(const std::string& error_function) {
         return {"SDL_" + error_function + " Error: " + SDL_GetError()};
     }
 };

@@ -98,7 +98,7 @@ void Channel::CheckTrigger(u32 frame_seq) {
 
         if (gen_type == Generator::Wave) {
             if (console == Console::DMG && reading_sample) {
-                CorruptWaveRAM();
+                CorruptWaveRam();
             }
 
             wave_pos = 0;
@@ -319,7 +319,7 @@ void Channel::ClearRegisters() {
     channel_enabled = false;
 }
 
-void Channel::CorruptWaveRAM() {
+void Channel::CorruptWaveRam() {
     // On DMG, if the wave channel is triggered while a sample is being read from the wave RAM, the first few bytes
     // of wave RAM get corrupted.
     if (wave_pos < 4) {

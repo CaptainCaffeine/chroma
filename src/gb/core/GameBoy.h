@@ -24,7 +24,7 @@
 #include "common/CommonEnums.h"
 #include "gb/core/Enums.h"
 
-namespace Emu { class SDLContext; }
+namespace Emu { class SdlContext; }
 
 namespace Gb {
 
@@ -40,7 +40,7 @@ class Logging;
 
 class GameBoy {
 public:
-    GameBoy(const Console _console, const CartridgeHeader& header, Emu::SDLContext& context,
+    GameBoy(const Console _console, const CartridgeHeader& header, Emu::SdlContext& context,
             const std::string& save_path, const std::vector<u8>& rom, bool enable_iir, LogLevel log_level);
     ~GameBoy();
 
@@ -74,7 +74,7 @@ public:
     void SpeedSwitch();
 
 private:
-    Emu::SDLContext& sdl_context;
+    Emu::SdlContext& sdl_context;
     std::vector<u16> front_buffer;
 
     bool quit = false;
