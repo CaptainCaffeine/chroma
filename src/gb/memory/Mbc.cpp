@@ -69,7 +69,7 @@ void Memory::WriteSaveFile() {
             fmt::print("Error: could not open {} to write save file to disk.\n", save_path);
         } else {
             if (rtc_present) {
-                rtc->AppendRTCData(ext_ram);
+                rtc->AppendRtcData(ext_ram);
             }
 
             save_ostream.write(reinterpret_cast<const char*>(ext_ram.data()), ext_ram.size());
@@ -78,7 +78,7 @@ void Memory::WriteSaveFile() {
     }
 }
 
-u8 Memory::ReadExternalRAM(const u16 addr) const {
+u8 Memory::ReadExternalRam(const u16 addr) const {
     if (ext_ram_enabled) {
         u16 adjusted_addr = addr - 0xA000 + 0x2000 * (ram_bank_num & (num_ram_banks - 1));
 
@@ -107,13 +107,13 @@ u8 Memory::ReadExternalRAM(const u16 addr) const {
                 // Any address in the range will work to write the RTC registers.
                 switch (ram_bank_num) {
                 case 0x08:
-                    return rtc->GetLatchedTime<RTC::Seconds>();
+                    return rtc->GetLatchedTime<Rtc::Seconds>();
                 case 0x09:
-                    return rtc->GetLatchedTime<RTC::Minutes>();
+                    return rtc->GetLatchedTime<Rtc::Minutes>();
                 case 0x0A:
-                    return rtc->GetLatchedTime<RTC::Hours>();
+                    return rtc->GetLatchedTime<Rtc::Hours>();
                 case 0x0B:
-                    return rtc->GetLatchedTime<RTC::Days>();
+                    return rtc->GetLatchedTime<Rtc::Days>();
                 case 0x0C:
                     return rtc->GetFlags();
                 default:
@@ -150,7 +150,7 @@ u8 Memory::ReadExternalRAM(const u16 addr) const {
     }
 }
 
-void Memory::WriteExternalRAM(const u16 addr, const u8 data) {
+void Memory::WriteExternalRam(const u16 addr, const u8 data) {
     // Writes are ignored if external RAM is disabled or not present.
     if (ext_ram_enabled) {
         u16 adjusted_addr = addr - 0xA000 + 0x2000 * (ram_bank_num & (num_ram_banks - 1));
@@ -176,16 +176,16 @@ void Memory::WriteExternalRAM(const u16 addr, const u8 data) {
                     // Any address in the range will work to write the RTC registers.
                     switch (ram_bank_num) {
                     case 0x08:
-                        rtc->SetTime<RTC::Seconds>(data);
+                        rtc->SetTime<Rtc::Seconds>(data);
                         break;
                     case 0x09:
-                        rtc->SetTime<RTC::Minutes>(data);
+                        rtc->SetTime<Rtc::Minutes>(data);
                         break;
                     case 0x0A:
-                        rtc->SetTime<RTC::Hours>(data);
+                        rtc->SetTime<Rtc::Hours>(data);
                         break;
                     case 0x0B:
-                        rtc->SetTime<RTC::Days>(data);
+                        rtc->SetTime<Rtc::Days>(data);
                         break;
                     case 0x0C:
                         rtc->SetFlags(data);
@@ -220,7 +220,7 @@ void Memory::WriteExternalRAM(const u16 addr, const u8 data) {
     }
 }
 
-void Memory::WriteMBCControlRegisters(const u16 addr, const u8 data) {
+void Memory::WriteMbcControlRegisters(const u16 addr, const u8 data) {
     switch (mbc_mode) {
     case MBC::MBC1:
     case MBC::MBC1M:

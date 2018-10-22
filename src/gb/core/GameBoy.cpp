@@ -143,8 +143,8 @@ void GameBoy::HardwareTick(unsigned int cycles) {
         cpu->EnableInterruptsDelayed();
 
         // Update the rest of the system hardware.
-        mem->UpdateOAM_DMA();
-        mem->UpdateHDMA();
+        mem->UpdateOamDma();
+        mem->UpdateHdma();
         timer->UpdateTimer();
         serial->UpdateSerial();
         lcd->UpdateLcd();

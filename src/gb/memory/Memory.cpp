@@ -42,10 +42,10 @@ Memory::Memory(const CartridgeHeader& header, const std::vector<u8>& _rom, const
         , save_path(_save_path) {
 
     IORegisterInit();
-    VRAMInit();
+    VramInit();
     ReadSaveFile(header.ram_size);
     if (rtc_present) {
-        rtc = std::make_unique<RTC>(ext_ram);
+        rtc = std::make_unique<Rtc>(ext_ram);
     }
 }
 
@@ -95,7 +95,7 @@ void Memory::IORegisterInit() {
     gameboy.serial->InitSerialClock(static_cast<u8>(gameboy.timer->divider));
 }
 
-void Memory::VRAMInit() {
+void Memory::VramInit() {
     // The CGB boot ROM does something different.
     if (gameboy.GameModeDmg()) {
         // Initialize the tile map.
@@ -168,7 +168,7 @@ u8 Memory::ReadMem(const u16 addr) const {
         }
     } else if (addr < 0xA000) {
         // VRAM -- switchable in CGB mode
-        if (dma_bus_block != Bus::VRAM) {
+        if (dma_bus_block != Bus::Vram) {
             // Not accessible during screen mode 3.
             if ((gameboy.lcd->stat & 0x03) != 3) {
                 return vram[addr - 0x8000 + 0x2000 * vram_bank_num];
@@ -183,7 +183,7 @@ u8 Memory::ReadMem(const u16 addr) const {
         if (dma_bus_block != Bus::External) {
             if (addr < 0xC000) {
                 // External RAM bank.
-                return ReadExternalRAM(addr);
+                return ReadExternalRam(addr);
             } else if (addr < 0xD000) {
                 // WRAM bank 0
                 return wram[addr - 0xC000];
@@ -237,12 +237,12 @@ void Memory::WriteMem(const u16 addr, const u8 data) {
         // MBC control registers -- writes to this region do not write the ROM.
         // If OAM DMA is currently transferring from the external bus, the write is ignored.
         if (dma_bus_block != Bus::External) {
-            WriteMBCControlRegisters(addr, data);
+            WriteMbcControlRegisters(addr, data);
         }
     } else if (addr < 0xA000) {
         // VRAM -- switchable in CGB mode
         // If OAM DMA is currently transferring from the VRAM bus, the write is ignored.
-        if (dma_bus_block != Bus::VRAM && (gameboy.lcd->stat & 0x03) != 3) {
+        if (dma_bus_block != Bus::Vram && (gameboy.lcd->stat & 0x03) != 3) {
             // Not accessible during screen mode 3.
             vram[addr - 0x8000 + 0x2000 * vram_bank_num] = data;
         }
@@ -251,7 +251,7 @@ void Memory::WriteMem(const u16 addr, const u8 data) {
         if (dma_bus_block != Bus::External) {
             if (addr < 0xC000) {
                 // External RAM bank.
-                WriteExternalRAM(addr, data);
+                WriteExternalRam(addr, data);
             } else if (addr < 0xD000) {
                 // WRAM bank 0
                 wram[addr - 0xC000] = data;
@@ -667,7 +667,7 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         break;
     case DMA:
         oam_dma_start = data;
-        oam_dma_state = DMAState::Starting;
+        oam_dma_state = DmaState::Starting;
         break;
     case BGP:
         gameboy.lcd->bg_palette_dmg = data;

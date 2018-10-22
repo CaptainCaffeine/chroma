@@ -23,16 +23,16 @@
 
 namespace Gb {
 
-class RTC {
+class Rtc {
 public:
-    RTC(std::vector<u8>& save_game);
+    Rtc(std::vector<u8>& save_game);
 
     void LatchCurrentTime();
     u8 GetFlags() const { return flags | 0x3E; }
     void SetFlags(u8 value);
 
-    void LoadRTCData(const std::vector<u8>& save_game);
-    void AppendRTCData(std::vector<u8>& save_game) const;
+    void LoadRtcData(const std::vector<u8>& save_game);
+    void AppendRtcData(std::vector<u8>& save_game) const;
 
     template<typename T>
     u8 GetLatchedTime() const {
@@ -51,15 +51,15 @@ public:
     u8 latch_last_value_written = 0xFF;
 
     template<typename T, int N>
-    struct RTCDuration {
+    struct RtcDuration {
         using Duration = T;
         enum : int {mod = N};
     };
 
-    using Seconds = RTCDuration<std::chrono::seconds, 60>;
-    using Minutes = RTCDuration<std::chrono::minutes, 60>;
-    using Hours = RTCDuration<std::chrono::hours, 24>;
-    using Days = RTCDuration<std::chrono::duration<long, std::ratio<86400>>, 256>;
+    using Seconds = RtcDuration<std::chrono::seconds, 60>;
+    using Minutes = RtcDuration<std::chrono::minutes, 60>;
+    using Hours = RtcDuration<std::chrono::hours, 24>;
+    using Days = RtcDuration<std::chrono::duration<long, std::ratio<86400>>, 256>;
 private:
     // The reference time is 0 seconds, 0 minutes, 0 hours, and 0 days in the MBC3 RTC time.
     std::chrono::time_point<std::chrono::steady_clock> reference_time{std::chrono::steady_clock::now()};
@@ -78,7 +78,7 @@ private:
 
     std::chrono::seconds CurrentInternalTime() const;
 
-    void AppendRTCRegs(std::vector<u8>& save_file, std::chrono::seconds save_time) const;
+    void AppendRtcRegs(std::vector<u8>& save_file, std::chrono::seconds save_time) const;
     void AppendTimeStamp(std::vector<u8>& save_file) const;
     void PushBackAs32Bits(std::vector<u8>& save_file, const u8 value) const;
 };

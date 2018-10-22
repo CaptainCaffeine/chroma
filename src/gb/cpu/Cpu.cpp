@@ -90,8 +90,8 @@ int Cpu::RunFor(int cycles) {
             StoppedTick();
             cycles -= 4;
             continue;
-        } else if (mem.HDMAInProgress() && cpu_mode != CpuMode::Halted) {
-            mem.UpdateHDMA();
+        } else if (mem.HdmaInProgress() && cpu_mode != CpuMode::Halted) {
+            mem.UpdateHdma();
             gameboy.HaltedTick(4);
             cycles -= 4;
             continue;

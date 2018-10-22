@@ -30,7 +30,7 @@ void Lcd::DumpBgWin(u16 start_addr, const std::string& filename) {
     // Get BG/Window tile map.
     std::size_t tile_map_len = tile_map_row_len * tile_map_row_len;
     std::vector<u8> tile_map(tile_map_len);
-    gameboy.mem->CopyFromVRAM(start_addr, tile_map_len, 0, tile_map.begin());
+    gameboy.mem->CopyFromVram(start_addr, tile_map_len, 0, tile_map.begin());
 
     if (gameboy.GameModeDmg()) {
         for (std::size_t i = 0; i < tile_map.size(); ++i) {
@@ -39,7 +39,7 @@ void Lcd::DumpBgWin(u16 start_addr, const std::string& filename) {
     } else {
         // Get BG tile attributes.
         std::vector<u8> tile_attrs(tile_map_len);
-        gameboy.mem->CopyFromVRAM(start_addr, tile_map_len, 1, tile_attrs.begin());
+        gameboy.mem->CopyFromVram(start_addr, tile_map_len, 1, tile_attrs.begin());
 
         for (std::size_t i = 0; i < tile_map.size(); ++i) {
             tile_data.emplace_back(tile_map[i], tile_attrs[i]);
@@ -86,7 +86,7 @@ void Lcd::DumpBgWin(u16 start_addr, const std::string& filename) {
 
 void Lcd::DumpTileSet(int bank) {
     std::vector<u8> tileset(0x17FF);
-    gameboy.mem->CopyFromVRAM(0x8000, 0x1800, bank, tileset.begin());
+    gameboy.mem->CopyFromVram(0x8000, 0x1800, bank, tileset.begin());
 
     // 24 rows of 16 tiles.
     std::vector<u16> buffer(192*128);

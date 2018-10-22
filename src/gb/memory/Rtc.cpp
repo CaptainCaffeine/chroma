@@ -20,16 +20,16 @@
 
 namespace Gb {
 
-RTC::RTC(std::vector<u8>& save_game) {
+Rtc::Rtc(std::vector<u8>& save_game) {
     if ((save_game.size() % 0x400) != 0x30) {
         fmt::print("No RTC save data found. RTC initialized to default time.\n");
     } else {
-        LoadRTCData(save_game);
+        LoadRtcData(save_game);
         save_game.erase(save_game.cend() - 0x30, save_game.cend());
     }
 }
 
-void RTC::LatchCurrentTime() {
+void Rtc::LatchCurrentTime() {
     latched_time = CurrentInternalTime();
 
     auto days_msb = (std::chrono::duration_cast<Days::Duration>(latched_time).count() % 512) >> 8;
@@ -41,7 +41,7 @@ void RTC::LatchCurrentTime() {
     flags = (flags & 0xFE) | days_msb;
 }
 
-void RTC::SetFlags(u8 value) {
+void Rtc::SetFlags(u8 value) {
     // Clear unused bits.
     value &= 0xC1;
 
@@ -65,7 +65,7 @@ void RTC::SetFlags(u8 value) {
     flags = value;
 }
 
-std::chrono::seconds RTC::CurrentInternalTime() const {
+std::chrono::seconds Rtc::CurrentInternalTime() const {
     if (flags & 0x40) {
         return std::chrono::duration_cast<std::chrono::seconds>(halted_time - reference_time);
     } else {
@@ -73,7 +73,7 @@ std::chrono::seconds RTC::CurrentInternalTime() const {
     }
 }
 
-void RTC::LoadRTCData(const std::vector<u8>& save_game) {
+void Rtc::LoadRtcData(const std::vector<u8>& save_game) {
     const std::size_t save_size = save_game.size();
 
     // Load the latched time first.
@@ -128,7 +128,7 @@ void RTC::LoadRTCData(const std::vector<u8>& save_game) {
     reference_time -= elapsed_real_time;
 }
 
-void RTC::AppendRTCData(std::vector<u8>& save_game) const {
+void Rtc::AppendRtcData(std::vector<u8>& save_game) const {
     // Since it's not actually part of the external RAM address space, the saved format of the RTC state is up
     // to the implementation. There is a somewhat-agreed upon format between emulators that was put in place
     // by either VBA or BGB ages ago.
@@ -137,12 +137,12 @@ void RTC::AppendRTCData(std::vector<u8>& save_game) const {
     // little-endian 32-bit words, with the low word first.
     // Not all emulators store the RTC state this way, but at least mGBA, BGB, and VBA-M do. Gambatte, GBE+, and
     // Higan do not.
-    AppendRTCRegs(save_game, CurrentInternalTime());
-    AppendRTCRegs(save_game, latched_time);
+    AppendRtcRegs(save_game, CurrentInternalTime());
+    AppendRtcRegs(save_game, latched_time);
     AppendTimeStamp(save_game);
 }
 
-void RTC::AppendRTCRegs(std::vector<u8>& save_file, std::chrono::seconds save_time) const {
+void Rtc::AppendRtcRegs(std::vector<u8>& save_file, std::chrono::seconds save_time) const {
     PushBackAs32Bits(save_file, GetTimeValue<Seconds>(save_time));
     PushBackAs32Bits(save_file, GetTimeValue<Minutes>(save_time));
     PushBackAs32Bits(save_file, GetTimeValue<Hours>(save_time));
@@ -150,7 +150,7 @@ void RTC::AppendRTCRegs(std::vector<u8>& save_file, std::chrono::seconds save_ti
     PushBackAs32Bits(save_file, flags);
 }
 
-void RTC::AppendTimeStamp(std::vector<u8>& save_file) const {
+void Rtc::AppendTimeStamp(std::vector<u8>& save_file) const {
     const u64 timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
     save_file.push_back(static_cast<u8>(timestamp));
@@ -163,7 +163,7 @@ void RTC::AppendTimeStamp(std::vector<u8>& save_file) const {
     save_file.push_back(static_cast<u8>(timestamp >> 56));
 }
 
-void RTC::PushBackAs32Bits(std::vector<u8>& save_file, const u8 value) const {
+void Rtc::PushBackAs32Bits(std::vector<u8>& save_file, const u8 value) const {
     save_file.push_back(value);
     save_file.push_back(0);
     save_file.push_back(0);

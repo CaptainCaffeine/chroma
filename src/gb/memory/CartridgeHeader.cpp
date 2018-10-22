@@ -50,8 +50,8 @@ CartridgeHeader::CartridgeHeader(Console& console, const std::vector<u8>& rom, b
         fmt::print("WARNING: Size of provided ROM does not match size given in cartridge header.\n");
     }
 
-    GetRAMSize(rom);
-    GetMBCType(rom);
+    GetRamSize(rom);
+    GetMbcType(rom);
     if (console == Console::DMG && !CheckNintendoLogo(console, rom)) {
         fmt::print("WARNING: Nintendo logo does not match. This ROM would not run on a DMG!\n");
     }
@@ -68,7 +68,7 @@ CartridgeHeader::CartridgeHeader(Console& console, const std::vector<u8>& rom, b
     }
 }
 
-void CartridgeHeader::GetRAMSize(const std::vector<u8>& rom) {
+void CartridgeHeader::GetRamSize(const std::vector<u8>& rom) {
     // The RAM size identifier is at 0x0149 in cartridge header.
     switch (rom[0x0149]) {
     case 0x00:
@@ -102,7 +102,7 @@ void CartridgeHeader::GetRAMSize(const std::vector<u8>& rom) {
     }
 }
 
-void CartridgeHeader::GetMBCType(const std::vector<u8>& rom) {
+void CartridgeHeader::GetMbcType(const std::vector<u8>& rom) {
     // The MBC type is at 0x0147. The MBC identifier also tells us if this cartridge contains external RAM.
     switch (rom[0x0147]) {
     case 0x00:

@@ -22,17 +22,17 @@
 
 namespace Gb {
 
-void Memory::UpdateOAM_DMA() {
-    if (oam_dma_state == DMAState::Starting) {
+void Memory::UpdateOamDma() {
+    if (oam_dma_state == DmaState::Starting) {
         if (bytes_read != 0) {
             oam_transfer_addr = static_cast<u16>(oam_dma_start) << 8;
             bytes_read = 0;
         } else {
             // No write on the startup cycle.
-            oam_transfer_byte = DMACopy(oam_transfer_addr);
+            oam_transfer_byte = DmaCopy(oam_transfer_addr);
             ++bytes_read;
 
-            oam_dma_state = DMAState::Active;
+            oam_dma_state = DmaState::Active;
 
             // The Game Boy has two major memory buses (afaik): the external bus (0x0000-0x7FFF, 0xA000-0xFDFF) and
             // the VRAM bus (0x8000-0x9FFF). I/O registers, OAM, and HRAM are all internal to the CPU. OAM DMA
@@ -44,66 +44,66 @@ void Memory::UpdateOAM_DMA() {
             // starting. But, if a DMA is started while one is already active, the state goes from Active to Starting,
             // without becoming Inactive, so memory remains inaccessible for those two cycles.
             if (oam_transfer_addr >= 0x8000 && oam_transfer_addr < 0xA000) {
-                dma_bus_block = Bus::VRAM;
+                dma_bus_block = Bus::Vram;
             } else {
                 dma_bus_block = Bus::External;
             }
         }
-    } else if (oam_dma_state == DMAState::Active) {
+    } else if (oam_dma_state == DmaState::Active) {
         // Write the byte which was read last cycle to OAM.
         gameboy.lcd->oam[bytes_read - 1] = oam_transfer_byte;
 
         if (bytes_read == 160) {
             // Don't read on the last cycle.
-            oam_dma_state = DMAState::Inactive;
+            oam_dma_state = DmaState::Inactive;
             dma_bus_block = Bus::None;
             return;
         }
 
         // Read the next byte.
-        oam_transfer_byte = DMACopy(oam_transfer_addr + bytes_read);
+        oam_transfer_byte = DmaCopy(oam_transfer_addr + bytes_read);
         ++bytes_read;
     }
 }
 
-void Memory::UpdateHDMA() {
+void Memory::UpdateHdma() {
     if (hdma_reg_written) {
-        if (hdma_state == DMAState::Inactive) {
-            InitHDMA();
+        if (hdma_state == DmaState::Inactive) {
+            InitHdma();
         } else {
             // Can only occur when HDMA is paused.
             if (hdma_control & 0x80) {
                 // Restart the copy.
-                InitHDMA();
+                InitHdma();
             } else {
                 // Stop the current copy and set bit 7 of HDMA5. Because of this, it is not possible to switch
                 // directly from an HDMA to a GDMA, the current transfer must be stopped first.
                 hdma_control |= 0x80;
                 bytes_to_copy = 0;
                 hblank_bytes = 0;
-                hdma_state = DMAState::Inactive;
+                hdma_state = DmaState::Inactive;
             }
         }
 
         hdma_reg_written = false;
-    } else if (hdma_state == DMAState::Starting) {
-        hdma_state = DMAState::Active;
-    } else if (hdma_state == DMAState::Active) {
-        ExecuteHDMA();
+    } else if (hdma_state == DmaState::Starting) {
+        hdma_state = DmaState::Active;
+    } else if (hdma_state == DmaState::Active) {
+        ExecuteHdma();
 
         if (bytes_to_copy == 0) {
             // End the copy.
             hdma_control = 0xFF;
-            hdma_state = DMAState::Inactive;
-        } else if (hdma_type == HDMAType::HDMA && hblank_bytes == 0) {
+            hdma_state = DmaState::Inactive;
+        } else if (hdma_type == HdmaType::Hdma && hblank_bytes == 0) {
             // Pause the copy until the next HBLANK.
-            hdma_state = DMAState::Paused;
+            hdma_state = DmaState::Paused;
         }
     }
 }
 
-void Memory::InitHDMA() {
-    hdma_type = (hdma_control & 0x80) ? HDMAType::HDMA : HDMAType::GDMA;
+void Memory::InitHdma() {
+    hdma_type = (hdma_control & 0x80) ? HdmaType::Hdma : HdmaType::Gdma;
     bytes_to_copy = ((hdma_control & 0x7F) + 1) * 16;
     hblank_bytes = 16;
 
@@ -112,14 +112,14 @@ void Memory::InitHDMA() {
 
     hdma_control &= 0x7F;
 
-    if (hdma_type == HDMAType::HDMA && (gameboy.lcd->stat & 0x03) != 0) {
-        hdma_state = DMAState::Paused;
+    if (hdma_type == HdmaType::Hdma && (gameboy.lcd->stat & 0x03) != 0) {
+        hdma_state = DmaState::Paused;
     } else {
-        hdma_state = DMAState::Starting;
+        hdma_state = DmaState::Starting;
     }
 }
 
-void Memory::ExecuteHDMA() {
+void Memory::ExecuteHdma() {
     u16 hdma_source = (static_cast<u16>(hdma_source_hi) << 8) | hdma_source_lo;
     u16 hdma_dest = (static_cast<u16>(hdma_dest_hi | 0x80) << 8) | hdma_dest_lo;
 
@@ -128,7 +128,7 @@ void Memory::ExecuteHDMA() {
     // left for HDMA) then only one byte will be transferred in single speed mode.
     int num_bytes = std::min(2 >> double_speed, bytes_to_copy);
 
-    if (hdma_type == HDMAType::HDMA) {
+    if (hdma_type == HdmaType::Hdma) {
         num_bytes = std::min(num_bytes, hblank_bytes);
         hblank_bytes -= num_bytes;
     }
@@ -137,7 +137,7 @@ void Memory::ExecuteHDMA() {
 
     for (int i = 0; i < num_bytes; ++i) {
         if ((gameboy.lcd->stat & 0x03) != 3) {
-            vram[hdma_dest - 0x8000 + 0x2000 * vram_bank_num] = DMACopy(hdma_source);
+            vram[hdma_dest - 0x8000 + 0x2000 * vram_bank_num] = DmaCopy(hdma_source);
         }
 
         // Mask hdma_dest so it wraps around to the beginning of VRAM in case it increments past 0x9FFF.
@@ -153,14 +153,14 @@ void Memory::ExecuteHDMA() {
     hdma_control = ((bytes_to_copy / 16) - 1) & 0x7F;
 }
 
-void Memory::SignalHDMA() {
-    if (hdma_state == DMAState::Paused) {
+void Memory::SignalHdma() {
+    if (hdma_state == DmaState::Paused) {
         hblank_bytes = 16;
-        hdma_state = DMAState::Starting;
+        hdma_state = DmaState::Starting;
     }
 }
 
-u8 Memory::DMACopy(const u16 addr) const {
+u8 Memory::DmaCopy(const u16 addr) const {
     if (addr < 0x4000) {
         // ROM0 bank
         if (mbc_mode == MBC::MBC1) {
@@ -176,14 +176,14 @@ u8 Memory::DMACopy(const u16 addr) const {
     } else if (addr < 0xA000) {
         // VRAM -- switchable in CGB mode
         // Not accessible during screen mode 3. HDMA/GDMA cannot read VRAM.
-        if ((gameboy.lcd->stat & 0x03) != 3 && hdma_state != DMAState::Active) {
+        if ((gameboy.lcd->stat & 0x03) != 3 && hdma_state != DmaState::Active) {
             return vram[addr - 0x8000 + 0x2000 * vram_bank_num];
         } else {
             return 0xFF;
         }
     } else if (addr < 0xC000) {
         // External RAM bank.
-        return ReadExternalRAM(addr);
+        return ReadExternalRam(addr);
     } else if (addr < 0xD000) {
         // WRAM bank 0
         return wram[addr - 0xC000];
@@ -192,9 +192,9 @@ u8 Memory::DMACopy(const u16 addr) const {
         return wram[addr - 0xC000 + 0x1000 * ((wram_bank_num == 0) ? 0 : wram_bank_num - 1)];
     }
 
-    if (hdma_state == DMAState::Active) {
+    if (hdma_state == DmaState::Active) {
         // If HDMA/GDMA attempts to read from 0xE000-0xFFFF, it will read from 0xA000-0xBFFF instead.
-        return ReadExternalRAM(addr - 0x4000);
+        return ReadExternalRam(addr - 0x4000);
     } else if (addr < 0xF000) {
         // Echo of C000-DDFF
         return wram[addr - 0xE000];

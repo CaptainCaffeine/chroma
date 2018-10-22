@@ -73,7 +73,7 @@ void Lcd::UpdateLcd() {
             RenderScanline();
         } else if (scanline_cycles == Mode3Cycles()) {
             SetStatMode(0);
-            gameboy.mem->SignalHDMA();
+            gameboy.mem->SignalHdma();
         }
     } else if (current_scanline == 144) {
         if (scanline_cycles == 0 && gameboy.ConsoleCgb()) {
@@ -124,7 +124,7 @@ void Lcd::UpdatePowerOnState(bool was_enabled) {
         gameboy.SwapBuffers(back_buffer);
 
         // An in-progress HDMA will transfer one block after the LCD switches off.
-        gameboy.mem->SignalHDMA();
+        gameboy.mem->SignalHdma();
     }
 }
 
@@ -595,7 +595,7 @@ void Lcd::InitTileMap(u16 tile_map_addr) {
 
     // Get the current row of tile indices from VRAM.
     std::array<u8, tile_map_row_len> row_tile_map;
-    gameboy.mem->CopyFromVRAM(tile_map_addr, tile_map_row_len, 0, row_tile_map.begin());
+    gameboy.mem->CopyFromVram(tile_map_addr, tile_map_row_len, 0, row_tile_map.begin());
 
     tile_data.clear();
 
@@ -606,7 +606,7 @@ void Lcd::InitTileMap(u16 tile_map_addr) {
     } else {
         // Get the current row of background tile attributes from VRAM.
         std::array<u8, tile_map_row_len> row_attr_map;
-        gameboy.mem->CopyFromVRAM(tile_map_addr, tile_map_row_len, 1, row_attr_map.begin());
+        gameboy.mem->CopyFromVram(tile_map_addr, tile_map_row_len, 1, row_attr_map.begin());
 
         for (std::size_t i = 0; i < row_tile_map.size(); ++i) {
             tile_data.emplace_back(row_tile_map[i], row_attr_map[i]);
@@ -624,13 +624,13 @@ void Lcd::FetchTiles() {
         // Signed tile data region.
         for (auto& bg_tile : tile_data) {
             u16 tile_addr = region_start_addr + static_cast<s8>(bg_tile.index) * static_cast<s8>(tile_bytes);
-            gameboy.mem->CopyFromVRAM(tile_addr, tile_bytes, bg_tile.bank_num, bg_tile.tile.begin());
+            gameboy.mem->CopyFromVram(tile_addr, tile_bytes, bg_tile.bank_num, bg_tile.tile.begin());
         }
     } else {
         // Unsigned tile data region.
         for (auto& bg_tile : tile_data) {
             u16 tile_addr = region_start_addr + bg_tile.index * tile_bytes;
-            gameboy.mem->CopyFromVRAM(tile_addr, tile_bytes, bg_tile.bank_num, bg_tile.tile.begin());
+            gameboy.mem->CopyFromVram(tile_addr, tile_bytes, bg_tile.bank_num, bg_tile.tile.begin());
         }
     }
 }
@@ -644,7 +644,7 @@ void Lcd::FetchSpriteTiles() {
     // Sprite tiles can only be located in 0x8000-0x8FFF.
     for (auto& sa : oam_sprites) {
         u16 tile_addr = 0x8000 | (static_cast<u16>(sa.tile_index) << 4);
-        gameboy.mem->CopyFromVRAM(tile_addr, tile_size, sa.bank_num, sa.sprite_tiles.begin());
+        gameboy.mem->CopyFromVram(tile_addr, tile_size, sa.bank_num, sa.sprite_tiles.begin());
     }
 }
 

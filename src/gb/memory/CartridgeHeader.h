@@ -38,8 +38,8 @@ public:
     bool rumble_present = false;
 
 private:
-    void GetRAMSize(const std::vector<u8>& rom);
-    void GetMBCType(const std::vector<u8>& rom);
+    void GetRamSize(const std::vector<u8>& rom);
+    void GetMbcType(const std::vector<u8>& rom);
     void HeaderChecksum(const std::vector<u8>& rom) const;
 };
 

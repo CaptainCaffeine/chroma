@@ -28,12 +28,7 @@ namespace Gb {
 
 class CartridgeHeader;
 class GameBoy;
-class Timer;
-class Serial;
-class LCD;
-class Joypad;
-class Audio;
-class RTC;
+class Rtc;
 
 class Memory {
 public:
@@ -65,14 +60,14 @@ public:
     bool IF_written_this_cycle = false;
 
     // DMA functions
-    void UpdateOAM_DMA();
-    void UpdateHDMA();
-    bool HDMAInProgress() const { return hdma_state == DMAState::Active || hdma_state == DMAState::Starting; }
-    void SignalHDMA();
+    void UpdateOamDma();
+    void UpdateHdma();
+    bool HdmaInProgress() const { return hdma_state == DmaState::Active || hdma_state == DmaState::Starting; }
+    void SignalHdma();
 
     // LCD functions
     template<typename DestIter>
-    void CopyFromVRAM(const u16 start_addr, const std::size_t num_bytes, const int bank_num, DestIter dest) const {
+    void CopyFromVram(const u16 start_addr, const std::size_t num_bytes, const int bank_num, DestIter dest) const {
         std::copy_n(vram.cbegin() + (start_addr - 0x8000) + 0x2000 * bank_num, num_bytes, dest);
     }
 
@@ -91,45 +86,45 @@ private:
     std::vector<u8> wram;
     std::vector<u8> hram;
     std::vector<u8> ext_ram;
-    std::unique_ptr<RTC> rtc;
+    std::unique_ptr<Rtc> rtc;
 
     const std::string& save_path;
 
     // Init functions
     void IORegisterInit();
-    void VRAMInit();
+    void VramInit();
 
     // I/O register functions
     u8 ReadIORegisters(const u16 addr) const;
     void WriteIORegisters(const u16 addr, const u8 data);
 
     // DMA utilities
-    enum class DMAState {Inactive, Starting, Active, Paused};
-    enum class Bus {None, External, VRAM};
-    DMAState oam_dma_state = DMAState::Inactive;
+    enum class DmaState {Inactive, Starting, Active, Paused};
+    enum class Bus {None, External, Vram};
+    DmaState oam_dma_state = DmaState::Inactive;
     Bus dma_bus_block = Bus::None;
 
     u16 oam_transfer_addr;
     u8 oam_transfer_byte;
     unsigned int bytes_read = 160;
 
-    enum class HDMAType {GDMA, HDMA};
-    DMAState hdma_state = DMAState::Inactive;
-    HDMAType hdma_type;
+    enum class HdmaType {Gdma, Hdma};
+    DmaState hdma_state = DmaState::Inactive;
+    HdmaType hdma_type;
     bool hdma_reg_written = false;
     int bytes_to_copy = 0, hblank_bytes = 0;
 
-    void InitHDMA();
-    void ExecuteHDMA();
-    u8 DMACopy(const u16 addr) const;
+    void InitHdma();
+    void ExecuteHdma();
+    u8 DmaCopy(const u16 addr) const;
 
     // MBC/Saving functions
     void ReadSaveFile(unsigned int cart_ram_size);
     void WriteSaveFile();
 
-    u8 ReadExternalRAM(const u16 addr) const;
-    void WriteExternalRAM(const u16 addr, const u8 data);
-    void WriteMBCControlRegisters(const u16 addr, const u8 data);
+    u8 ReadExternalRam(const u16 addr) const;
+    void WriteExternalRam(const u16 addr, const u8 data);
+    void WriteMbcControlRegisters(const u16 addr, const u8 data);
 
     // IO registers
     static constexpr u16 P1     = 0xFF00;
