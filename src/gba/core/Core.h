@@ -19,6 +19,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <array>
 
 #include "common/CommonTypes.h"
 #include "common/CommonEnums.h"
