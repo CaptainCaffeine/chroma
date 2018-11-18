@@ -100,18 +100,18 @@ private:
     int eeprom_addr_len = 0;
     std::vector<u8> eeprom_bitstream;
     u16 eeprom_ready = 0x1;
-
     int eeprom_read_pos = 64;
     u64 eeprom_read_buffer = 0x0;
+    static constexpr int eeprom_write_cycles = 108368; // 6.46ms
 
-    static constexpr u32 flash_cmd_addr1    = 0x0E00'5555;
-    static constexpr u32 flash_cmd_addr2    = 0x0E00'2AAA;
-    static constexpr u32 flash_man_addr     = 0x0E00'0000;
-    static constexpr u32 flash_dev_addr     = 0x0E00'0001;
-    static constexpr u16 panasonic_id       = 0x1B32;
-    static constexpr u16 sanyo_id           = 0x1362;
-    static constexpr int flash_erase_cycles = 30000; // Slightly less than 2ms.
-    static constexpr int flash_write_cycles = 300; // Around 18us.
+    static constexpr u32 flash_cmd_addr1     = 0x0E00'5555;
+    static constexpr u32 flash_cmd_addr2     = 0x0E00'2AAA;
+    static constexpr u32 flash_man_addr      = 0x0E00'0000;
+    static constexpr u32 flash_dev_addr      = 0x0E00'0001;
+    static constexpr u16 panasonic_id        = 0x1B32;
+    static constexpr u16 sanyo_id            = 0x1362;
+    static constexpr int flash_erase_cycles  = 30000; // 1.79ms
+    static constexpr int flash_write_cycles  = 300; // 17.9us
 
     enum class FlashState {NotStarted, Starting, Ready, Command};
     enum FlashCmd {Start1      = 0xAA,

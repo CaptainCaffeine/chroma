@@ -157,7 +157,7 @@ void Memory::ParseEepromCommand() {
     }
 
     const bool read_request = eeprom_bitstream[1] == 1;
-    u16 eeprom_addr = ParseEepromAddr(stream_size, read_request);
+    const u16 eeprom_addr = ParseEepromAddr(stream_size, read_request);
     if (eeprom_addr == 0xFFFF) {
         eeprom_bitstream.clear();
         return;
@@ -182,7 +182,7 @@ void Memory::ParseEepromCommand() {
         // We store the EEPROM data as big-endian for compatibility with mGBA.
         eeprom[eeprom_addr] = ByteSwap64(value);
         eeprom_ready = 0;
-        delayed_op = {108368, [this]() {
+        delayed_op = {eeprom_write_cycles, [this]() {
             eeprom_ready = 1;
         }};
     }
@@ -191,7 +191,7 @@ void Memory::ParseEepromCommand() {
 }
 
 u16 Memory::ParseEepromAddr(int stream_size, bool read_request) {
-    const int non_addr_bits = read_request ?  3 : 67;
+    const int non_addr_bits = read_request ? 3 : 67;
 
     if (eeprom_addr_len == 0) {
         InitEeprom(stream_size, non_addr_bits);
