@@ -25,7 +25,7 @@ class GameBoy;
 
 class Joypad {
 public:
-    Joypad(GameBoy& _gameboy)
+    explicit Joypad(GameBoy& _gameboy)
             : gameboy(_gameboy) {}
 
     enum Button : u8 {Right  = 0x01,

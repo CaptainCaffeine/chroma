@@ -26,7 +26,7 @@ class GameBoy;
 
 class Timer {
 public:
-    Timer(GameBoy& _gameboy)
+    explicit Timer(GameBoy& _gameboy)
             : gameboy(_gameboy) {}
 
     void UpdateTimer();

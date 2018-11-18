@@ -25,7 +25,7 @@ namespace Gb {
 
 class Rtc {
 public:
-    Rtc(std::vector<u8>& save_game);
+    explicit Rtc(std::vector<u8>& save_game);
 
     void LatchCurrentTime();
     u8 GetFlags() const { return flags | 0x3E; }

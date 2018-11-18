@@ -28,7 +28,7 @@ namespace Gb {
 class GameBoy;
 
 struct BgAttrs {
-    BgAttrs(u8 tile_index);
+    explicit BgAttrs(u8 tile_index);
     BgAttrs(u8 tile_index, u8 attrs);
 
     const u8 index = 0, above_sprites = 0;
@@ -50,7 +50,7 @@ struct SpriteAttrs {
 
 class Lcd {
 public:
-    Lcd(GameBoy& _gameboy);
+    explicit Lcd(GameBoy& _gameboy);
 
     void UpdateLcd();
 

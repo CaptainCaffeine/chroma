@@ -25,7 +25,7 @@ class GameBoy;
 
 class Serial {
 public:
-    Serial(GameBoy& _gameboy)
+    explicit Serial(GameBoy& _gameboy)
             : gameboy(_gameboy) {}
 
     void UpdateSerial();

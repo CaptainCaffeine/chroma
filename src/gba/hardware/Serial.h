@@ -25,7 +25,7 @@ class Core;
 
 class Serial {
 public:
-    Serial(Core&) {}
+    explicit Serial(Core&) {}
 
     IOReg data0          = {0x0000, 0xFFFF, 0xFFFF};
     IOReg data1          = {0x0000, 0xFFFF, 0xFFFF};

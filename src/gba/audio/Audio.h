@@ -55,7 +55,7 @@ private:
 
 class Audio {
 public:
-    Audio(Core& _core);
+    explicit Audio(Core& _core);
     ~Audio();
 
     IOReg psg_control  = {0x0000, 0xFF77, 0xFF77};
