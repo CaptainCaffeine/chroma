@@ -25,184 +25,184 @@ struct IOReg {
     u16 read_mask;
     u16 write_mask;
 
-    u16 Read() const { return v & read_mask; }
-    void Write(u16 data, u16 mask_8bit) { v = (v & ~(write_mask & mask_8bit)) | (data & write_mask); }
-    void Clear(u16 data) { v &= ~(data & write_mask); }
+    constexpr u16 Read() const { return v & read_mask; }
+    constexpr void Write(u16 data, u16 mask_8bit) { v = (v & ~(write_mask & mask_8bit)) | (data & write_mask); }
+    constexpr void Clear(u16 data) { v &= ~(data & write_mask); }
 
     // Assignment operator.
-    IOReg& operator=(IOReg rhs) {
+    constexpr IOReg& operator=(const IOReg& rhs) {
         v = rhs.v;
         return *this;
     }
 
-    IOReg& operator=(int rhs) {
+    constexpr IOReg& operator=(int rhs) {
         v = rhs;
         return *this;
     }
 
     // Conversion operator.
-    operator int() const {
+    constexpr operator int() const {
         return v;
     }
 
     // Unary operators.
-    IOReg& operator++() {
+    constexpr IOReg& operator++() {
         ++v;
         return *this;
     }
 
-    IOReg operator++(int) {
+    constexpr IOReg operator++(int) {
         IOReg temp{*this};
         operator++();
         return temp;
     }
 
-    IOReg& operator--() {
+    constexpr IOReg& operator--() {
         --v;
         return *this;
     }
 
-    IOReg operator--(int) {
+    constexpr IOReg operator--(int) {
         IOReg temp{*this};
         operator--();
         return temp;
     }
 
     // Binary arithmetic operators with another IOReg.
-    IOReg& operator+=(const IOReg& rhs) {
+    constexpr IOReg& operator+=(const IOReg& rhs) {
         v += rhs.v;
         return *this;
     }
 
-    IOReg& operator-=(const IOReg& rhs) {
+    constexpr IOReg& operator-=(const IOReg& rhs) {
         v -= rhs.v;
         return *this;
     }
 
-    IOReg& operator*=(const IOReg& rhs) {
+    constexpr IOReg& operator*=(const IOReg& rhs) {
         v *= rhs.v;
         return *this;
     }
 
-    IOReg& operator/=(const IOReg& rhs) {
+    constexpr IOReg& operator/=(const IOReg& rhs) {
         v /= rhs.v;
         return *this;
     }
 
-    IOReg& operator&=(const IOReg& rhs) {
+    constexpr IOReg& operator&=(const IOReg& rhs) {
         v &= rhs.v;
         return *this;
     }
 
-    IOReg& operator|=(const IOReg& rhs) {
+    constexpr IOReg& operator|=(const IOReg& rhs) {
         v |= rhs.v;
         return *this;
     }
 
-    IOReg& operator^=(const IOReg& rhs) {
+    constexpr IOReg& operator^=(const IOReg& rhs) {
         v ^= rhs.v;
         return *this;
     }
 
-    IOReg& operator<<=(const IOReg& rhs) {
+    constexpr IOReg& operator<<=(const IOReg& rhs) {
         v <<= rhs.v;
         return *this;
     }
 
-    IOReg& operator>>=(const IOReg& rhs) {
+    constexpr IOReg& operator>>=(const IOReg& rhs) {
         v >>= rhs.v;
         return *this;
     }
 
     // Binary arithmetic operators with an int.
-    IOReg& operator+=(int rhs) {
+    constexpr IOReg& operator+=(int rhs) {
         v += rhs;
         return *this;
     }
 
-    IOReg& operator-=(int rhs) {
+    constexpr IOReg& operator-=(int rhs) {
         v -= rhs;
         return *this;
     }
 
-    IOReg& operator*=(int rhs) {
+    constexpr IOReg& operator*=(int rhs) {
         v *= rhs;
         return *this;
     }
 
-    IOReg& operator/=(int rhs) {
+    constexpr IOReg& operator/=(int rhs) {
         v /= rhs;
         return *this;
     }
 
-    IOReg& operator&=(int rhs) {
+    constexpr IOReg& operator&=(int rhs) {
         v &= rhs;
         return *this;
     }
 
-    IOReg& operator|=(int rhs) {
+    constexpr IOReg& operator|=(int rhs) {
         v |= rhs;
         return *this;
     }
 
-    IOReg& operator^=(int rhs) {
+    constexpr IOReg& operator^=(int rhs) {
         v ^= rhs;
         return *this;
     }
 
-    IOReg& operator<<=(int rhs) {
+    constexpr IOReg& operator<<=(int rhs) {
         v <<= rhs;
         return *this;
     }
 
-    IOReg& operator>>=(int rhs) {
+    constexpr IOReg& operator>>=(int rhs) {
         v >>= rhs;
         return *this;
     }
 };
 
 // Binary arithmetic operators with another IOReg.
-inline IOReg operator+(IOReg lhs, const IOReg& rhs) {
+constexpr IOReg operator+(IOReg lhs, const IOReg& rhs) {
     lhs += rhs;
     return lhs;
 }
 
-inline IOReg operator-(IOReg lhs, const IOReg& rhs) {
+constexpr IOReg operator-(IOReg lhs, const IOReg& rhs) {
     lhs -= rhs;
     return lhs;
 }
 
-inline IOReg operator*(IOReg lhs, const IOReg& rhs) {
+constexpr IOReg operator*(IOReg lhs, const IOReg& rhs) {
     lhs *= rhs;
     return lhs;
 }
 
-inline IOReg operator/(IOReg lhs, const IOReg& rhs) {
+constexpr IOReg operator/(IOReg lhs, const IOReg& rhs) {
     lhs /= rhs;
     return lhs;
 }
 
-inline IOReg operator&(IOReg lhs, const IOReg& rhs) {
+constexpr IOReg operator&(IOReg lhs, const IOReg& rhs) {
     lhs &= rhs;
     return lhs;
 }
 
-inline IOReg operator|(IOReg lhs, const IOReg& rhs) {
+constexpr IOReg operator|(IOReg lhs, const IOReg& rhs) {
     lhs |= rhs;
     return lhs;
 }
 
-inline IOReg operator^(IOReg lhs, const IOReg& rhs) {
+constexpr IOReg operator^(IOReg lhs, const IOReg& rhs) {
     lhs ^= rhs;
     return lhs;
 }
 
-inline IOReg operator<<(IOReg lhs, const IOReg& rhs) {
+constexpr IOReg operator<<(IOReg lhs, const IOReg& rhs) {
     lhs <<= rhs;
     return lhs;
 }
 
-inline IOReg operator>>(IOReg lhs, const IOReg& rhs) {
+constexpr IOReg operator>>(IOReg lhs, const IOReg& rhs) {
     lhs >>= rhs;
     return lhs;
 }
@@ -210,27 +210,27 @@ inline IOReg operator>>(IOReg lhs, const IOReg& rhs) {
 // Binary arithmetic operators with an int not needed due to implicit conversion to int.
 
 // Comparison operators.
-inline bool operator==(const IOReg& lhs, const IOReg& rhs) {
+constexpr bool operator==(const IOReg& lhs, const IOReg& rhs) {
     return lhs.v == rhs.v;
 }
 
-inline bool operator!=(const IOReg& lhs, const IOReg& rhs) {
+constexpr bool operator!=(const IOReg& lhs, const IOReg& rhs) {
     return !operator==(lhs, rhs);
 }
 
-inline bool operator<(const IOReg& lhs, const IOReg& rhs) {
+constexpr bool operator<(const IOReg& lhs, const IOReg& rhs) {
     return lhs.v < rhs.v;
 }
 
-inline bool operator>(const IOReg& lhs, const IOReg& rhs) {
+constexpr bool operator>(const IOReg& lhs, const IOReg& rhs) {
     return operator<(rhs, lhs);
 }
 
-inline bool operator<=(const IOReg& lhs, const IOReg& rhs) {
+constexpr bool operator<=(const IOReg& lhs, const IOReg& rhs) {
     return !operator>(lhs, rhs);
 }
 
-inline bool operator>=(const IOReg& lhs, const IOReg& rhs) {
+constexpr bool operator>=(const IOReg& lhs, const IOReg& rhs) {
     return !operator<(lhs, rhs);
 }
 
