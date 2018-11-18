@@ -43,6 +43,7 @@ Memory::Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom, cons
 
     ReadSaveFile();
     CheckHardwareOverrides();
+    UpdateWaitStates();
 }
 
 Memory::~Memory() {
