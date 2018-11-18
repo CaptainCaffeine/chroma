@@ -135,7 +135,7 @@ private:
     struct DelayedOp {
         DelayedOp(int _cycles, std::function<void()> _action)
                 : cycles(_cycles)
-                , action(_action) {}
+                , action(std::move(_action)) {}
 
         int cycles;
         std::function<void()> action;
