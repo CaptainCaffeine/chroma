@@ -128,10 +128,6 @@ void Audio::WriteSoundOn(u8 data) {
 
     if (was_enabled && !AudioEnabled()) {
         ClearRegisters();
-    } else if (!was_enabled && AudioEnabled()) {
-        square1.PowerOn();
-        square2.PowerOn();
-        wave.PowerOn();
     }
 }
 

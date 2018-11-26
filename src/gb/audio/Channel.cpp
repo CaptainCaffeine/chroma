@@ -97,10 +97,6 @@ void Channel::CheckTrigger(u32 frame_seq) {
         }
 
         if (gen_type == Generator::Wave) {
-            if (console == Console::DMG && reading_sample) {
-                CorruptWaveRam();
-            }
-
             wave_pos = 0;
             channel_enabled = WaveChannelOn();
 
@@ -317,21 +313,6 @@ void Channel::ClearRegisters() {
     }
 
     channel_enabled = false;
-}
-
-void Channel::CorruptWaveRam() {
-    // On DMG, if the wave channel is triggered while a sample is being read from the wave RAM, the first few bytes
-    // of wave RAM get corrupted.
-    if (wave_pos < 4) {
-        // If the sample being read is one of the first four bytes, then the first byte is set to the byte being read.
-        wave_ram[0] = current_sample;
-    } else {
-        // Otherwise, the first 4 bytes are overwritten with 4 bytes in the 4-aligned block around the byte being read.
-        unsigned int copy_pos = (wave_pos / 4) * 4;
-        for (int i = 0; i < 4; ++i) {
-            wave_ram[i] = wave_ram[copy_pos + i];
-        }
-    }
 }
 
 bool Channel::FrameSeqBitIsLow(unsigned int clock_bit, u32 frame_seq) const {

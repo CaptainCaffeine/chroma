@@ -53,8 +53,6 @@ public:
     bool EnabledLeft(const u8 sound_select) const { return channel_enabled && (sound_select & left_enable_mask); }
     bool EnabledRight(const u8 sound_select) const { return channel_enabled && (sound_select & right_enable_mask); }
 
-    void PowerOn() { wave_pos = 0x00; current_sample = 0x00; }
-
     void ExtraLengthClocking(u8 new_frequency_hi, u32 frame_seq);
     void SweepWriteHandler();
 
@@ -127,7 +125,6 @@ private:
         u8 sample_byte = wave_ram[(wave_pos & 0x1E) >> 1];
         return (wave_pos & 0x01) ? (sample_byte & 0x0F) : ((sample_byte & 0xF0) >> 4);
     }
-    void CorruptWaveRam();
 
     u16 ShiftClock() const { return (frequency_lo & 0xF0) >> 4; }
 
