@@ -175,7 +175,7 @@ bool Cpu::InterruptsEnabled() const {
 }
 
 bool Cpu::ValidCpuMode(u32 new_mode) const {
-    switch(static_cast<CpuMode>(new_mode & cpu_mode)) {
+    switch (static_cast<CpuMode>(new_mode & cpu_mode)) {
     case CpuMode::User:
     case CpuMode::Fiq:
     case CpuMode::Irq:

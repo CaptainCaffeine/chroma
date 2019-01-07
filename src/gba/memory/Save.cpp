@@ -495,7 +495,7 @@ void Memory::CheckSaveOverrides() {
 
     auto game_override = save_overrides.find(game_code);
     if (game_override != save_overrides.end()) {
-        switch(game_override->second) {
+        switch (game_override->second) {
         case SaveType::SRam:
             fmt::print("SRAM override\n");
 
