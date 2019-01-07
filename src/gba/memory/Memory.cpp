@@ -526,14 +526,59 @@ u16 Memory::ReadIO(const u32 addr) const {
         return core.lcd->blend_control.Read();
     case BLDALPHA:
         return core.lcd->blend_alpha.Read();
+    case SOUND1CNT_L:
+        return core.audio->square1.ReadSweepGba();
+    case SOUND1CNT_H:
+        return core.audio->square1.ReadDutyAndEnvelopeGba();
+    case SOUND1CNT_X:
+        return core.audio->square1.ReadResetGba();
+    case INVALID_66:
+        return 0x0000;
+    case SOUND2CNT_L:
+        return core.audio->square2.ReadDutyAndEnvelopeGba();
+    case SOUND2CNT_H:
+        return core.audio->square2.ReadResetGba();
+    case INVALID_6E:
+        return 0x0000;
+    case SOUND3CNT_L:
+        return core.audio->wave.ReadSweepGba();
+    case SOUND3CNT_H:
+        return core.audio->wave.ReadDutyAndEnvelopeGba();
+    case SOUND3CNT_X:
+        return core.audio->wave.ReadResetGba();
+    case INVALID_76:
+        return 0x0000;
+    case SOUND4CNT_L:
+        return core.audio->noise.ReadDutyAndEnvelopeGba();
+    case INVALID_7A:
+        return 0x0000;
+    case SOUND4CNT_H:
+        return core.audio->noise.ReadResetGba();
+    case INVALID_7E:
+        return 0x0000;
     case SOUNDCNT_L:
         return core.audio->psg_control.Read();
     case SOUNDCNT_H:
         return core.audio->fifo_control.Read();
     case SOUNDCNT_X:
-        return core.audio->sound_on.Read();
+        return core.audio->ReadSoundOn();
+    case INVALID_86:
+        return 0x0000;
     case SOUNDBIAS:
         return core.audio->soundbias.Read();
+    case INVALID_8A:
+        return 0x0000;
+    case WAVE_RAM0_L:
+    case WAVE_RAM0_H:
+    case WAVE_RAM1_L:
+    case WAVE_RAM1_H:
+    case WAVE_RAM2_L:
+    case WAVE_RAM2_H:
+    case WAVE_RAM3_L:
+    case WAVE_RAM3_H: {
+        const u32 wave_ram_addr = addr - WAVE_RAM0_L + core.audio->wave.AccessibleBankOffset();
+        return core.audio->wave_ram[wave_ram_addr] | (core.audio->wave_ram[wave_ram_addr + 1] << 8);
+    }
     case DMA0CNT_L:
         return 0x0000;
     case DMA0CNT_H:
@@ -751,17 +796,29 @@ void Memory::WriteIO(const u32 addr, const u16 data, const u16 mask) {
     case BLDY:
         core.lcd->blend_fade.Write(data, mask);
         break;
+    case SOUND1CNT_L:
+    case SOUND1CNT_H:
+    case SOUND1CNT_X:
+    case SOUND2CNT_L:
+    case SOUND2CNT_H:
+    case SOUND3CNT_L:
+    case SOUND3CNT_H:
+    case SOUND3CNT_X:
+    case SOUND4CNT_L:
+    case SOUND4CNT_H:
     case SOUNDCNT_L:
-        core.audio->psg_control.Write(data, mask);
-        break;
     case SOUNDCNT_H:
-        core.audio->WriteFifoControl(data, mask);
-        break;
     case SOUNDCNT_X:
-        core.audio->WriteSoundOn(data, mask);
-        break;
     case SOUNDBIAS:
-        core.audio->soundbias.Write(data, mask);
+    case WAVE_RAM0_L:
+    case WAVE_RAM0_H:
+    case WAVE_RAM1_L:
+    case WAVE_RAM1_H:
+    case WAVE_RAM2_L:
+    case WAVE_RAM2_H:
+    case WAVE_RAM3_L:
+    case WAVE_RAM3_H:
+        core.audio->WriteSoundRegs(addr, data, mask);
         break;
     case FIFO_A_L:
     case FIFO_A_H:

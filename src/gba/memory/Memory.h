@@ -256,6 +256,7 @@ private:
     u16 ParseEepromAddr(int stream_size, bool read_request);
     void InitEeprom(int stream_size, int non_addr_bits);
 
+public:
     // IO registers
     static constexpr u32 DISPCNT     = 0x0400'0000;
     static constexpr u32 GREENSWAP   = 0x0400'0002;
@@ -308,18 +309,25 @@ private:
     static constexpr u32 SOUND1CNT_L = 0x0400'0060;
     static constexpr u32 SOUND1CNT_H = 0x0400'0062;
     static constexpr u32 SOUND1CNT_X = 0x0400'0064;
+    static constexpr u32 INVALID_66  = 0x0400'0066;
     static constexpr u32 SOUND2CNT_L = 0x0400'0068;
     static constexpr u32 SOUND2CNT_H = 0x0400'006C;
+    static constexpr u32 INVALID_6E  = 0x0400'006E;
     static constexpr u32 SOUND3CNT_L = 0x0400'0070;
     static constexpr u32 SOUND3CNT_H = 0x0400'0072;
     static constexpr u32 SOUND3CNT_X = 0x0400'0074;
+    static constexpr u32 INVALID_76  = 0x0400'0076;
     static constexpr u32 SOUND4CNT_L = 0x0400'0078;
+    static constexpr u32 INVALID_7A  = 0x0400'007A;
     static constexpr u32 SOUND4CNT_H = 0x0400'007C;
+    static constexpr u32 INVALID_7E  = 0x0400'007E;
 
     static constexpr u32 SOUNDCNT_L  = 0x0400'0080;
     static constexpr u32 SOUNDCNT_H  = 0x0400'0082;
     static constexpr u32 SOUNDCNT_X  = 0x0400'0084;
+    static constexpr u32 INVALID_86  = 0x0400'0086;
     static constexpr u32 SOUNDBIAS   = 0x0400'0088;
+    static constexpr u32 INVALID_8A  = 0x0400'008A;
 
     static constexpr u32 WAVE_RAM0_L = 0x0400'0090;
     static constexpr u32 WAVE_RAM0_H = 0x0400'0092;

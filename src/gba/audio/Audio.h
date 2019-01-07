@@ -25,15 +25,11 @@
 #include "common/RingBuffer.h"
 #include "common/Biquad.h"
 #include "gba/memory/IOReg.h"
+#include "gb/audio/Channel.h"
 
 namespace Gba {
 
 class Core;
-
-enum Generator {Square1 = 0x01,
-                Square2 = 0x02,
-                Wave    = 0x04,
-                Noise   = 0x08};
 
 class Fifo {
 public:
@@ -63,6 +59,13 @@ public:
     IOReg sound_on     = {0x0000, 0x008F, 0x0080};
     IOReg soundbias    = {0x0000, 0xC3FE, 0xC3FE};
 
+    Gb::Channel<Gb::Gen::Square1> square1;
+    Gb::Channel<Gb::Gen::Square2> square2;
+    Gb::Channel<Gb::Gen::Wave> wave;
+    Gb::Channel<Gb::Gen::Noise> noise;
+
+    std::array<u8, 0x20> wave_ram{};
+
     std::array<Fifo, 2> fifos;
     std::array<s16, 1600> output_buffer;
 
@@ -70,7 +73,9 @@ public:
     void ConsumeSample(int f, u64 timer_clock);
     int NextEvent();
 
-    void WriteSoundOn(u16 data, u16 mask);
+    void WriteSoundRegs(const u32 addr, const u16 data, const u16 mask);
+
+    u16 ReadSoundOn();
 
     void WriteFifoControl(u16 data, u16 mask);
     int FifoTimerSelect(int f) const { return (fifo_control >> (10 + 4 * f)) & 0x1; }
@@ -95,12 +100,17 @@ private:
     void Resample();
     int ClampSample(int sample) const;
 
+    u64 GetFrameSequencer() const { return audio_clock >> 15; }
+
+    void WriteSoundOn(u16 data, u16 mask);
+
+    void ClearRegisters();
+
     int PsgVolumeRight() const { return psg_control & 0x7; }
     int PsgVolumeLeft() const { return (psg_control >> 4) & 0x7; }
-    bool PsgEnabledRight(Generator gen) const { return (psg_control >> 8) & gen; }
-    bool PsgEnabledLeft(Generator gen) const { return (psg_control >> 12) & gen; }
+    u8 PsgEnabledChannels() const { return psg_control >> 8; }
 
-    int PsgMixerVolume() const { return fifo_control & 0x3; }
+    int PsgMixerVolume() const { return 2 - (fifo_control & 0x3); }
     int FifoVolume(int f) const { return (~fifo_control >> (2 + f)) & 0x1; }
     bool FifoEnabledRight(int f) const { return (fifo_control >> (8 + 4 * f)) & 0x1; }
     bool FifoEnabledLeft(int f) const { return (fifo_control >> (9 + 4 * f)) & 0x1; }

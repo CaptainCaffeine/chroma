@@ -313,46 +313,46 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
     case IF:
         return interrupt_flags | 0xE0;
     case NR10:
-        return gameboy.audio->square1.sweep | 0x80;
+        return gameboy.audio->square1.ReadSweepCgb();
     case NR11:
-        return gameboy.audio->square1.sound_length | 0x3F;
+        return gameboy.audio->square1.ReadSoundLengthCgb();
     case NR12:
-        return gameboy.audio->square1.volume_envelope;
+        return gameboy.audio->square1.ReadEnvelopeCgb();
     case NR13:
         // This register is write-only.
         return 0xFF;
     case NR14:
-        return gameboy.audio->square1.frequency_hi | 0xBF;
+        return gameboy.audio->square1.ReadResetCgb();
     case NR21:
-        return gameboy.audio->square2.sound_length | 0x3F;
+        return gameboy.audio->square2.ReadSoundLengthCgb();
     case NR22:
-        return gameboy.audio->square2.volume_envelope;
+        return gameboy.audio->square2.ReadEnvelopeCgb();
     case NR23:
         // This register is write-only.
         return 0xFF;
     case NR24:
-        return gameboy.audio->square2.frequency_hi | 0xBF;
+        return gameboy.audio->square2.ReadResetCgb();
     case NR30:
-        return gameboy.audio->wave.channel_on | 0x7F;
+        return gameboy.audio->wave.ReadSweepCgb();
     case NR31:
         // This register is write-only.
         return 0xFF;
     case NR32:
-        return gameboy.audio->wave.volume_envelope | 0x9F;
+        return gameboy.audio->wave.ReadEnvelopeCgb();
     case NR33:
         // This register is write-only.
         return 0xFF;
     case NR34:
-        return gameboy.audio->wave.frequency_hi | 0xBF;
+        return gameboy.audio->wave.ReadResetCgb();
     case NR41:
         // This register is write-only.
         return 0xFF;
     case NR42:
-        return gameboy.audio->noise.volume_envelope;
+        return gameboy.audio->noise.ReadEnvelopeCgb();
     case NR43:
-        return gameboy.audio->noise.frequency_lo;
+        return gameboy.audio->noise.ReadNoiseControlCgb();
     case NR44:
-        return gameboy.audio->noise.frequency_hi | 0xBF;
+        return gameboy.audio->noise.ReadResetCgb();
     case NR50:
         return gameboy.audio->master_volume;
     case NR51:
@@ -361,19 +361,7 @@ u8 Memory::ReadIORegisters(const u16 addr) const {
         return gameboy.audio->ReadSoundOn();
     case WAVE_0: case WAVE_1: case WAVE_2: case WAVE_3: case WAVE_4: case WAVE_5: case WAVE_6: case WAVE_7:
     case WAVE_8: case WAVE_9: case WAVE_A: case WAVE_B: case WAVE_C: case WAVE_D: case WAVE_E: case WAVE_F:
-        if (gameboy.audio->wave.channel_on) {
-            // While the wave channel is enabled, reads to wave RAM return the byte containing the sample
-            // currently being played.
-            if (gameboy.ConsoleCgb() || gameboy.audio->wave.reading_sample) {
-                return gameboy.audio->wave_ram[gameboy.audio->wave.wave_pos >> 1];
-            } else {
-                // On DMG, the wave RAM can only be accessed within 2 cycles after the sample position has been
-                // incremented, while the APU is reading the sample.
-                return 0xFF;
-            }
-        } else {
-            return gameboy.audio->wave_ram[addr - 0xFF30];
-        }
+        return gameboy.audio->wave_ram[addr - WAVE_0];
     case LCDC:
         return gameboy.lcd->lcdc;
     case STAT:
@@ -503,144 +491,29 @@ void Memory::WriteIORegisters(const u16 addr, const u8 data) {
         IF_written_this_cycle = true;
         break;
     case NR10:
-        if (gameboy.audio->AudioEnabled()) {
-            gameboy.audio->square1.sweep = data & 0x7F;
-            gameboy.audio->square1.SweepWriteHandler();
-        }
-        break;
     case NR11:
-        if (gameboy.audio->AudioEnabled() || gameboy.ConsoleDmg()) {
-            gameboy.audio->square1.sound_length = data;
-            gameboy.audio->square1.ReloadLengthCounter();
-            gameboy.audio->square1.SetDutyCycle();
-        }
-        break;
     case NR12:
-        if (gameboy.audio->AudioEnabled()) {
-            gameboy.audio->square1.volume_envelope = data;
-            if ((gameboy.audio->square1.volume_envelope & 0xF0) == 0) {
-                gameboy.audio->square1.channel_enabled = false;
-            }
-        }
-        break;
     case NR13:
-        if (gameboy.audio->AudioEnabled()) {
-            gameboy.audio->square1.frequency_lo = data;
-        }
-        break;
     case NR14:
-        if (gameboy.audio->AudioEnabled()) {
-            gameboy.audio->square1.ExtraLengthClocking(data & 0xC7, gameboy.audio->GetFrameSequencer());
-            gameboy.audio->square1.frequency_hi = data & 0xC7;
-        }
-        break;
     case NR21:
-        if (gameboy.audio->AudioEnabled() || gameboy.ConsoleDmg()) {
-            gameboy.audio->square2.sound_length = data;
-            gameboy.audio->square2.ReloadLengthCounter();
-            gameboy.audio->square2.SetDutyCycle();
-        }
-        break;
     case NR22:
-        if (gameboy.audio->AudioEnabled()) {
-            gameboy.audio->square2.volume_envelope = data;
-            if ((gameboy.audio->square2.volume_envelope & 0xF0) == 0) {
-                gameboy.audio->square2.channel_enabled = false;
-            }
-        }
-        break;
     case NR23:
-        if (gameboy.audio->AudioEnabled()) {
-            gameboy.audio->square2.frequency_lo = data;
-        }
-        break;
     case NR24:
-        if (gameboy.audio->AudioEnabled()) {
-            gameboy.audio->square2.ExtraLengthClocking(data & 0xC7, gameboy.audio->GetFrameSequencer());
-            gameboy.audio->square2.frequency_hi = data & 0xC7;
-        }
-        break;
     case NR30:
-        if (gameboy.audio->AudioEnabled()) {
-            gameboy.audio->wave.channel_on = data & 0x80;
-            if ((gameboy.audio->wave.channel_on & 0x80) == 0) {
-                gameboy.audio->wave.channel_enabled = false;
-            }
-        }
-        break;
     case NR31:
-        if (gameboy.audio->AudioEnabled() || gameboy.ConsoleDmg()) {
-            gameboy.audio->wave.sound_length = data;
-            gameboy.audio->wave.ReloadLengthCounter();
-        }
-        break;
     case NR32:
-        if (gameboy.audio->AudioEnabled()) {
-            gameboy.audio->wave.volume_envelope = data & 0x60;
-        }
-        break;
     case NR33:
-        if (gameboy.audio->AudioEnabled()) {
-            gameboy.audio->wave.frequency_lo = data;
-        }
-        break;
     case NR34:
-        if (gameboy.audio->AudioEnabled()) {
-            gameboy.audio->wave.ExtraLengthClocking(data & 0xC7, gameboy.audio->GetFrameSequencer());
-            gameboy.audio->wave.frequency_hi = data & 0xC7;
-        }
-        break;
     case NR41:
-        if (gameboy.audio->AudioEnabled() || gameboy.ConsoleDmg()) {
-            gameboy.audio->noise.sound_length = data & 0x3F;
-            gameboy.audio->noise.ReloadLengthCounter();
-        }
-        break;
     case NR42:
-        if (gameboy.audio->AudioEnabled()) {
-            gameboy.audio->noise.volume_envelope = data;
-            if ((gameboy.audio->noise.volume_envelope & 0xF0) == 0) {
-                gameboy.audio->noise.channel_enabled = false;
-            }
-        }
-        break;
     case NR43:
-        if (gameboy.audio->AudioEnabled()) {
-            gameboy.audio->noise.frequency_lo = data;
-        }
-        break;
     case NR44:
-        if (gameboy.audio->AudioEnabled()) {
-            gameboy.audio->noise.ExtraLengthClocking(data & 0xC0, gameboy.audio->GetFrameSequencer());
-            gameboy.audio->noise.frequency_hi = data & 0xC0;
-        }
-        break;
     case NR50:
-        if (gameboy.audio->AudioEnabled()) {
-            gameboy.audio->master_volume = data;
-        }
-        break;
     case NR51:
-        if (gameboy.audio->AudioEnabled()) {
-            gameboy.audio->sound_select = data;
-        }
-        break;
     case NR52:
-        gameboy.audio->WriteSoundOn(data);
-        break;
     case WAVE_0: case WAVE_1: case WAVE_2: case WAVE_3: case WAVE_4: case WAVE_5: case WAVE_6: case WAVE_7:
     case WAVE_8: case WAVE_9: case WAVE_A: case WAVE_B: case WAVE_C: case WAVE_D: case WAVE_E: case WAVE_F:
-        if (gameboy.audio->wave.channel_on) {
-            // While the wave channel is enabled, writes to wave RAM write the byte containing the sample
-            // currently being played.
-            if (gameboy.ConsoleCgb() || gameboy.audio->wave.reading_sample) {
-                // On DMG, the wave RAM can only be accessed within 2 cycles after the sample position has been
-                // incremented, while the APU is reading the sample.
-                gameboy.audio->wave_ram[gameboy.audio->wave.wave_pos >> 1] = data;
-            }
-        } else {
-            gameboy.audio->wave_ram[addr - 0xFF30] = data;
-        }
+        gameboy.audio->WriteSoundRegs(addr, data);
         break;
     case LCDC:
         gameboy.lcd->WriteLcdc(data);

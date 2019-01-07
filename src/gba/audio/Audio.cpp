@@ -19,11 +19,16 @@
 #include "gba/audio/Audio.h"
 #include "gba/core/Core.h"
 #include "gba/hardware/Dma.h"
+#include "gba/memory/Memory.h"
 
 namespace Gba {
 
 Audio::Audio(Core& _core)
-        : core(_core)
+        : square1(Gb::Console::AGB, true, 0x00, 0x00, 0x00, 0x00, 0x00)
+        , square2(Gb::Console::AGB, true, 0x00, 0x00, 0x00, 0x00, 0x00)
+        , wave(Gb::Console::AGB, true, 0x00, 0x00, 0x00, 0x00, 0x00)
+        , noise(Gb::Console::AGB, true, 0x00, 0x00, 0x00, 0x00, 0x00)
+        , core(_core)
         , resample_buffer(interpolated_buffer_size / 2) {
 
     Common::Vec4f::SetFlushToZero();
@@ -66,6 +71,36 @@ void Audio::Update(int cycles) {
             }
         }
 
+        square1.Update(GetFrameSequencer(), wave_ram);
+        square2.Update(GetFrameSequencer(), wave_ram);
+        wave.Update(GetFrameSequencer(), wave_ram);
+        noise.Update(GetFrameSequencer(), wave_ram);
+
+        const int sample_square1 = square1.GenSample();
+        const int sample_square2 = square2.GenSample();
+        const int sample_wave = wave.GenSample();
+        const int sample_noise = noise.GenSample();
+
+        int left_psg_sample = 0;
+        int right_psg_sample = 0;
+
+        const u8 enabled_channels = PsgEnabledChannels();
+
+        if (square1.EnabledLeft(enabled_channels))  { left_psg_sample += sample_square1; }
+        if (square1.EnabledRight(enabled_channels)) { right_psg_sample += sample_square1; }
+        if (square2.EnabledLeft(enabled_channels))  { left_psg_sample += sample_square2; }
+        if (square2.EnabledRight(enabled_channels)) { right_psg_sample += sample_square2; }
+        if (wave.EnabledLeft(enabled_channels))     { left_psg_sample += sample_wave; }
+        if (wave.EnabledRight(enabled_channels))    { right_psg_sample += sample_wave; }
+        if (noise.EnabledLeft(enabled_channels))    { left_psg_sample += sample_noise; }
+        if (noise.EnabledRight(enabled_channels))   { right_psg_sample += sample_noise; }
+
+        left_psg_sample *= PsgVolumeLeft() + 1;
+        right_psg_sample *= PsgVolumeRight() + 1;
+
+        left_sample += left_psg_sample >> PsgMixerVolume();
+        right_sample += right_psg_sample >> PsgMixerVolume();
+
         left_sample = ClampSample(left_sample);
         right_sample = ClampSample(right_sample);
 
@@ -102,7 +137,9 @@ int Audio::NextEvent() {
 
     for (int f = 0; f < 2; ++f) {
         const int fifo_timer = FifoTimerSelect(f);
-        const int next_timer_event_cycles = core.next_timer_event_cycles[fifo_timer] - core.timer_cycle_counter[fifo_timer];
+        const int next_timer_event_cycles =
+            core.next_timer_event_cycles[fifo_timer] - core.timer_cycle_counter[fifo_timer];
+
         if (next_timer_event_cycles != 0) {
             next_event_cycles = std::min(next_event_cycles, next_timer_event_cycles);
         }
@@ -116,17 +153,25 @@ int Audio::NextEvent() {
     return next_event_cycles;
 }
 
-void Audio::WriteSoundOn(u16 data, u16 mask) {
+u16 Audio::ReadSoundOn() {
     Update(core.audio_cycle_counter);
     core.audio_cycle_counter = 0;
     core.next_audio_event_cycles = NextEvent();
 
+    return sound_on | square1.EnabledFlag() | square2.EnabledFlag() | wave.EnabledFlag() | noise.EnabledFlag();
+}
+
+void Audio::WriteSoundOn(u16 data, u16 mask) {
+    const bool was_enabled = AudioEnabled();
+
     sound_on.Write(data, mask);
+
+    if (was_enabled && !AudioEnabled()) {
+        ClearRegisters();
+    }
 }
 
 void Audio::WriteFifoControl(u16 data, u16 mask) {
-    Update(core.audio_cycle_counter);
-
     fifo_control.Write(data, mask);
 
     for (int f = 0; f < 2; ++f) {
@@ -135,9 +180,6 @@ void Audio::WriteFifoControl(u16 data, u16 mask) {
             ClearReset(f);
         }
     }
-
-    core.audio_cycle_counter = 0;
-    core.next_audio_event_cycles = NextEvent();
 }
 
 void Audio::ConsumeSample(int f, u64 timer_clock) {
@@ -166,6 +208,15 @@ int Audio::ClampSample(int sample) const {
 
     // We multiply the final sample by 64 to fill the s16 range.
     return sample * 64;
+}
+
+void Audio::ClearRegisters() {
+    square1.ClearRegisters();
+    square2.ClearRegisters();
+    wave.ClearRegisters();
+    noise.ClearRegisters();
+
+    psg_control = 0x00;
 }
 
 s32 Fifo::ReadCurrentSample(u64 audio_clock) {
@@ -218,6 +269,163 @@ void Fifo::Reset() {
     fifo_buffer.Reset();
     play_queue.Reset();
     playing_sample = 0;
+}
+
+void Audio::WriteSoundRegs(const u32 addr, const u16 data, const u16 mask) {
+    Update(core.audio_cycle_counter);
+
+    const bool write_low_byte = (mask & 0x00FF) == 0x00FF;
+    const bool write_high_byte = (mask & 0xFF00) == 0xFF00;
+
+    if (!AudioEnabled()) {
+        // Only SOUNDCNT_H, SOUNDCNT_X, SOUNDBIAS, and wave RAM are accessible when audio is disabled.
+        switch (addr & ~0x1) {
+        case Memory::SOUNDCNT_H:
+            WriteFifoControl(data, mask);
+            break;
+        case Memory::SOUNDCNT_X:
+            WriteSoundOn(data, mask);
+            break;
+        case Memory::SOUNDBIAS:
+            soundbias.Write(data, mask);
+            break;
+        case Memory::WAVE_RAM0_L:
+        case Memory::WAVE_RAM0_H:
+        case Memory::WAVE_RAM1_L:
+        case Memory::WAVE_RAM1_H:
+        case Memory::WAVE_RAM2_L:
+        case Memory::WAVE_RAM2_H:
+        case Memory::WAVE_RAM3_L:
+        case Memory::WAVE_RAM3_H: {
+            const u32 wave_ram_addr = addr - Memory::WAVE_RAM0_L + wave.AccessibleBankOffset();
+            if (write_low_byte) {
+                wave_ram[wave_ram_addr] = data;
+            }
+            if (write_high_byte) {
+                wave_ram[wave_ram_addr + 1] = data >> 8;
+            }
+            break;
+        }
+        default:
+            break;
+        }
+
+        core.audio_cycle_counter = 0;
+        core.next_audio_event_cycles = NextEvent();
+
+        return;
+    }
+
+    switch (addr & ~0x1) {
+    case Memory::SOUND1CNT_L:
+        if (write_low_byte) {
+            square1.WriteSweep(data);
+        }
+        break;
+    case Memory::SOUND1CNT_H:
+        if (write_low_byte) {
+            square1.WriteSoundLength(data);
+        }
+        if (write_high_byte) {
+            square1.WriteEnvelope(data >> 8);
+        }
+        break;
+    case Memory::SOUND1CNT_X:
+        if (write_low_byte) {
+            square1.WriteFrequencyLow(data);
+        }
+        if (write_high_byte) {
+            square1.WriteReset(data >> 8, GetFrameSequencer());
+        }
+        break;
+    case Memory::SOUND2CNT_L:
+        if (write_low_byte) {
+            square2.WriteSoundLength(data);
+        }
+        if (write_high_byte) {
+            square2.WriteEnvelope(data >> 8);
+        }
+        break;
+    case Memory::SOUND2CNT_H:
+        if (write_low_byte) {
+            square2.WriteFrequencyLow(data);
+        }
+        if (write_high_byte) {
+            square2.WriteReset(data >> 8, GetFrameSequencer());
+        }
+        break;
+    case Memory::SOUND3CNT_L:
+        if (write_low_byte) {
+            wave.WriteWaveControl(data);
+        }
+        break;
+    case Memory::SOUND3CNT_H:
+        if (write_low_byte) {
+            wave.WriteSoundLength(data);
+        }
+        if (write_high_byte) {
+            wave.WriteEnvelope(data >> 8);
+        }
+        break;
+    case Memory::SOUND3CNT_X:
+        if (write_low_byte) {
+            wave.WriteFrequencyLow(data);
+        }
+        if (write_high_byte) {
+            wave.WriteReset(data >> 8, GetFrameSequencer());
+        }
+        break;
+    case Memory::SOUND4CNT_L:
+        if (write_low_byte) {
+            noise.WriteSoundLength(data);
+        }
+        if (write_high_byte) {
+            noise.WriteEnvelope(data >> 8);
+        }
+        break;
+    case Memory::SOUND4CNT_H:
+        if (write_low_byte) {
+            noise.WriteFrequencyLow(data);
+        }
+        if (write_high_byte) {
+            noise.WriteReset(data >> 8, GetFrameSequencer());
+        }
+        break;
+    case Memory::SOUNDCNT_L:
+        psg_control.Write(data, mask);
+        break;
+    case Memory::SOUNDCNT_H:
+        WriteFifoControl(data, mask);
+        break;
+    case Memory::SOUNDCNT_X:
+        WriteSoundOn(data, mask);
+        break;
+    case Memory::SOUNDBIAS:
+        soundbias.Write(data, mask);
+        break;
+    case Memory::WAVE_RAM0_L:
+    case Memory::WAVE_RAM0_H:
+    case Memory::WAVE_RAM1_L:
+    case Memory::WAVE_RAM1_H:
+    case Memory::WAVE_RAM2_L:
+    case Memory::WAVE_RAM2_H:
+    case Memory::WAVE_RAM3_L:
+    case Memory::WAVE_RAM3_H: {
+        const u32 wave_ram_addr = addr - Memory::WAVE_RAM0_L + wave.AccessibleBankOffset();
+        if (write_low_byte) {
+            wave_ram[wave_ram_addr] = data;
+        }
+        if (write_high_byte) {
+            wave_ram[wave_ram_addr + 1] = data >> 8;
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
+    core.audio_cycle_counter = 0;
+    core.next_audio_event_cycles = NextEvent();
 }
 
 } // End namespace Gba

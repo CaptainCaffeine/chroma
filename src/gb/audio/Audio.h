@@ -28,111 +28,35 @@
 
 namespace Gb {
 
+class GameBoy;
+
 class Audio {
 public:
-    Audio(bool enable_filter, const Console _console);
+    Audio(bool enable_filter, const GameBoy& _gameboy);
     ~Audio();
-
-    void UpdateAudio();
-
-    u32 GetFrameSequencer() const { return audio_clock >> 13; }
-
-    bool AudioEnabled() const { return sound_on & 0x80; }
-    u8 ReadSoundOn() const;
-    void WriteSoundOn(u8 data);
 
     std::array<s16, 1600> output_buffer;
 
-    Channel square1;
-    Channel square2;
-    Channel wave;
-    Channel noise;
+    Channel<Gen::Square1> square1;
+    Channel<Gen::Square2> square2;
+    Channel<Gen::Wave> wave;
+    Channel<Gen::Noise> noise;
 
-    // ******** Audio I/O registers ********
-    // NR10 register: 0xFF10
-    //     bit 6-4: Sweep Time (n/128Hz)
-    //     bit 3:   Sweep Direction (0=increase, 1=decrease)
-    //     bit 2-0: Sweep Shift
-    // NR11 register: 0xFF11
-    //     bit 7-6: Wave Pattern Duty
-    //     bit 5-0: Sound Length (Write Only)
-    // NR12 register: 0xFF12
-    //     bit 7-4: Initial Volume of Envelope
-    //     bit 3:   Envelope Direction (0=decrease, 1=increase)
-    //     bit 2-0: Step Time (n/64 seconds)
-    // NR13 register: 0xFF13 (Write Only)
-    //     bit 7-0: Frequency Low 8 Bits (Write Only)
-    // NR14 register: 0xFF14
-    //     bit 7:   Reset (1=Trigger Channel) (Write Only)
-    //     bit 6:   Timed Mode (0=continuous, 1=stop when length expires)
-    //     bit 2-0: Frequency High 3 Bits (Write Only)
-    // NR21 register: 0xFF16
-    //     bit 7-6: Wave Pattern Duty
-    //     bit 5-0: Sound Length (Write Only)
-    // NR22 register: 0xFF17
-    //     bit 7-4: Initial Volume of Envelope
-    //     bit 3:   Envelope Direction (0=decrease, 1=increase)
-    //     bit 2-0: Step Time (n/64 seconds)
-    // NR23 register: 0xFF18
-    //     bit 7-0: Frequency Low 8 Bits (Write Only)
-    // NR24 register: 0xFF19
-    //     bit 7:   Reset (1=Trigger Channel) (Write Only)
-    //     bit 6:   Timed Mode (0=continuous, 1=stop when length expires)
-    //     bit 2-0: Frequency High 3 Bits (Write Only)
-    // NR30 register: 0xFF1A
-    //     bit 7: Channel On/Off (0=Off, 1=On)
-    // NR31 register: 0xFF1B
-    //     bit 7-0: Sound Length
-    // NR32 register: 0xFF1C
-    //     bit 6-5: Output Level (0=Silent, 1=unshifted/100%, 2=shifted right once/50%, 3=shifted right twice/25%)
-    // NR33 register: 0xFF1D
-    //     bit 7-0: Frequency Low 8 Bits (Write Only)
-    // NR34 register: 0xFF1E
-    //     bit 7:   Reset (1=Trigger Channel) (Write Only)
-    //     bit 6:   Timed Mode (0=continuous, 1=stop when length expires)
-    //     bit 2-0: Frequency High 3 Bits (Write Only)
-    // NR41 register: 0xFF20
-    //     bit 5-0: Sound Length
-    // NR42 register: 0xFF21
-    //     bit 7-4: Initial Volume of Envelope
-    //     bit 3:   Envelope Direction (0=decrease, 1=increase)
-    //     bit 2-0: Step Time (n/64 seconds)
-    // NR43 register: 0xFF22
-    //     bit 7-4: Shift Clock Frequency
-    //     bit 3:   LFSR Width (0=15 bits, 1=7 bits)
-    //     bit 2-0: Clock Divider
-    // NR44 register: 0xFF23
-    //     bit 7: Reset (1=Trigger Channel) (Write Only)
-    //     bit 6: Timed Mode (0=continuous, 1=stop when length expires)
-    // NR50 register: 0xFF24
-    //     bit 7:   Output Vin to SO2 (1=Enable)
-    //     bit 6-4: SO2 Output Level
-    //     bit 3:   Output Vin to SO1 (1=Enable)
-    //     bit 2-0: SO1 Output Level
     u8 master_volume = 0x77;
-    // NR51 register: 0xFF25
-    //     bit 7: Output Channel 4 to SO2
-    //     bit 6: Output Channel 3 to SO2
-    //     bit 5: Output Channel 2 to SO2
-    //     bit 4: Output Channel 1 to SO2
-    //     bit 3: Output Channel 4 to SO1
-    //     bit 2: Output Channel 3 to SO1
-    //     bit 1: Output Channel 2 to SO1
-    //     bit 0: Output Channel 1 to SO1
     u8 sound_select = 0xF3;
-    // NR52 register: 0xFF26
-    //     bit 7: Master Sound On/Off (0=Off)
-    //     bit 3: Channel 4 On (Read Only)
-    //     bit 2: Channel 3 On (Read Only)
-    //     bit 1: Channel 2 On (Read Only)
-    //     bit 0: Channel 1 On (Read Only)
     u8 sound_on = 0x80;
 
-    // Wave Pattern RAM: 0xFF30-0xFF3F
-    std::array<u8, 0x10> wave_ram{{0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
+    std::array<u8, 0x20> wave_ram{{0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
                                    0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF}};
 
+    void UpdateAudio();
+
+    u8 ReadSoundOn() const;
+    void WriteSoundRegs(const u16 addr, const u8 data);
+
 private:
+    const GameBoy& gameboy;
+
     u32 audio_clock = 0;
 
     // IIR filter
@@ -151,13 +75,19 @@ private:
     static constexpr std::array<float, 2> q{0.54119610f, 1.3065630f};
     Common::Biquad biquad{interpolated_buffer_size, q[0], q[1]};
 
-    void UpdatePowerOnState();
-    void ClearRegisters();
+    u32 GetFrameSequencer() const { return audio_clock >> 13; }
+
     void QueueSample(int left_sample, int right_sample);
     void Resample();
 
+    void WriteSoundOn(u8 data);
+
+    void ClearRegisters();
+
     int MasterVolumeRight() const { return master_volume & 0x7; }
     int MasterVolumeLeft() const { return (master_volume >> 4) & 0x7; }
+
+    bool AudioEnabled() const { return sound_on & 0x80; }
 };
 
 } // End namespace Gb

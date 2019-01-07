@@ -126,6 +126,7 @@ private:
     void WriteExternalRam(const u16 addr, const u8 data);
     void WriteMbcControlRegisters(const u16 addr, const u8 data);
 
+public:
     // IO registers
     static constexpr u16 P1     = 0xFF00;
 
