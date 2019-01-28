@@ -67,7 +67,7 @@ void Memory::ReadSaveFile() {
 
         if (save_size == flash_size * 2) {
             // 128KB flash.
-            chip_id = sanyo_id;
+            chip_id = FlashId::Sanyo;
         }
     } else if (save_size > 128 * kbyte) {
         throw std::runtime_error(fmt::format("Save game size of {} bytes is too large to be a GBA save.", save_size));
@@ -248,14 +248,14 @@ void Memory::WriteFlash(const u32 addr, const T data) {
         break;
 
     case FlashState::NotStarted:
-        if (data == FlashCmd::Start1 && addr == flash_cmd_addr1) {
+        if (data == FlashCmd::Start1 && addr == FlashAddr::Command1) {
             // Start a new command.
             flash_state = FlashState::Starting;
         }
         break;
 
     case FlashState::Starting:
-        if (data == FlashCmd::Start2 && addr == flash_cmd_addr2) {
+        if (data == FlashCmd::Start2 && addr == FlashAddr::Command2) {
             flash_state = FlashState::Ready;
         } else {
             // Does it actually reset the state machine here if we receive something other than Start2? Or does
@@ -271,7 +271,7 @@ void Memory::WriteFlash(const u32 addr, const T data) {
             }};
 
             flash_state = FlashState::NotStarted;
-        } else if (addr == flash_cmd_addr1) {
+        } else if (addr == FlashAddr::Command1) {
             flash_state = FlashState::NotStarted;
 
             switch (data) {
@@ -521,7 +521,7 @@ void Memory::CheckSaveOverrides() {
             save_type = SaveType::Flash;
             sram.resize(flash_size * 2, 0xFF);
             sram_addr_mask = flash_size - 1;
-            chip_id = sanyo_id;
+            chip_id = FlashId::Sanyo;
             break;
         case SaveType::None:
             fmt::print("Force no save game\n");

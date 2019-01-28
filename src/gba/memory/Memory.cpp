@@ -158,9 +158,9 @@ T Memory::ReadMem(const u32 addr, bool dma) {
             return ReadSRam<T>(addr);
         } else if (save_type == SaveType::Flash) {
             if (flash_id_mode) {
-                if (addr == flash_man_addr) {
+                if (addr == FlashAddr::Manufacturer) {
                     return chip_id & 0xFF;
-                } else if (addr == flash_dev_addr) {
+                } else if (addr == FlashAddr::Device) {
                     return chip_id >> 8;
                 }
             }
@@ -309,7 +309,7 @@ void Memory::WriteMem(const u32 addr, const T data, bool dma) {
     case Region::SRam_l:
     case Region::SRam_h:
         if (save_type == SaveType::Unknown) {
-            if (addr == flash_cmd_addr1 && data == FlashCmd::Start1) {
+            if (addr == FlashAddr::Command1 && data == FlashCmd::Start1) {
                 InitFlash();
             } else {
                 InitSRam();
