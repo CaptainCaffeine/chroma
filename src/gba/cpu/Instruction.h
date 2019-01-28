@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2017-2018 Matthew Murray
+// Copyright (C) 2017-2019 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@
 
 #include "common/CommonTypes.h"
 #include "common/CommonFuncs.h"
+#include "gba/cpu/CpuDefs.h"
 
 namespace Gba {
 

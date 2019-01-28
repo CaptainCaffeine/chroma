@@ -62,10 +62,11 @@ set(HEADERS
     gb/logging/Logging.h
 
     gba/core/Core.h
-    gba/core/Enums.h
     gba/memory/Memory.h
+    gba/memory/MemDefs.h
     gba/memory/IOReg.h
     gba/cpu/Cpu.h
+    gba/cpu/CpuDefs.h
     gba/cpu/Instruction.h
     gba/cpu/Disassembler.h
     gba/lcd/Lcd.h

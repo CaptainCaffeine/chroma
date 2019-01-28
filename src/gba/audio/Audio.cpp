@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2018 Matthew Murray
+// Copyright (C) 2018-2019 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -280,24 +280,24 @@ void Audio::WriteSoundRegs(const u32 addr, const u16 data, const u16 mask) {
     if (!AudioEnabled()) {
         // Only SOUNDCNT_H, SOUNDCNT_X, SOUNDBIAS, and wave RAM are accessible when audio is disabled.
         switch (addr & ~0x1) {
-        case Memory::SOUNDCNT_H:
+        case SOUNDCNT_H:
             WriteFifoControl(data, mask);
             break;
-        case Memory::SOUNDCNT_X:
+        case SOUNDCNT_X:
             WriteSoundOn(data, mask);
             break;
-        case Memory::SOUNDBIAS:
+        case SOUNDBIAS:
             soundbias.Write(data, mask);
             break;
-        case Memory::WAVE_RAM0_L:
-        case Memory::WAVE_RAM0_H:
-        case Memory::WAVE_RAM1_L:
-        case Memory::WAVE_RAM1_H:
-        case Memory::WAVE_RAM2_L:
-        case Memory::WAVE_RAM2_H:
-        case Memory::WAVE_RAM3_L:
-        case Memory::WAVE_RAM3_H: {
-            const u32 wave_ram_addr = addr - Memory::WAVE_RAM0_L + wave.AccessibleBankOffset();
+        case WAVE_RAM0_L:
+        case WAVE_RAM0_H:
+        case WAVE_RAM1_L:
+        case WAVE_RAM1_H:
+        case WAVE_RAM2_L:
+        case WAVE_RAM2_H:
+        case WAVE_RAM3_L:
+        case WAVE_RAM3_H: {
+            const u32 wave_ram_addr = addr - WAVE_RAM0_L + wave.AccessibleBankOffset();
             if (write_low_byte) {
                 wave_ram[wave_ram_addr] = data;
             }
@@ -317,12 +317,12 @@ void Audio::WriteSoundRegs(const u32 addr, const u16 data, const u16 mask) {
     }
 
     switch (addr & ~0x1) {
-    case Memory::SOUND1CNT_L:
+    case SOUND1CNT_L:
         if (write_low_byte) {
             square1.WriteSweep(data);
         }
         break;
-    case Memory::SOUND1CNT_H:
+    case SOUND1CNT_H:
         if (write_low_byte) {
             square1.WriteSoundLength(data);
         }
@@ -330,7 +330,7 @@ void Audio::WriteSoundRegs(const u32 addr, const u16 data, const u16 mask) {
             square1.WriteEnvelope(data >> 8);
         }
         break;
-    case Memory::SOUND1CNT_X:
+    case SOUND1CNT_X:
         if (write_low_byte) {
             square1.WriteFrequencyLow(data);
         }
@@ -338,7 +338,7 @@ void Audio::WriteSoundRegs(const u32 addr, const u16 data, const u16 mask) {
             square1.WriteReset(data >> 8, GetFrameSequencer());
         }
         break;
-    case Memory::SOUND2CNT_L:
+    case SOUND2CNT_L:
         if (write_low_byte) {
             square2.WriteSoundLength(data);
         }
@@ -346,7 +346,7 @@ void Audio::WriteSoundRegs(const u32 addr, const u16 data, const u16 mask) {
             square2.WriteEnvelope(data >> 8);
         }
         break;
-    case Memory::SOUND2CNT_H:
+    case SOUND2CNT_H:
         if (write_low_byte) {
             square2.WriteFrequencyLow(data);
         }
@@ -354,12 +354,12 @@ void Audio::WriteSoundRegs(const u32 addr, const u16 data, const u16 mask) {
             square2.WriteReset(data >> 8, GetFrameSequencer());
         }
         break;
-    case Memory::SOUND3CNT_L:
+    case SOUND3CNT_L:
         if (write_low_byte) {
             wave.WriteWaveControl(data);
         }
         break;
-    case Memory::SOUND3CNT_H:
+    case SOUND3CNT_H:
         if (write_low_byte) {
             wave.WriteSoundLength(data);
         }
@@ -367,7 +367,7 @@ void Audio::WriteSoundRegs(const u32 addr, const u16 data, const u16 mask) {
             wave.WriteEnvelope(data >> 8);
         }
         break;
-    case Memory::SOUND3CNT_X:
+    case SOUND3CNT_X:
         if (write_low_byte) {
             wave.WriteFrequencyLow(data);
         }
@@ -375,7 +375,7 @@ void Audio::WriteSoundRegs(const u32 addr, const u16 data, const u16 mask) {
             wave.WriteReset(data >> 8, GetFrameSequencer());
         }
         break;
-    case Memory::SOUND4CNT_L:
+    case SOUND4CNT_L:
         if (write_low_byte) {
             noise.WriteSoundLength(data);
         }
@@ -383,7 +383,7 @@ void Audio::WriteSoundRegs(const u32 addr, const u16 data, const u16 mask) {
             noise.WriteEnvelope(data >> 8);
         }
         break;
-    case Memory::SOUND4CNT_H:
+    case SOUND4CNT_H:
         if (write_low_byte) {
             noise.WriteFrequencyLow(data);
         }
@@ -391,27 +391,27 @@ void Audio::WriteSoundRegs(const u32 addr, const u16 data, const u16 mask) {
             noise.WriteReset(data >> 8, GetFrameSequencer());
         }
         break;
-    case Memory::SOUNDCNT_L:
+    case SOUNDCNT_L:
         psg_control.Write(data, mask);
         break;
-    case Memory::SOUNDCNT_H:
+    case SOUNDCNT_H:
         WriteFifoControl(data, mask);
         break;
-    case Memory::SOUNDCNT_X:
+    case SOUNDCNT_X:
         WriteSoundOn(data, mask);
         break;
-    case Memory::SOUNDBIAS:
+    case SOUNDBIAS:
         soundbias.Write(data, mask);
         break;
-    case Memory::WAVE_RAM0_L:
-    case Memory::WAVE_RAM0_H:
-    case Memory::WAVE_RAM1_L:
-    case Memory::WAVE_RAM1_H:
-    case Memory::WAVE_RAM2_L:
-    case Memory::WAVE_RAM2_H:
-    case Memory::WAVE_RAM3_L:
-    case Memory::WAVE_RAM3_H: {
-        const u32 wave_ram_addr = addr - Memory::WAVE_RAM0_L + wave.AccessibleBankOffset();
+    case WAVE_RAM0_L:
+    case WAVE_RAM0_H:
+    case WAVE_RAM1_L:
+    case WAVE_RAM1_H:
+    case WAVE_RAM2_L:
+    case WAVE_RAM2_H:
+    case WAVE_RAM3_L:
+    case WAVE_RAM3_H: {
+        const u32 wave_ram_addr = addr - WAVE_RAM0_L + wave.AccessibleBankOffset();
         if (write_low_byte) {
             wave_ram[wave_ram_addr] = data;
         }

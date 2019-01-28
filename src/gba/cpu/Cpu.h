@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2017-2018 Matthew Murray
+// Copyright (C) 2017-2019 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 
 #include "common/CommonTypes.h"
 #include "common/CommonFuncs.h"
-#include "gba/core/Enums.h"
+#include "gba/cpu/CpuDefs.h"
 
 namespace Gba {
 
@@ -32,12 +32,6 @@ class Core;
 
 template<typename T, typename D>
 class Instruction;
-
-// Declared outside of class for Disassembler.
-struct ImmediateShift {
-    ShiftType type;
-    u32 imm;
-};
 
 class Cpu {
 public:
@@ -91,8 +85,6 @@ private:
     bool halted = false;
 
     // Constants
-    using Reg = unsigned int;
-    static constexpr Reg sp = 13, lr = 14, pc = 15;
     static constexpr u64 carry_bit = 0x1'0000'0000, sign_bit = 0x8000'0000;
 
     enum CpsrMasks : u32 {sign_flag     = 0x8000'0000,

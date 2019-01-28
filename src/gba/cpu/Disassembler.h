@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2018 Matthew Murray
+// Copyright (C) 2018-2019 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@
 #include "common/CommonTypes.h"
 #include "common/CommonFuncs.h"
 #include "common/CommonEnums.h"
-#include "gba/core/Enums.h"
+#include "gba/cpu/CpuDefs.h"
 
 namespace Gba {
 
@@ -33,8 +33,6 @@ class Core;
 
 template<typename T, typename D>
 class Instruction;
-
-struct ImmediateShift;
 
 class Disassembler {
 public:
@@ -75,9 +73,6 @@ private:
     std::ofstream log_stream;
 
     int halt_cycles = 0;
-
-    using Reg = std::size_t;
-    static constexpr Reg sp = 13, lr = 14, pc = 15;
 
     static std::string Flags(bool sf) { return (sf) ? "S" : ""; }
     static std::string RegStr(Reg r);

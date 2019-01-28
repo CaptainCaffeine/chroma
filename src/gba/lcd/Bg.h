@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2018 Matthew Murray
+// Copyright (C) 2018-2019 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 #include "common/CommonTypes.h"
 #include "common/CommonFuncs.h"
 #include "gba/memory/IOReg.h"
+#include "gba/memory/MemDefs.h"
 
 namespace Gba {
 
@@ -103,8 +104,6 @@ private:
                      int pixel_width, int pixel_height) const;
 
     // Control flags
-    static constexpr int kbyte = 1024;
-
     int TileBase() const { return ((control >> 2) & 0x3) * 16 * kbyte; }
     bool Mosaic() const { return control & 0x40; }
     int MapBase() const { return ((control >> 8) & 0x1F) * 2 * kbyte; }

@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2018 Matthew Murray
+// Copyright (C) 2018-2019 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 
 #include "common/CommonTypes.h"
 #include "gba/memory/IOReg.h"
-#include "gba/core/Enums.h"
+#include "gba/memory/MemDefs.h"
 
 namespace Gba {
 
@@ -45,10 +45,7 @@ public:
     void WriteControl(const u16 data, const u16 mask);
     bool Active() const { return DmaEnabled() && !paused; }
     void Trigger(Timing event);
-    bool WritingToFifo(int f) const {
-        static constexpr u32 fifo_base_addr = 0x0400'00A0;
-        return dest == fifo_base_addr + 4 * f;
-    }
+    bool WritingToFifo(int f) const { return dest == FIFO_A_L + 4 * f; }
 
 private:
     const int id;

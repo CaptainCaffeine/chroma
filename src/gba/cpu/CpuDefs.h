@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2017-2018 Matthew Murray
+// Copyright (C) 2017-2019 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,7 +16,15 @@
 
 #pragma once
 
+#include "common/CommonTypes.h"
+
 namespace Gba {
+
+using Arm = u32;
+using Thumb = u16;
+
+using Reg = u32;
+static constexpr Reg sp = 13, lr = 14, pc = 15;
 
 enum class Condition {Equal         = 0b0000,
                       NotEqual      = 0b0001,
@@ -40,39 +48,9 @@ enum class ShiftType {LSL = 0,
                       ROR = 3,
                       RRX = 4};
 
-namespace Interrupt {
-enum Interrupt {VBlank  = 0x0001,
-                HBlank  = 0x0002,
-                VCount  = 0x0004,
-                Timer0  = 0x0008,
-                Timer1  = 0x0010,
-                Timer2  = 0x0020,
-                Timer3  = 0x0040,
-                Serial  = 0x0080,
-                Dma0    = 0x0100,
-                Dma1    = 0x0200,
-                Dma2    = 0x0400,
-                Dma3    = 0x0800,
-                Keypad  = 0x1000,
-                Gamepak = 0x2000};
-}
-
-enum class AccessType {Normal,
-                       Opcode,
-                       Dma};
-
-namespace BaseAddr {
-enum BaseAddr {Bios   = 0x0000'0000,
-               XRam   = 0x0200'0000,
-               IRam   = 0x0300'0000,
-               IO     = 0x0400'0000,
-               PRam   = 0x0500'0000,
-               VRam   = 0x0600'0000,
-               Oam    = 0x0700'0000,
-               Rom    = 0x0800'0000,
-               Eeprom = 0x0D00'0000,
-               SRam   = 0x0E00'0000,
-               Max    = 0x1000'0000};
-}
+struct ImmediateShift {
+    ShiftType type;
+    u32 imm;
+};
 
 } // End namespace Gba

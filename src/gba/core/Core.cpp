@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2017-2018 Matthew Murray
+// Copyright (C) 2017-2019 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,7 +17,6 @@
 #include <chrono>
 
 #include "gba/core/Core.h"
-#include "gba/core/Enums.h"
 #include "gba/memory/Memory.h"
 #include "gba/cpu/Cpu.h"
 #include "gba/cpu/Disassembler.h"
