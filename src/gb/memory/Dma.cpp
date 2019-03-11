@@ -196,15 +196,13 @@ u8 Memory::DmaCopy(const u16 addr) const {
         // If HDMA/GDMA attempts to read from 0xE000-0xFFFF, it will read from 0xA000-0xBFFF instead.
         return ReadExternalRam(addr - 0x4000);
     } else if (addr < 0xF000) {
-        // Echo of C000-DDFF
+        // Echo of 0xC000-0xDFFF
         return wram[addr - 0xE000];
-    } else if (addr < 0xF200) {
-        // Echo of C000-DDFF
-        return wram[addr - 0xE000 + 0x1000 * ((wram_bank_num == 0) ? 0 : wram_bank_num - 1)];
     } else {
-        // Only 0x00-0xF1 are valid OAM DMA start addresses (several sources make that claim, at least. I've seen
-        // differing ranges mentioned but this seems to work for now).
-        return 0xFF;
+        // Echo of 0xC000-0xDFFF
+        // OAM DMA is not capable of reading 0xFE00-0xFFFF as it asserts the external RAM chip select for all
+        // addresses above 0xA000. As a result, 0xE000-0xFFFF mirrors all of WRAM instead.
+        return wram[addr - 0xE000 + 0x1000 * ((wram_bank_num == 0) ? 0 : wram_bank_num - 1)];
     }
 }
 
