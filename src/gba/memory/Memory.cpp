@@ -126,6 +126,20 @@ T Memory::ReadMem(const u32 addr, bool dma) {
     case Region::Oam:
         return ReadOam<T>(addr);
     case Region::Rom0_l:
+        if (gpio_present && InGpioAddrRange(addr)) {
+            switch (addr) {
+            case GpioAddr::Data:
+                return gpio_data.Read();
+            case GpioAddr::Direction:
+                return gpio_direction.Read();
+            case GpioAddr::Control:
+                return gpio_readable.Read();
+            default:
+                return ReadRom<T>(addr);
+            }
+        }
+
+        return ReadRom<T>(addr);
     case Region::Rom0_h:
     case Region::Rom1_l:
     case Region::Rom1_h:
@@ -289,6 +303,8 @@ void Memory::WriteMem(const u32 addr, const T data, bool dma) {
         WriteOam(addr, data);
         break;
     case Region::Rom0_l:
+        WriteGpio(addr, data);
+        break;
     case Region::Rom0_h:
     case Region::Rom1_l:
     case Region::Rom1_h:
@@ -472,6 +488,45 @@ void Memory::RunPrefetch(int cycles) {
             prefetched_opcodes = std::min(prefetched_opcodes + 1, 4);
             prefetch_cycles -= wait_states;
         }
+    }
+}
+
+void Memory::WriteGpio(const u32 addr, const u16 data) {
+    if (!gpio_present) {
+        return;
+    }
+
+    switch (addr) {
+    case GpioAddr::Data:
+        gpio_data.Write(addr, data);
+        break;
+    case GpioAddr::Direction:
+        gpio_direction.Write(addr, data);
+        UpdateGpioDirections();
+        break;
+    case GpioAddr::Control:
+        gpio_readable.Write(addr, data);
+        UpdateGpioReadable();
+        break;
+    default:
+        break;
+    }
+}
+
+void Memory::UpdateGpioDirections() {
+    gpio_data.read_mask = ~gpio_direction & 0x000F;
+    gpio_data.write_mask = gpio_direction;
+}
+
+void Memory::UpdateGpioReadable() {
+    if (gpio_readable) {
+        gpio_data.read_mask = ~gpio_direction & 0x000F;
+        gpio_direction.read_mask = 0x000F;
+        gpio_readable.read_mask = 0x0001;
+    } else {
+        gpio_data.read_mask = 0x0000;
+        gpio_direction.read_mask = 0x0000;
+        gpio_readable.read_mask = 0x0000;
     }
 }
 

@@ -93,11 +93,21 @@ private:
     const unsigned int rom_size;
     u32 rom_addr_mask;
 
+    bool gpio_present = false;
+
     IOReg intr_enable = {0x0000, 0x3FFF, 0x3FFF};
     IOReg intr_flags = {0x0000, 0x3FFF, 0x3FFF};
     IOReg waitcnt = {0x0000, 0x5FFF, 0x5FFF};
     IOReg master_enable = {0x0000, 0x0001, 0x0001};
     IOReg haltcnt = {0x0000, 0x0001, 0x8001};
+
+    IOReg gpio_data = {0x0000, 0x000F, 0x000F};
+    IOReg gpio_direction = {0x0000, 0x000F, 0x000F};
+    IOReg gpio_readable = {0x0000, 0x0001, 0x0001};
+
+    enum GpioAddr : u32 {Data      = 0x0800'00C4,
+                         Direction = 0x0800'00C6,
+                         Control   = 0x0800'00C8};
 
     enum class SaveType {Unknown,
                          SRam,
@@ -263,6 +273,11 @@ private:
     void InitFlash();
     u16 ParseEepromAddr(int stream_size, bool read_request);
     void InitEeprom(int stream_size, int non_addr_bits);
+
+    void WriteGpio(const u32 addr, const u16 data);
+    void UpdateGpioDirections();
+    void UpdateGpioReadable();
+    static bool InGpioAddrRange(u32 addr) { return (addr & 0xFFFF'FFF1) == 0x0800'00C0; }
 };
 
 } // End namespace Gba
