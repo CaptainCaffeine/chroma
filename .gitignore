@@ -9,3 +9,7 @@
 
 # Test scripts directory
 testing_scripts/
+
+# Tags files
+tags
+tags.*
