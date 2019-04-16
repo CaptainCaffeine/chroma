@@ -10,6 +10,10 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(SDL2 REQUIRED)
 include_directories(${SDL2_INCLUDE_DIR})
 
+find_package(PNG REQUIRED)
+include_directories(${PNG_INCLUDE_DIRS})
+add_definitions(${PNG_DEFINITIONS})
+
 add_subdirectory(externals)
 add_subdirectory(src)
 

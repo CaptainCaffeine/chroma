@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2018 Matthew Murray
+// Copyright (C) 2016-2019 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -134,7 +134,7 @@ void GameBoy::SwapBuffers(std::vector<u16>& back_buffer) {
 }
 
 void GameBoy::Screenshot() const {
-    Common::WritePPMFile(Common::BGR5ToRGB8(front_buffer), "screenshot.ppm", 160, 144);
+    Common::WriteImageToFile(Common::BGR5ToRGB8(front_buffer), "screenshot", 160, 144);
 }
 
 void GameBoy::HardwareTick(unsigned int cycles) {

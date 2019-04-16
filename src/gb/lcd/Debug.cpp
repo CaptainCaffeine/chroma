@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2018 Matthew Murray
+// Copyright (C) 2016-2019 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <fmt/format.h>
+
 #include "gb/lcd/Lcd.h"
 #include "gb/core/GameBoy.h"
 #include "gb/memory/Memory.h"
@@ -22,7 +24,7 @@
 namespace Gb {
 
 void Lcd::DumpBackBuffer() const {
-    Common::WritePPMFile(Common::BGR5ToRGB8(back_buffer), "screenshot.ppm", 160, 144);
+    Common::WriteImageToFile(Common::BGR5ToRGB8(back_buffer), "screenshot", 160, 144);
 }
 
 void Lcd::DumpBgWin(u16 start_addr, const std::string& filename) {
@@ -81,7 +83,7 @@ void Lcd::DumpBgWin(u16 start_addr, const std::string& filename) {
         }
     }
 
-    Common::WritePPMFile(Common::BGR5ToRGB8(bg_buffer), filename, 256, 256);
+    Common::WriteImageToFile(Common::BGR5ToRGB8(bg_buffer), filename, 256, 256);
 }
 
 void Lcd::DumpTileSet(int bank) {
@@ -119,13 +121,13 @@ void Lcd::DumpTileSet(int bank) {
         }
     }
 
-    Common::WritePPMFile(Common::BGR5ToRGB8(buffer), std::string("tileset") + std::to_string(bank) + ".ppm", 128, 192);
+    Common::WriteImageToFile(Common::BGR5ToRGB8(buffer), fmt::format("tileset{}", bank), 128, 192);
 }
 
 void Lcd::DumpEverything() {
     DumpBackBuffer();
-    DumpBgWin(0x9800, "first_tilemap.ppm");
-    DumpBgWin(0x9C00, "second_tilemap.ppm");
+    DumpBgWin(0x9800, "first_tilemap");
+    DumpBgWin(0x9C00, "second_tilemap");
     DumpTileSet(0);
     if (gameboy.GameModeCgb()) {
         DumpTileSet(1);

@@ -178,7 +178,7 @@ void Core::RegisterCallbacks() {
 }
 
 void Core::Screenshot() const {
-    Common::WritePPMFile(Common::BGR5ToRGB8(front_buffer), "screenshot.ppm", 240, 160);
+    Common::WriteImageToFile(Common::BGR5ToRGB8(front_buffer), "screenshot", 240, 160);
 }
 
 } // End namespace Gba

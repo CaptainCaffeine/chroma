@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2017 Matthew Murray
+// Copyright (C) 2016-2019 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,19 +14,31 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include <fstream>
+#include <cstring>
+#include <png.h>
+#include <fmt/format.h>
 
 #include "common/Screenshot.h"
 
 namespace Common {
 
-void WritePPMFile(const std::vector<u8>& buffer, const std::string& filename, int width, int height) {
-    std::ofstream output_image(filename);
+void WriteImageToFile(const std::vector<u8>& buffer, const std::string& filename, int width, int height) {
+    png_image image;
+    std::memset(&image, 0, sizeof(image));
+    image.version = PNG_IMAGE_VERSION;
+    image.format = PNG_FORMAT_RGB;
+    image.width = width;
+    image.height = height;
+    image.flags = 0;
+    image.colormap_entries = 0;
 
-    output_image << "P6\n";
-    output_image << width << " " << height << "\n";
-    output_image << 255 << "\n";
-    output_image.write(reinterpret_cast<const char*>(buffer.data()), buffer.size() * 3);
+    png_image_write_to_file(&image, fmt::format("{}.png", filename).c_str(), false, buffer.data(), width * 3, nullptr);
+
+    if (PNG_IMAGE_FAILED(image)) {
+        fmt::print("Failed to write PNG image: {}", image.message);
+    } else if (image.warning_or_error != 0) {
+        fmt::print("Warning when writing PNG image: {}", image.message);
+    }
 }
 
 std::vector<u8> BGR5ToRGB8(const std::vector<u16>& bgr5_buffer) {

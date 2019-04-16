@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2017 Matthew Murray
+// Copyright (C) 2016-2019 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 
 namespace Common {
 
-void WritePPMFile(const std::vector<u8>& buffer, const std::string& filename, int width, int height);
+void WriteImageToFile(const std::vector<u8>& buffer, const std::string& filename, int width, int height);
 std::vector<u8> BGR5ToRGB8(const std::vector<u16>& bgr5_buffer);
 
 } // End namespace Common

@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2018 Matthew Murray
+// Copyright (C) 2018-2019 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -85,8 +85,8 @@ void Lcd::DumpSprites() const {
             vertical_index += 1;
         }
 
-        Common::WritePPMFile(Common::BGR5ToRGB8(sprite_buffer), fmt::format("sprite{}.ppm", s),
-                             sprite.pixel_width, sprite.pixel_height);
+        Common::WriteImageToFile(Common::BGR5ToRGB8(sprite_buffer), fmt::format("sprite{}", s),
+                                 sprite.pixel_width, sprite.pixel_height);
     }
 }
 
@@ -183,7 +183,7 @@ void Bg::DumpBg() const {
         vertical_index += 1;
     }
 
-    Common::WritePPMFile(Common::BGR5ToRGB8(bg_buffer), fmt::format("bg{}.ppm", id), pixel_width, pixel_height);
+    Common::WriteImageToFile(Common::BGR5ToRGB8(bg_buffer), fmt::format("bg{}", id), pixel_width, pixel_height);
 }
 
 void Bg::DrawOverlay(std::array<u16, 8>& pixel_colours, int scanline_index, int vertical_index,
@@ -284,9 +284,9 @@ void Lcd::DumpTileset(int base, bool single_palette) const {
         vertical_index += 1;
     }
 
-    Common::WritePPMFile(Common::BGR5ToRGB8(tileset_buffer),
-                         fmt::format("tileset{}_{}bit.ppm", base / (32 * 1024), (single_palette ? 8 : 4)),
-                         pixel_width, pixel_height);
+    Common::WriteImageToFile(Common::BGR5ToRGB8(tileset_buffer),
+                             fmt::format("tileset{}_{}bit", base / (32 * 1024), (single_palette ? 8 : 4)),
+                             pixel_width, pixel_height);
 }
 
 } // End namespace Gba
