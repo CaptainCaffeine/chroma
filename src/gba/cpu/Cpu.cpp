@@ -87,9 +87,10 @@ int Cpu::Execute(int cycles) {
             cycles -= cycles_taken;
             cycles_taken = 0;
 
-            core.disasm->DisassembleThumb(pipeline[0], regs, cpsr);
-            const auto& impl = DecodeThumb(pipeline[0]);
-            cycles_taken += impl(*this, pipeline[0]);
+            const Thumb opcode = pipeline[0];
+            core.disasm->DisassembleThumb(opcode, regs, cpsr);
+            const auto& impl = DecodeThumb(opcode);
+            cycles_taken += impl(*this, opcode);
 
             if (!pc_written) {
                 // Only increment the PC if the executing instruction didn't change it.
@@ -106,9 +107,13 @@ int Cpu::Execute(int cycles) {
             cycles -= cycles_taken;
             cycles_taken = 0;
 
-            core.disasm->DisassembleArm(pipeline[0], regs, cpsr);
-            const auto& impl = DecodeArm(pipeline[0]);
-            cycles_taken += impl(*this, pipeline[0]);
+            const Arm opcode = pipeline[0];
+            core.disasm->DisassembleArm(opcode, regs, cpsr);
+
+            if (ConditionPassed(GetCondition(opcode))) {
+                const auto& impl = DecodeArm(opcode);
+                cycles_taken += impl(*this, opcode);
+            }
 
             if (!pc_written) {
                 // Only increment the PC if the executing instruction didn't change it.

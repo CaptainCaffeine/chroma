@@ -197,6 +197,7 @@ private:
     void ConditionalSetSignZeroFlags(bool set_flags, u32 result);
     void ConditionalSetMultiplyLongFlags(bool set_flags, u64 result);
 
+    static constexpr Condition GetCondition(Arm opcode) { return static_cast<Condition>(opcode >> 28); }
     bool ConditionPassed(Condition cond) const;
 
     static int MultiplyCycles(u32 operand);
@@ -228,39 +229,37 @@ private:
 
     int AluWritePC(bool set_flags, u32 result);
 
-    int Arm_ArithImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, ArithOp op, u32 carry);
-    int Arm_ArithReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, ShiftType type, Reg m, ArithOp op,
-                     u32 carry);
-    int Arm_ArithRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s, ShiftType type, Reg m, ArithOp op,
-                            u32 carry);
+    int Arm_ArithImm(bool set_flags, Reg n, Reg d, u32 imm, ArithOp op, u32 carry);
+    int Arm_ArithReg(bool set_flags, Reg n, Reg d, u32 imm, ShiftType type, Reg m, ArithOp op, u32 carry);
+    int Arm_ArithRegShifted(bool set_flags, Reg n, Reg d, Reg s, ShiftType type, Reg m, ArithOp op, u32 carry);
 
-    int Arm_CompareImm(Condition cond, Reg n, u32 imm, ArithOp op, u32 carry);
-    int Arm_CompareReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m, ArithOp op, u32 carry);
-    int Arm_CompareRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m, ArithOp op, u32 carry);
+    int Arm_CompareImm(Reg n, u32 imm, ArithOp op, u32 carry);
+    int Arm_CompareReg(Reg n, u32 imm, ShiftType type, Reg m, ArithOp op, u32 carry);
+    int Arm_CompareRegShifted(Reg n, Reg s, ShiftType type, Reg m, ArithOp op, u32 carry);
 
-    int Arm_MultiplyReg(Condition cond, bool set_flags, Reg d, Reg a, Reg m, Reg n);
-    int Arm_MultiplyLongReg(Condition cond, bool set_flags, Reg dh, Reg dl, Reg m, Reg n, MullOp op, bool acc);
+    int Arm_MultiplyReg(bool set_flags, Reg d, Reg a, Reg m, Reg n);
+    int Arm_MultiplyLongReg(bool set_flags, Reg dh, Reg dl, Reg m, Reg n, MullOp op, bool acc);
 
-    int Arm_LogicImm(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, LogicOp op);
-    int Arm_LogicReg(Condition cond, bool set_flags, Reg n, Reg d, u32 imm, ShiftType type, Reg m, LogicOp op);
-    int Arm_LogicRegShifted(Condition cond, bool set_flags, Reg n, Reg d, Reg s, ShiftType type, Reg m, LogicOp op);
+    int Arm_LogicImm(bool set_flags, Reg n, Reg d, u32 imm, LogicOp op);
+    int Arm_LogicReg(bool set_flags, Reg n, Reg d, u32 imm, ShiftType type, Reg m, LogicOp op);
+    int Arm_LogicRegShifted(bool set_flags, Reg n, Reg d, Reg s, ShiftType type, Reg m, LogicOp op);
 
-    int Arm_TestImm(Condition cond, Reg n, u32 imm, LogicOp op);
-    int Arm_TestReg(Condition cond, Reg n, u32 imm, ShiftType type, Reg m, LogicOp op);
-    int Arm_TestRegShifted(Condition cond, Reg n, Reg s, ShiftType type, Reg m, LogicOp op);
+    int Arm_TestImm(Reg n, u32 imm, LogicOp op);
+    int Arm_TestReg(Reg n, u32 imm, ShiftType type, Reg m, LogicOp op);
+    int Arm_TestRegShifted(Reg n, Reg s, ShiftType type, Reg m, LogicOp op);
 
-    int Arm_ShiftImm(Condition cond, bool set_flags, Reg d, u32 imm, Reg m, ShiftType type);
-    int Arm_ShiftReg(Condition cond, bool set_flags, Reg d, Reg m, Reg n, ShiftType type);
+    int Arm_ShiftImm(bool set_flags, Reg d, u32 imm, Reg m, ShiftType type);
+    int Arm_ShiftReg(bool set_flags, Reg d, Reg m, Reg n, ShiftType type);
 
-    int Arm_LoadImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm, LoadOp op);
-    int Arm_LoadReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm,
+    int Arm_LoadImm(bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm, LoadOp op);
+    int Arm_LoadReg(bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm,
                     ShiftType type, Reg m, LoadOp op);
 
-    int Arm_StoreImm(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm, StoreOp op);
-    int Arm_StoreReg(Condition cond, bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm,
+    int Arm_StoreImm(bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm, StoreOp op);
+    int Arm_StoreReg(bool pre_indexed, bool add, bool writeback, Reg n, Reg t, u32 imm,
                      ShiftType type, Reg m, StoreOp op);
 
-    int Arm_WriteStatusReg(Condition cond, bool write_spsr, u32 mask, u32 value);
+    int Arm_WriteStatusReg(bool write_spsr, u32 mask, u32 value);
 
 public:
     // ******************* Thumb Operators *******************
