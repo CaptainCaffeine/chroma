@@ -1,6 +1,6 @@
 # Chroma
 
-Chroma is a Game Boy, Game Boy Color, and Game Boy Advance emulator that strives for accuracy and readability. It is currently capable of playing most commercial Game Boy and Game Boy Color games quite well. Game Boy Advance support is still WIP.
+Chroma is a Game Boy, Game Boy Color, and Game Boy Advance emulator that strives for accuracy and readability. It is currently capable of playing most commercial games quite well, but is lacking some features common in other emulators like savestates and cheat code support.
 
 Chroma has only been tested on Linux; however, it should work on both macOS and FreeBSD, I just don't have systems set up on which to test it. If you try Chroma on other operating systems, please let me know if it works or if there are any issues! There isn't anything in particular that would prevent it from working on Windows, I just haven't tried compiling it with MSVC.
 
