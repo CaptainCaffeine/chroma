@@ -52,7 +52,7 @@ void Rtc::SetFlags(u8 value) {
 
     // Handle the RTC halt flag.
     if ((flags & 0x40) ^ (value & 0x40)) {
-        if ((value & 0x40) == 1) {
+        if (value & 0x40) {
             // Halt the RTC.
             halted_time = std::chrono::steady_clock::now();
         } else {
