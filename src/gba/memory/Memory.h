@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2017-2019 Matthew Murray
+// Copyright (C) 2017-2020 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 #include <array>
 #include <string>
 #include <functional>
+#include <memory>
 
 #include "common/CommonTypes.h"
 #include "common/CommonFuncs.h"
@@ -29,6 +30,7 @@
 namespace Gba {
 
 class Core;
+class Rtc;
 
 class Memory {
 public:
@@ -94,6 +96,8 @@ private:
     u32 rom_addr_mask;
 
     bool gpio_present = false;
+    bool rtc_present = false;
+    std::unique_ptr<Rtc> rtc;
 
     IOReg intr_enable = {0x0000, 0x3FFF, 0x3FFF};
     IOReg intr_flags = {0x0000, 0x3FFF, 0x3FFF};
@@ -140,11 +144,20 @@ private:
                    BankSwitch  = 0xB0,
                    None        = 0x00};
 
+    // Need to prefix the entries with Device_ to avoid name collisions with Rtc and FlashCmd::None.
+    enum Device {Device_None = 0x0,
+                 Device_Rtc  = 0x1};
+
+    struct Overrides {
+        SaveType save_type;
+        u32 devices;
+    };
+
     static constexpr int eeprom_write_cycles = 108368; // 6.46ms
     static constexpr int flash_erase_cycles  = 30000; // 1.79ms
     static constexpr int flash_write_cycles  = 300; // 17.9us
 
-    SaveType save_type;
+    SaveType save_type = SaveType::Unknown;
     const std::string& save_path;
 
     int eeprom_addr_len = 0;
@@ -256,6 +269,8 @@ private:
     template <typename T>
     void WriteOam(const u32 addr, const T data);
     template <typename T>
+    void WriteGpio(const u32 addr, const T data, const u16 mask = 0xFFFF);
+    template <typename T>
     void WriteSRam(const u32 addr, const T data) {
         sram[bank_num * flash_size + (addr & sram_addr_mask)] = RotateRight(data, (addr & (sizeof(T) - 1)) * 8);
     }
@@ -267,17 +282,16 @@ private:
 
     void ReadSaveFile();
     void WriteSaveFile() const;
-    void CheckSaveOverrides();
     void CheckHardwareOverrides();
+    void InitOverrideSaveType();
     void InitSRam();
     void InitFlash();
     u16 ParseEepromAddr(int stream_size, bool read_request);
     void InitEeprom(int stream_size, int non_addr_bits);
 
-    void WriteGpio(const u32 addr, const u16 data);
     void UpdateGpioDirections();
     void UpdateGpioReadable();
-    static bool InGpioAddrRange(u32 addr) { return (addr & 0xFFFF'FFF1) == 0x0800'00C0; }
+    static constexpr bool InGpioAddrRange(u32 addr) { return (addr & 0xFFFF'FFF1) == 0x0800'00C0; }
 };
 
 } // End namespace Gba

@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2017-2018 Matthew Murray
+// Copyright (C) 2017-2020 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@
 #include "gba/hardware/Dma.h"
 #include "gba/hardware/Keypad.h"
 #include "gba/hardware/Serial.h"
+#include "gba/hardware/Rtc.h"
 
 namespace Gba {
 
@@ -39,10 +40,11 @@ Memory::Memory(const std::vector<u32>& _bios, const std::vector<u16>& _rom, cons
         , oam(oam_size / sizeof(u32))
         , rom(_rom)
         , rom_size(rom.size() * 2)
+        , rtc(nullptr)
         , save_path(_save_path) {
 
-    ReadSaveFile();
     CheckHardwareOverrides();
+    ReadSaveFile();
     UpdateWaitStates();
 }
 
@@ -273,10 +275,14 @@ void Memory::WriteVRam(const u32 addr, const u8 data) {
 template <>
 void Memory::WriteOam(const u32, const u8) {}
 
-// Forward declaring template specializations of WriteIO for WriteMem.
+// Forward declaring template specializations of WriteIO/WriteGpio for WriteMem.
 template <> void Memory::WriteIO(const u32 addr, u32 data, u16 mask);
 template <> void Memory::WriteIO(const u32 addr, u16 data, u16 mask);
 template <> void Memory::WriteIO(const u32 addr, u8 data, u16 mask);
+
+template <> void Memory::WriteGpio(const u32 addr, u32 data, u16 mask);
+template <> void Memory::WriteGpio(const u32 addr, u16 data, u16 mask);
+template <> void Memory::WriteGpio(const u32 addr, u8 data, u16 mask);
 
 template <typename T>
 void Memory::WriteMem(const u32 addr, const T data, bool dma) {
@@ -491,21 +497,38 @@ void Memory::RunPrefetch(int cycles) {
     }
 }
 
-void Memory::WriteGpio(const u32 addr, const u16 data) {
+template <>
+void Memory::WriteGpio(const u32 addr, const u32 data, const u16) {
+    // 32 bit writes must be aligned.
+    WriteGpio<u16>(addr & ~0x3, data);
+    WriteGpio<u16>((addr & ~0x3) + 2, data >> 16);
+}
+
+template <>
+void Memory::WriteGpio(const u32 addr, const u8 data, const u16) {
+    const u32 hi_shift = 8 * (addr & 0x1);
+    WriteGpio<u16>(addr, data << hi_shift, 0xFF << hi_shift);
+}
+
+template <>
+void Memory::WriteGpio(const u32 addr, const u16 data, const u16 mask) {
     if (!gpio_present) {
         return;
     }
 
     switch (addr) {
     case GpioAddr::Data:
-        gpio_data.Write(addr, data);
+        gpio_data.Write(data, mask);
+        if (rtc_present) {
+            gpio_data = rtc->UpdateState(gpio_data, gpio_data.write_mask & Rtc::Pin::SIO);
+        }
         break;
     case GpioAddr::Direction:
-        gpio_direction.Write(addr, data);
+        gpio_direction.Write(data, mask);
         UpdateGpioDirections();
         break;
     case GpioAddr::Control:
-        gpio_readable.Write(addr, data);
+        gpio_readable.Write(data, mask);
         UpdateGpioReadable();
         break;
     default:

@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2018 Matthew Murray
+// Copyright (C) 2018-2020 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 #include "gba/memory/Memory.h"
 #include "gba/core/Core.h"
 #include "gba/cpu/Disassembler.h"
+#include "gba/hardware/Rtc.h"
 #include "emu/ParseOptions.h"
 
 namespace Gba {
@@ -30,7 +31,10 @@ void Memory::ReadSaveFile() {
     std::ifstream save_file(save_path);
     if (!save_file) {
         // Save file doesn't exist.
-        CheckSaveOverrides();
+        if (save_type != SaveType::Unknown) {
+            // We have a manual override for this game's save type.
+            InitOverrideSaveType();
+        }
         return;
     }
 
@@ -314,239 +318,237 @@ template void Memory::WriteFlash<u8>(const u32 addr, const u8 data);
 template void Memory::WriteFlash<u16>(const u32 addr, const u16 data);
 template void Memory::WriteFlash<u32>(const u32 addr, const u32 data);
 
-void Memory::CheckSaveOverrides() {
-    // Credit goes to mGBA for this list of save overrides. As of June 2018, the original can be found here:
+void Memory::InitOverrideSaveType() {
+    switch (save_type) {
+    case SaveType::SRam:
+        fmt::print("SRAM override\n");
+
+        sram.resize(sram_size);
+        sram_addr_mask = sram_size - 1;
+        break;
+    case SaveType::Eeprom:
+        fmt::print("EEPROM override\n");
+        break;
+    case SaveType::Flash:
+        fmt::print("64KB Flash override\n");
+
+        sram.resize(flash_size, 0xFF);
+        sram_addr_mask = flash_size - 1;
+        break;
+    case SaveType::Flash128:
+        fmt::print("128KB Flash override\n");
+
+        save_type = SaveType::Flash;
+        sram.resize(flash_size * 2, 0xFF);
+        sram_addr_mask = flash_size - 1;
+        chip_id = FlashId::Sanyo;
+        break;
+    case SaveType::None:
+        fmt::print("Force no save game\n");
+        break;
+    default:
+        break;
+    }
+}
+
+void Memory::CheckHardwareOverrides() {
+    // Credit goes to mGBA for this list of save overrides. As of January 2020, the original can be found here:
     // https://github.com/mgba-emu/mgba/blob/master/src/gba/overrides.c
-    const std::unordered_map<std::string, SaveType> save_overrides {
+    const std::unordered_map<std::string, Overrides> overrides {
         // Advance Wars
-        {"AWRE", SaveType::Flash},
-        {"AWRP", SaveType::Flash},
+        {"AWRE", {SaveType::Flash, Device_None}},
+        {"AWRP", {SaveType::Flash, Device_None}},
 
         // Advance Wars 2: Black Hole Rising
-        {"AW2E", SaveType::Flash},
-        {"AW2P", SaveType::Flash},
+        {"AW2E", {SaveType::Flash, Device_None}},
+        {"AW2P", {SaveType::Flash, Device_None}},
 
         // Boktai: The Sun is in Your Hand
-        {"U3IJ", SaveType::Eeprom},
-        {"U3IE", SaveType::Eeprom},
-        {"U3IP", SaveType::Eeprom},
+        {"U3IJ", {SaveType::Eeprom, Device_Rtc}},
+        {"U3IE", {SaveType::Eeprom, Device_Rtc}},
+        {"U3IP", {SaveType::Eeprom, Device_Rtc}},
 
         // Boktai 2: Solar Boy Django
-        {"U32J", SaveType::Eeprom},
-        {"U32E", SaveType::Eeprom},
-        {"U32P", SaveType::Eeprom},
+        {"U32J", {SaveType::Eeprom, Device_Rtc}},
+        {"U32E", {SaveType::Eeprom, Device_Rtc}},
+        {"U32P", {SaveType::Eeprom, Device_Rtc}},
 
         // Crash Bandicoot 2 - N-Tranced
-        {"AC8J", SaveType::Eeprom},
-        {"AC8E", SaveType::Eeprom},
-        {"AC8P", SaveType::Eeprom},
+        {"AC8J", {SaveType::Eeprom, Device_None}},
+        {"AC8E", {SaveType::Eeprom, Device_None}},
+        {"AC8P", {SaveType::Eeprom, Device_None}},
 
         // Dragon Ball Z - The Legacy of Goku
-        {"ALGP", SaveType::Eeprom},
+        {"ALGP", {SaveType::Eeprom, Device_None}},
 
         // Dragon Ball Z - The Legacy of Goku II
-        {"ALFJ", SaveType::Eeprom},
-        {"ALFE", SaveType::Eeprom},
-        {"ALFP", SaveType::Eeprom},
+        {"ALFJ", {SaveType::Eeprom, Device_None}},
+        {"ALFE", {SaveType::Eeprom, Device_None}},
+        {"ALFP", {SaveType::Eeprom, Device_None}},
 
         // Dragon Ball Z - Taiketsu
-        {"BDBE", SaveType::Eeprom},
-        {"BDBP", SaveType::Eeprom},
+        {"BDBE", {SaveType::Eeprom, Device_None}},
+        {"BDBP", {SaveType::Eeprom, Device_None}},
 
         // Drill Dozer
-        {"V49J", SaveType::SRam},
-        {"V49E", SaveType::SRam},
+        {"V49J", {SaveType::SRam, Device_None}},
+        {"V49E", {SaveType::SRam, Device_None}},
 
         // Final Fantasy Tactics Advance
-        {"AFXE", SaveType::Flash},
+        {"AFXE", {SaveType::Flash, Device_None}},
 
         // F-Zero - Climax
-        {"BFTJ", SaveType::Flash128},
+        {"BFTJ", {SaveType::Flash128, Device_None}},
 
         // Iridion II
-        {"AI2E", SaveType::None},
-        {"AI2P", SaveType::None},
+        {"AI2E", {SaveType::None, Device_None}},
+        {"AI2P", {SaveType::None, Device_None}},
 
         // Golden Sun: The Lost Age
-        {"AGFE", SaveType::Flash},
+        {"AGFE", {SaveType::Flash, Device_None}},
 
         // Koro Koro Puzzle - Happy Panechu!
-        {"KHPJ", SaveType::Eeprom},
+        {"KHPJ", {SaveType::Eeprom, Device_None}},
 
         // Mega Man Battle Network
-        {"AREE", SaveType::SRam},
+        {"AREE", {SaveType::SRam, Device_None}},
 
         // Mega Man Zero
-        {"AZCE", SaveType::SRam},
+        {"AZCE", {SaveType::SRam, Device_None}},
 
         // Metal Slug Advance
-        {"BSME", SaveType::Eeprom},
+        {"BSME", {SaveType::Eeprom, Device_None}},
 
         // Pokemon Pinball: Ruby & Sapphire
-        {"BPPJ", SaveType::SRam},
-        {"BPPE", SaveType::SRam},
-        {"BPPP", SaveType::SRam},
-        {"BPPU", SaveType::SRam},
+        {"BPPJ", {SaveType::SRam, Device_None}},
+        {"BPPE", {SaveType::SRam, Device_None}},
+        {"BPPP", {SaveType::SRam, Device_None}},
+        {"BPPU", {SaveType::SRam, Device_None}},
 
         // Pokemon Ruby
-        {"AXVJ", SaveType::Flash128},
-        {"AXVE", SaveType::Flash128},
-        {"AXVP", SaveType::Flash128},
-        {"AXVI", SaveType::Flash128},
-        {"AXVS", SaveType::Flash128},
-        {"AXVD", SaveType::Flash128},
-        {"AXVF", SaveType::Flash128},
+        {"AXVJ", {SaveType::Flash128, Device_Rtc}},
+        {"AXVE", {SaveType::Flash128, Device_Rtc}},
+        {"AXVP", {SaveType::Flash128, Device_Rtc}},
+        {"AXVI", {SaveType::Flash128, Device_Rtc}},
+        {"AXVS", {SaveType::Flash128, Device_Rtc}},
+        {"AXVD", {SaveType::Flash128, Device_Rtc}},
+        {"AXVF", {SaveType::Flash128, Device_Rtc}},
 
         // Pokemon Sapphire
-        {"AXPJ", SaveType::Flash128},
-        {"AXPE", SaveType::Flash128},
-        {"AXPP", SaveType::Flash128},
-        {"AXPI", SaveType::Flash128},
-        {"AXPS", SaveType::Flash128},
-        {"AXPD", SaveType::Flash128},
-        {"AXPF", SaveType::Flash128},
+        {"AXPJ", {SaveType::Flash128, Device_Rtc}},
+        {"AXPE", {SaveType::Flash128, Device_Rtc}},
+        {"AXPP", {SaveType::Flash128, Device_Rtc}},
+        {"AXPI", {SaveType::Flash128, Device_Rtc}},
+        {"AXPS", {SaveType::Flash128, Device_Rtc}},
+        {"AXPD", {SaveType::Flash128, Device_Rtc}},
+        {"AXPF", {SaveType::Flash128, Device_Rtc}},
 
         // Pokemon Emerald
-        {"BPEJ", SaveType::Flash128},
-        {"BPEE", SaveType::Flash128},
-        {"BPEP", SaveType::Flash128},
-        {"BPEI", SaveType::Flash128},
-        {"BPES", SaveType::Flash128},
-        {"BPED", SaveType::Flash128},
-        {"BPEF", SaveType::Flash128},
+        {"BPEJ", {SaveType::Flash128, Device_Rtc}},
+        {"BPEE", {SaveType::Flash128, Device_Rtc}},
+        {"BPEP", {SaveType::Flash128, Device_Rtc}},
+        {"BPEI", {SaveType::Flash128, Device_Rtc}},
+        {"BPES", {SaveType::Flash128, Device_Rtc}},
+        {"BPED", {SaveType::Flash128, Device_Rtc}},
+        {"BPEF", {SaveType::Flash128, Device_Rtc}},
 
         // Pokemon Mystery Dungeon
-        {"B24J", SaveType::Flash128},
-        {"B24E", SaveType::Flash128},
-        {"B24P", SaveType::Flash128},
-        {"B24U", SaveType::Flash128},
+        {"B24J", {SaveType::Flash128, Device_None}},
+        {"B24E", {SaveType::Flash128, Device_None}},
+        {"B24P", {SaveType::Flash128, Device_None}},
+        {"B24U", {SaveType::Flash128, Device_None}},
 
         // Pokemon FireRed
-        {"BPRJ", SaveType::Flash128},
-        {"BPRE", SaveType::Flash128},
-        {"BPRP", SaveType::Flash128},
-        {"BPRI", SaveType::Flash128},
-        {"BPRS", SaveType::Flash128},
-        {"BPRD", SaveType::Flash128},
-        {"BPRF", SaveType::Flash128},
+        {"BPRJ", {SaveType::Flash128, Device_None}},
+        {"BPRE", {SaveType::Flash128, Device_None}},
+        {"BPRP", {SaveType::Flash128, Device_None}},
+        {"BPRI", {SaveType::Flash128, Device_None}},
+        {"BPRS", {SaveType::Flash128, Device_None}},
+        {"BPRD", {SaveType::Flash128, Device_None}},
+        {"BPRF", {SaveType::Flash128, Device_None}},
 
         // Pokemon LeafGreen
-        {"BPGJ", SaveType::Flash128},
-        {"BPGE", SaveType::Flash128},
-        {"BPGP", SaveType::Flash128},
-        {"BPGI", SaveType::Flash128},
-        {"BPGS", SaveType::Flash128},
-        {"BPGD", SaveType::Flash128},
-        {"BPGF", SaveType::Flash128},
+        {"BPGJ", {SaveType::Flash128, Device_None}},
+        {"BPGE", {SaveType::Flash128, Device_None}},
+        {"BPGP", {SaveType::Flash128, Device_None}},
+        {"BPGI", {SaveType::Flash128, Device_None}},
+        {"BPGS", {SaveType::Flash128, Device_None}},
+        {"BPGD", {SaveType::Flash128, Device_None}},
+        {"BPGF", {SaveType::Flash128, Device_None}},
 
         // RockMan EXE 4.5 - Real Operation
-        {"BR4J", SaveType::Flash},
+        {"BR4J", {SaveType::Flash, Device_Rtc}},
 
         // Rocky
-        {"AR8E", SaveType::Eeprom},
-        {"AROP", SaveType::Eeprom},
+        {"AR8E", {SaveType::Eeprom, Device_None}},
+        {"AROP", {SaveType::Eeprom, Device_None}},
 
         // Sennen Kazoku
-        {"BKAJ", SaveType::Flash128},
+        {"BKAJ", {SaveType::Flash128, Device_Rtc}},
 
         // Shin Bokura no Taiyou: Gyakushuu no Sabata
-        {"U33J", SaveType::Eeprom},
+        {"U33J", {SaveType::Eeprom, Device_Rtc}},
 
         // Super Mario Advance 2
-        {"AA2J", SaveType::Eeprom},
-        {"AA2E", SaveType::Eeprom},
+        {"AA2J", {SaveType::Eeprom, Device_None}},
+        {"AA2E", {SaveType::Eeprom, Device_None}},
 
         // Super Mario Advance 3
-        {"A3AJ", SaveType::Eeprom},
-        {"A3AE", SaveType::Eeprom},
-        {"A3AP", SaveType::Eeprom},
+        {"A3AJ", {SaveType::Eeprom, Device_None}},
+        {"A3AE", {SaveType::Eeprom, Device_None}},
+        {"A3AP", {SaveType::Eeprom, Device_None}},
 
         // Super Mario Advance 4
-        {"AX4J", SaveType::Flash128},
-        {"AX4E", SaveType::Flash128},
-        {"AX4P", SaveType::Flash128},
+        {"AX4J", {SaveType::Flash128, Device_None}},
+        {"AX4E", {SaveType::Flash128, Device_None}},
+        {"AX4P", {SaveType::Flash128, Device_None}},
 
         // Super Monkey Ball Jr.
-        {"ALUE", SaveType::Eeprom},
-        {"ALUP", SaveType::Eeprom},
+        {"ALUE", {SaveType::Eeprom, Device_None}},
+        {"ALUP", {SaveType::Eeprom, Device_None}},
 
         // Top Gun - Combat Zones
-        {"A2YE", SaveType::None},
+        {"A2YE", {SaveType::None, Device_None}},
 
         // Ueki no Housoku - Jingi Sakuretsu! Nouryokusha Battle
-        {"BUHJ", SaveType::Eeprom},
+        {"BUHJ", {SaveType::Eeprom, Device_None}},
 
         // Wario Ware Twisted
-        {"RZWJ", SaveType::SRam},
-        {"RZWE", SaveType::SRam},
-        {"RZWP", SaveType::SRam},
+        {"RZWJ", {SaveType::SRam, Device_None}},
+        {"RZWE", {SaveType::SRam, Device_None}},
+        {"RZWP", {SaveType::SRam, Device_None}},
 
         // Yoshi's Universal Gravitation
-        {"KYGJ", SaveType::Eeprom},
-        {"KYGE", SaveType::Eeprom},
-        {"KYGP", SaveType::Eeprom},
+        {"KYGJ", {SaveType::Eeprom, Device_None}},
+        {"KYGE", {SaveType::Eeprom, Device_None}},
+        {"KYGP", {SaveType::Eeprom, Device_None}},
 
         // Aging cartridge
-        {"TCHK", SaveType::Eeprom},
+        {"TCHK", {SaveType::Eeprom, Device_None}},
     };
 
     // Read the game code from the ROM header and see if it's in our list of overrides.
     const std::string game_code{reinterpret_cast<const char*>(rom.data()) + 0xAC, 4};
 
-    auto game_override = save_overrides.find(game_code);
-    if (game_override != save_overrides.end()) {
-        switch (game_override->second) {
-        case SaveType::SRam:
-            fmt::print("SRAM override\n");
+    const auto override_iter = overrides.find(game_code);
+    if (override_iter != overrides.end()) {
+        const Overrides game_overrides = override_iter->second;
+        save_type = game_overrides.save_type;
 
-            save_type = SaveType::SRam;
-            sram.resize(sram_size);
-            sram_addr_mask = sram_size - 1;
-            break;
-        case SaveType::Eeprom:
-            fmt::print("EEPROM override\n");
-
-            save_type = SaveType::Eeprom;
-            break;
-        case SaveType::Flash:
-            fmt::print("64KB Flash override\n");
-
-            save_type = SaveType::Flash;
-            sram.resize(flash_size, 0xFF);
-            sram_addr_mask = flash_size - 1;
-            break;
-        case SaveType::Flash128:
-            fmt::print("128KB Flash override\n");
-
-            save_type = SaveType::Flash;
-            sram.resize(flash_size * 2, 0xFF);
-            sram_addr_mask = flash_size - 1;
-            chip_id = FlashId::Sanyo;
-            break;
-        case SaveType::None:
-            fmt::print("Force no save game\n");
-
-            save_type = SaveType::None;
-            break;
-        default:
-            break;
+        if (game_overrides.devices & Device_Rtc) {
+            gpio_present = true;
+            rtc_present = true;
+            rtc = std::make_unique<Rtc>(core);
+            fmt::print("RTC override found\n");
         }
-    } else if (game_code[0] == 'F') {
-        // Classic NES Series override.
-        fmt::print("EEPROM override\n");
-        save_type = SaveType::Eeprom;
-    } else {
-        save_type = SaveType::Unknown;
     }
-}
-
-void Memory::CheckHardwareOverrides() {
-    // Read the game code from the ROM header.
-    const std::string game_code{reinterpret_cast<const char*>(rom.data()) + 0xAC, 4};
 
     if (game_code[0] == 'F') {
         // In Classic NES Series games, the ROM contents are mirrored throughout the ROM region.
         rom_addr_mask = rom_size - 1;
+
+        // All Classic NES Series games need the EEPROM override.
+        save_type = SaveType::Eeprom;
     } else {
         rom_addr_mask = rom_max_size - 1;
     }

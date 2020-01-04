@@ -38,6 +38,7 @@ set(SOURCES
     gba/hardware/Timer.cpp
     gba/hardware/Dma.cpp
     gba/hardware/Keypad.cpp
+    gba/hardware/Rtc.cpp
 
     common/Screenshot.cpp
 
@@ -76,6 +77,7 @@ set(HEADERS
     gba/hardware/Dma.h
     gba/hardware/Keypad.h
     gba/hardware/Serial.h
+    gba/hardware/Rtc.h
 
     common/CommonTypes.h
     common/CommonFuncs.h

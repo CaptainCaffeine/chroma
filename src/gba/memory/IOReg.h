@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2018 Matthew Murray
+// Copyright (C) 2018-2019 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -26,7 +26,9 @@ struct IOReg {
     u16 write_mask;
 
     constexpr u16 Read() const { return v & read_mask; }
-    constexpr void Write(u16 data, u16 mask_8bit) { v = (v & ~(write_mask & mask_8bit)) | (data & write_mask); }
+    constexpr void Write(u16 data, u16 mask_8bit = 0xFFFF) {
+        v = (v & ~(write_mask & mask_8bit)) | (data & write_mask);
+    }
     constexpr void Clear(u16 data) { v &= ~(data & write_mask); }
 
     // Assignment operator.
