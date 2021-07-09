@@ -31,7 +31,12 @@ struct IOReg {
     }
     constexpr void Clear(u16 data) { v &= ~(data & write_mask); }
 
-    // Assignment operator.
+    // Copy constructor. This is defaulted because we want the copy constructor to copy all fields for the
+    // other operator overloads in this file that depend on it.
+    constexpr IOReg(const IOReg&) = default;
+
+    // Copy assignment operator. This differs from the copy constructor because we want assigning one register
+    // to another to only copy the value, not the masks.
     constexpr IOReg& operator=(const IOReg& rhs) {
         v = rhs.v;
         return *this;
