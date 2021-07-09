@@ -19,6 +19,7 @@
 #include <vector>
 #include <array>
 #include <deque>
+#include <string>
 
 #include "common/CommonTypes.h"
 #include "gb/core/Enums.h"
