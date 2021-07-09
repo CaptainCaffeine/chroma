@@ -17,8 +17,8 @@
 #include <fstream>
 #include <stdexcept>
 #include <algorithm>
+#include <filesystem>
 #include <fmt/format.h>
-#include <sys/stat.h>
 
 #include "gb/memory/CartridgeHeader.h"
 #include "gba/memory/Memory.h"
@@ -241,14 +241,11 @@ std::vector<u32> LoadGbaBios() {
 }
 
 void CheckPathIsRegularFile(const std::string& filename) {
-    // Check that the path points to a regular file.
-    struct stat stat_info;
-    if (stat(filename.c_str(), &stat_info) == 0) {
-        if (stat_info.st_mode & S_IFDIR) {
-            throw std::runtime_error("Provided path is a directory: " + filename);
-        } else if (!(stat_info.st_mode & S_IFREG)) {
-            throw std::runtime_error("Provided path is not a regular file: " + filename);
-        }
+    // Check that the provided path points to a regular file.
+    if (std::filesystem::is_directory(filename)) {
+        throw std::runtime_error("Provided path is a directory: " + filename);
+    } else if (!std::filesystem::is_regular_file(filename)) {
+        throw std::runtime_error("Provided path is not a regular file: " + filename);
     }
 }
 
