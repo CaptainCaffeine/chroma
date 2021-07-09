@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2018 Matthew Murray
+// Copyright (C) 2016-2021 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -37,7 +37,6 @@ LogLevel GetLogLevel(const std::vector<std::string>& tokens);
 unsigned int GetPixelScale(const std::vector<std::string>& tokens);
 bool GetFilterEnable(const std::vector<std::string>& tokens);
 
-std::size_t GetFileSize(std::ifstream& filestream);
 Gb::Console CheckRomFile(const std::string& filename);
 template<typename T>
 std::vector<T> LoadRom(const std::string& filename);

@@ -1,5 +1,5 @@
 // This file is a part of Chroma.
-// Copyright (C) 2016-2018 Matthew Murray
+// Copyright (C) 2016-2021 Matthew Murray
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -128,23 +128,15 @@ bool GetFilterEnable(const std::vector<std::string>& tokens) {
     }
 }
 
-std::size_t GetFileSize(std::ifstream& filestream) {
-    filestream.seekg(0, std::ios_base::end);
-    auto size = filestream.tellg();
-    filestream.seekg(0, std::ios_base::beg);
-
-    return size;
-}
-
-Gb::Console CheckRomFile(const std::string& filename) {
-    std::ifstream rom_file(filename);
+Gb::Console CheckRomFile(const std::string& rom_path) {
+    std::ifstream rom_file(rom_path);
     if (!rom_file) {
-        throw std::runtime_error("Error when attempting to open " + filename);
+        throw std::runtime_error("Error when attempting to open " + rom_path);
     }
 
-    CheckPathIsRegularFile(filename);
+    CheckPathIsRegularFile(rom_path);
 
-    const auto rom_size = GetFileSize(rom_file);
+    const auto rom_size = std::filesystem::file_size(rom_path);
 
     if (rom_size > 0x2000000) {
         // 32MB is the largest possible GBA game.
@@ -178,13 +170,13 @@ Gb::Console CheckRomFile(const std::string& filename) {
 }
 
 template<typename T>
-std::vector<T> LoadRom(const std::string& filename) {
-    std::ifstream rom_file(filename);
+std::vector<T> LoadRom(const std::string& rom_path) {
+    std::ifstream rom_file(rom_path);
     if (!rom_file) {
-        throw std::runtime_error("Error when attempting to open " + filename);
+        throw std::runtime_error("Error when attempting to open " + rom_path);
     }
 
-    const auto rom_size = GetFileSize(rom_file);
+    const auto rom_size = std::filesystem::file_size(rom_path);
 
     std::vector<T> rom_contents(rom_size / sizeof(T));
     rom_file.read(reinterpret_cast<char*>(rom_contents.data()), rom_size);
@@ -192,8 +184,8 @@ std::vector<T> LoadRom(const std::string& filename) {
     return rom_contents;
 }
 
-template std::vector<u8> LoadRom<u8>(const std::string& filename);
-template std::vector<u16> LoadRom<u16>(const std::string& filename);
+template std::vector<u8> LoadRom<u8>(const std::string& rom_path);
+template std::vector<u16> LoadRom<u16>(const std::string& rom_path);
 
 std::string SaveGamePath(const std::string& rom_path) {
     std::size_t last_dot = rom_path.rfind('.');
@@ -228,7 +220,7 @@ std::vector<u32> LoadGbaBios() {
 
     CheckPathIsRegularFile(bios_path);
 
-    const auto bios_size = GetFileSize(bios_file);
+    const auto bios_size = std::filesystem::file_size(bios_path);
 
     if (bios_size != 0x4000) {
         throw std::runtime_error("GBA BIOS must be 16KB. Provided file is " + std::to_string(bios_size) + " bytes.");

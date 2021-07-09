@@ -16,6 +16,7 @@
 
 #include <stdexcept>
 #include <fstream>
+#include <filesystem>
 #include <unordered_map>
 #include <fmt/format.h>
 
@@ -40,7 +41,7 @@ void Memory::ReadSaveFile() {
 
     Emu::CheckPathIsRegularFile(save_path);
 
-    const auto save_size = Emu::GetFileSize(save_file);
+    const auto save_size = std::filesystem::file_size(save_path);
 
     if (save_size == 32 * kbyte) {
         fmt::print("Found SRAM save\n");

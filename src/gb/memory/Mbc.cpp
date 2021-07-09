@@ -16,6 +16,7 @@
 
 #include <stdexcept>
 #include <fstream>
+#include <filesystem>
 #include <fmt/format.h>
 
 #include "gb/memory/Memory.h"
@@ -39,7 +40,7 @@ void Memory::ReadSaveFile(unsigned int cart_ram_size) {
 
     Emu::CheckPathIsRegularFile(save_path);
 
-    const auto save_size = Emu::GetFileSize(save_file);
+    const auto save_size = std::filesystem::file_size(save_path);
 
     if (save_size > 0x20030) {
         throw std::runtime_error(fmt::format("Save game size of {} bytes is too large to be a Game Boy save.",
