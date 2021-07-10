@@ -7,14 +7,32 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+# External libraries
+add_subdirectory(externals/fmt)
+
 find_package(SDL2 REQUIRED)
 include_directories(${SDL2_INCLUDE_DIR})
 
-find_package(PNG REQUIRED)
-include_directories(${PNG_INCLUDE_DIRS})
-add_definitions(${PNG_DEFINITIONS})
+find_package(ZLIB)
+if (ZLIB_FOUND)
+    message(STATUS "Using system zlib")
+else()
+    message(STATUS "Couldn't find system zlib, falling back on bundled library")
+    add_subdirectory(externals/zlib)
+    add_library(ZLIB::ZLIB ALIAS zlib)
+endif()
 
-add_subdirectory(externals)
+find_package(PNG)
+if (PNG_FOUND)
+    message(STATUS "Using system libpng")
+    include_directories(${PNG_INCLUDE_DIRS})
+    add_definitions(${PNG_DEFINITIONS})
+else()
+    message(STATUS "Couldn't find system libpng, falling back on bundled library")
+    add_subdirectory(externals/libpng)
+    add_library(PNG::PNG ALIAS png_static)
+endif()
+
 add_subdirectory(src)
 
 include(CheckIPOSupported)
